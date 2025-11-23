@@ -1,0 +1,430 @@
+"""
+MCPServer - Main MCP protocol server implementation.
+
+Implements the Model Context Protocol (MCP) server for stdio transport.
+Manages tool registration, request routing, and graceful shutdown.
+
+Author: Goncharenko Anton aka alienxs2
+License: MIT
+"""
+
+import asyncio
+import re
+import signal
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+import structlog
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool
+
+from zapomni_core.exceptions import ValidationError
+from zapomni_mcp.config import Settings
+from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
+
+
+# Custom Exceptions
+
+
+class MCPServerError(Exception):
+    """Base exception for all MCP server errors."""
+
+    pass
+
+
+class ConfigurationError(MCPServerError):
+    """Raised when server configuration is invalid."""
+
+    pass
+
+
+class ToolRegistrationError(MCPServerError):
+    """Raised when tool registration fails."""
+
+    pass
+
+
+class RequestHandlingError(MCPServerError):
+    """Raised when request processing fails."""
+
+    pass
+
+
+# Data Classes
+
+
+@dataclass
+class ServerStats:
+    """Statistics about server operation."""
+
+    total_requests: int
+    total_errors: int
+    registered_tools: int
+    uptime_seconds: float
+    running: bool
+
+
+# Main Server Class
+
+
+class MCPServer:
+    """
+    Main MCP protocol server implementing stdio transport.
+
+    This is the central component of the zapomni_mcp module, responsible for:
+    - Managing the MCP server lifecycle (start, run, stop)
+    - Registering and routing MCP tools
+    - Handling requests from MCP clients
+    - Delegating business logic to ZapomniCore
+    - Logging operations and errors
+
+    The server follows the MCP specification and uses stdio transport
+    for communication with clients.
+
+    Attributes:
+        _server: Internal mcp.server.Server instance
+        _core_engine: ZapomniCore processing engine for business logic
+        _tools: Registry of registered tools (name -> MCPTool instance)
+        _config: Server configuration settings
+        _running: Flag indicating if server is currently running
+        _logger: Structured logger for stderr output
+        _request_count: Total number of requests processed
+        _error_count: Total number of errors encountered
+        _start_time: Server start timestamp for uptime calculation
+
+    Thread Safety:
+        MCPServer is NOT thread-safe. Stdio transport is inherently sequential,
+        so only one request is processed at a time.
+    """
+
+    def __init__(
+        self, core_engine: Any, config: Optional[Settings] = None
+    ) -> None:
+        """
+        Initialize MCP server with core processing engine.
+
+        Args:
+            core_engine: ZapomniCore instance for business logic processing.
+                Must be fully initialized and ready to use.
+            config: Optional server configuration settings.
+                If None, uses defaults from Settings class.
+
+        Raises:
+            ConfigurationError: If core_engine is None or invalid config provided
+            ValidationError: If config contains invalid values
+        """
+        # Validate core_engine
+        if core_engine is None:
+            raise ConfigurationError("core_engine cannot be None")
+
+        # Initialize config with defaults if not provided
+        if config is None:
+            config = Settings()
+
+        # Store core dependencies
+        self._core_engine = core_engine
+        self._config = config
+
+        # Initialize server state
+        self._running = False
+        self._tools: Dict[str, MCPTool] = {}
+        self._request_count = 0
+        self._error_count = 0
+        self._start_time = 0.0
+
+        # Setup structured logging to stderr
+        structlog.configure(
+            processors=[
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.add_log_level,
+                structlog.processors.JSONRenderer(),
+            ],
+            wrapper_class=structlog.BoundLogger,
+            context_class=dict,
+            logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
+            cache_logger_on_first_use=True,
+        )
+        self._logger = structlog.get_logger()
+
+        # Create MCP server instance
+        self._server = Server(self._config.server_name)
+
+        # Setup signal handlers for graceful shutdown
+        self._setup_signal_handlers()
+
+        self._logger.info(
+            "MCPServer initialized",
+            server_name=self._config.server_name,
+            log_level=self._config.log_level,
+        )
+
+    def register_tool(self, tool: MCPTool) -> None:
+        """
+        Register a single MCP tool with the server.
+
+        Args:
+            tool: Tool instance implementing MCPTool protocol.
+                Must have unique name not already registered.
+
+        Raises:
+            ValueError: If tool.name is empty or already registered
+            TypeError: If tool doesn't implement MCPTool protocol
+            ValidationError: If tool.input_schema is invalid JSON Schema
+        """
+        # Validate tool implements protocol
+        self._validate_tool(tool)
+
+        # Validate tool name
+        if not tool.name or len(tool.name.strip()) == 0:
+            raise ValueError("Tool name cannot be empty")
+
+        # Check name format (lowercase with underscores only)
+        if not re.match(r"^[a-z_][a-z0-9_]*$", tool.name):
+            raise ValueError(
+                f"Tool name '{tool.name}' invalid format "
+                "(must be lowercase with underscores)"
+            )
+
+        # Check for duplicates
+        if tool.name in self._tools:
+            raise ValueError(f"Tool name '{tool.name}' already registered")
+
+        # Add to registry
+        self._tools[tool.name] = tool
+
+        # Register with MCP SDK
+        # Note: MCP SDK registration happens when server starts
+        # We just track tools in our registry for now
+
+        self._logger.info("Tool registered", tool_name=tool.name)
+
+    def register_all_tools(self) -> None:
+        """
+        Register all standard Zapomni MCP tools.
+
+        Registers:
+        - add_memory: Store new information in memory
+        - search_memory: Retrieve relevant information
+        - get_stats: Query system statistics
+
+        Raises:
+            ValueError: If any tool name conflicts
+            ImportError: If tool modules cannot be imported
+        """
+        # Instantiate all standard tools
+        tools = [
+            AddMemoryTool(core=self._core_engine),
+            SearchMemoryTool(core=self._core_engine),
+            GetStatsTool(core=self._core_engine),
+        ]
+
+        # Register each tool
+        for tool in tools:
+            self.register_tool(tool)
+
+        self._logger.info(
+            "All tools registered successfully", tool_count=len(self._tools)
+        )
+
+    async def run(self) -> None:
+        """
+        Start the MCP server and process requests from stdin.
+
+        This is the main server loop that processes incoming JSON-RPC 2.0
+        messages from stdin and routes them to registered tools.
+
+        Raises:
+            RuntimeError: If server is already running or no tools registered
+            ConnectionError: If stdin/stdout unavailable
+        """
+        # Check if already running
+        if self._running:
+            raise RuntimeError("Server is already running")
+
+        # Check if tools are registered
+        if len(self._tools) == 0:
+            raise RuntimeError(
+                "No tools registered. Call register_all_tools() first."
+            )
+
+        # Set running state
+        self._running = True
+        self._start_time = time.time()
+
+        self._logger.info(
+            "Starting MCP server",
+            tool_count=len(self._tools),
+            tools=list(self._tools.keys()),
+        )
+
+        try:
+            # Register tools with MCP server
+            for tool in self._tools.values():
+
+                @self._server.call_tool()
+                async def handle_call_tool(name: str, arguments: dict) -> list:
+                    """Handle tool call from MCP client."""
+                    self._request_count += 1
+
+                    try:
+                        if name not in self._tools:
+                            self._error_count += 1
+                            return [
+                                {
+                                    "type": "text",
+                                    "text": f"Error: Unknown tool '{name}'",
+                                }
+                            ]
+
+                        # Execute tool
+                        result = await self._tools[name].execute(arguments)
+
+                        # Return content from result
+                        return result.get("content", [])
+
+                    except Exception as e:
+                        self._error_count += 1
+                        self._logger.error(
+                            "Tool execution error", tool=name, error=str(e)
+                        )
+                        return [{"type": "text", "text": f"Error: {str(e)}"}]
+
+                @self._server.list_tools()
+                async def handle_list_tools() -> list[Tool]:
+                    """List all available tools."""
+                    return [
+                        Tool(
+                            name=tool.name,
+                            description=tool.description,
+                            inputSchema=tool.input_schema,
+                        )
+                        for tool in self._tools.values()
+                    ]
+
+            # Start stdio server (blocks until shutdown)
+            async with stdio_server() as streams:
+                read_stream, write_stream = streams
+                await self._server.run(
+                    read_stream, write_stream, self._server.create_initialization_options()
+                )
+
+        except Exception as e:
+            self._logger.error("Server error", error=str(e))
+            raise
+        finally:
+            # Ensure shutdown is called
+            self.shutdown()
+
+    def shutdown(self) -> None:
+        """
+        Gracefully shut down the MCP server.
+
+        This method is safe to call multiple times (idempotent).
+        Can be called from signal handlers.
+        """
+        if not self._running:
+            self._logger.debug("Shutdown called but server not running")
+            return
+
+        self._logger.info("Shutting down MCP server...")
+
+        # Set running flag to False
+        self._running = False
+
+        # Calculate final statistics
+        uptime = time.time() - self._start_time if self._start_time > 0 else 0
+
+        # Log final statistics
+        self._logger.info(
+            "Server shutdown complete",
+            total_requests=self._request_count,
+            total_errors=self._error_count,
+            uptime_seconds=round(uptime, 2),
+            error_rate=(
+                round(self._error_count / self._request_count * 100, 2)
+                if self._request_count > 0
+                else 0
+            ),
+        )
+
+    def get_stats(self) -> ServerStats:
+        """
+        Get current server statistics.
+
+        Returns:
+            ServerStats object containing operational metrics
+        """
+        uptime = (
+            time.time() - self._start_time
+            if self._running and self._start_time > 0
+            else 0.0
+        )
+
+        return ServerStats(
+            total_requests=self._request_count,
+            total_errors=self._error_count,
+            registered_tools=len(self._tools),
+            uptime_seconds=uptime,
+            running=self._running,
+        )
+
+    def _setup_signal_handlers(self) -> None:
+        """
+        Install signal handlers for graceful shutdown.
+
+        Registers handlers for SIGINT (Ctrl+C) and SIGTERM (kill).
+        """
+
+        def signal_handler(signum, frame):
+            """Handle shutdown signals."""
+            self._logger.info("Received shutdown signal", signal=signum)
+            self.shutdown()
+
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
+    def _validate_tool(self, tool: MCPTool) -> None:
+        """
+        Validate that a tool implements MCPTool protocol correctly.
+
+        Args:
+            tool: Tool instance to validate
+
+        Raises:
+            TypeError: If tool doesn't implement required attributes/methods
+        """
+        # Check for required attributes
+        if not hasattr(tool, "name"):
+            raise TypeError("Tool must implement 'name' attribute")
+
+        if not hasattr(tool, "description"):
+            raise TypeError("Tool must implement 'description' attribute")
+
+        if not hasattr(tool, "input_schema"):
+            raise TypeError("Tool must implement 'input_schema' attribute")
+
+        # Check for execute method
+        if not hasattr(tool, "execute") or not callable(getattr(tool, "execute")):
+            raise TypeError("Tool must implement 'execute' method")
+
+
+# Entry Point
+
+
+async def main() -> None:
+    """
+    Main entry point for MCP server.
+
+    This would be called from the command-line script.
+    For now, this is a placeholder.
+    """
+    # This will be implemented when we have full ZapomniCore integration
+    # For now, server is tested via unit tests with mocked core
+    pass
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
