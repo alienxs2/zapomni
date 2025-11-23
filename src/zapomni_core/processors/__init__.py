@@ -29,5 +29,6 @@ Example:
 from zapomni_core.processors.text_processor import TextProcessor
 from zapomni_core.processors.html_processor import HTMLProcessor
 from zapomni_core.processors.pdf_processor import PDFProcessor
+from zapomni_core.processors.markdown_processor import MarkdownProcessor
 
-__all__ = ["TextProcessor", "HTMLProcessor", "PDFProcessor"]
+__all__ = ["TextProcessor", "HTMLProcessor", "PDFProcessor", "MarkdownProcessor"]
