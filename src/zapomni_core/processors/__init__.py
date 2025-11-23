@@ -37,12 +37,14 @@ from zapomni_core.processors.code_processor import (
     parse_python,
     validate_syntax,
 )
+from zapomni_core.processors.docx_processor import DOCXProcessor
 
 __all__ = [
     "TextProcessor",
     "HTMLProcessor",
     "PDFProcessor",
     "MarkdownProcessor",
+    "DOCXProcessor",
     "extract_classes",
     "extract_functions",
     "extract_imports",
