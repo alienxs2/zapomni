@@ -121,6 +121,10 @@ class SemanticChunker:
         if separators is not None and len(separators) == 0:
             raise ValueError("separators cannot be empty")
 
+        logger.debug(
+            f"Initializing SemanticChunker: chunk_size={chunk_size}, overlap={chunk_overlap}"
+        )
+
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.min_chunk_size = min_chunk_size
@@ -204,6 +208,8 @@ class SemanticChunker:
         """
         self._validate_input(text)
 
+        logger.debug(f"Chunking text of {len(text)} chars")
+
         try:
             raw_chunks = self.splitter.split_text(text)
         except Exception as exc:  # pragma: no cover - defensive
@@ -216,6 +222,8 @@ class SemanticChunker:
 
         if not raw_chunks:
             raise ProcessingError("Chunking produced empty result", error_code="PROC_001")
+
+        logger.debug(f"Initial split created {len(raw_chunks)} chunks")
 
         chunks: List[Chunk] = []
         current_offset = 0
@@ -249,6 +257,8 @@ class SemanticChunker:
             current_offset = end_char
 
         merged_chunks = self.merge_small_chunks(chunks)
+
+        logger.info(f"Successfully chunked text into {len(merged_chunks)} chunks")
 
         return merged_chunks
 
@@ -338,6 +348,10 @@ class SemanticChunker:
                 )
             )
 
+        logger.debug(
+            f"Merging small chunks: input={len(chunks)}, output={len(reindexed)}"
+        )
+
         return reindexed
 
     def chunk_code(self, code: str, language: str = "python") -> List[Chunk]:
@@ -347,4 +361,3 @@ class SemanticChunker:
         Currently not implemented; reserved for future work.
         """
         raise NotImplementedError("AST-based code chunking is not implemented yet")
-
