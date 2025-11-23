@@ -1,0 +1,3 @@
+zapomni_core
+zapomni_db
+zapomni_mcp

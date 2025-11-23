@@ -1,0 +1,2 @@
+[console_scripts]
+zapomni-mcp = zapomni_mcp.server:main

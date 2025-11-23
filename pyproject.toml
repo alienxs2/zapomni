@@ -1,0 +1,174 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zapomni-mcp"
+version = "0.1.0"
+description = "Local-first MCP memory server for AI agents"
+authors = [
+    {name = "Goncharenko Anton aka alienxs2"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["mcp", "rag", "memory", "ai", "agents", "local-first"]
+
+dependencies = [
+    # MCP Protocol
+    "mcp>=1.0.0",
+
+    # Database
+    "falkordb>=1.2.0",
+    "redis>=5.0.0",
+
+    # LLM & Embeddings
+    "httpx>=0.25.0",
+
+    # Processing
+    "langchain>=0.1.0",
+    "sentence-transformers>=2.2.0",
+    "spacy>=3.7.0",
+    "rank-bm25>=0.2.2",
+
+    # Document Processing
+    "pymupdf>=1.23.0",
+    "python-docx>=1.0.0",
+    "trafilatura>=1.6.0",
+
+    # Utilities
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "structlog>=23.2.0",
+    "python-dotenv>=1.0.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-watch>=4.2.0",
+    "pytest-xdist>=3.5.0",
+
+    # Linting & Formatting
+    "black>=24.1.0",
+    "isort>=5.13.0",
+    "flake8>=7.0.0",
+    "mypy>=1.8.0",
+    "pylint>=3.0.0",
+
+    # Pre-commit
+    "pre-commit>=3.5.0",
+
+    # Documentation
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/alienxs2/zapomni"
+Documentation = "https://github.com/alienxs2/zapomni#readme"
+Repository = "https://github.com/alienxs2/zapomni"
+Issues = "https://github.com/alienxs2/zapomni/issues"
+
+[project.scripts]
+zapomni-mcp = "zapomni_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "falkordb.*",
+    "rank_bm25.*",
+    "trafilatura.*",
+    "pymupdf.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (medium speed, uses services)",
+    "e2e: End-to-end tests (slow, full stack)",
+]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--cov-report=term-missing",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/conftest.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

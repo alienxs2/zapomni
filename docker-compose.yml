@@ -1,0 +1,43 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: zapomni_falkordb
+    ports:
+      - "6381:6379"
+    volumes:
+      - falkordb_data:/data
+    environment:
+      - FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-}
+    command: >
+      falkordb-server
+      --save 60 1
+      --appendonly yes
+    restart: unless-stopped
+    networks:
+      - zapomni_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: zapomni_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    restart: unless-stopped
+    networks:
+      - zapomni_network
+
+volumes:
+  falkordb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  zapomni_network:
+    driver: bridge

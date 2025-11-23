@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/steering/product.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-22T20:27:46.012Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763843266005_m9wdw5ccz",
+      "approvalTitle": "Product Vision Document (product.md)"
+    }
+  ]
+}
