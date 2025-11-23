@@ -25,6 +25,7 @@ from zapomni_db.exceptions import (
     QueryError,
     TransactionError
 )
+from zapomni_db.schema_manager import SchemaManager
 
 
 logger = structlog.get_logger(__name__)
@@ -89,6 +90,7 @@ class FalkorDBClient:
         # Initialize state
         self._pool = None
         self.graph = None
+        self._schema_manager = None
         self._initialized = False
         self._schema_ready = False
         self._closed = False
@@ -128,40 +130,22 @@ class FalkorDBClient:
             raise ConnectionError(f"Failed to connect to FalkorDB: {e}")
 
     def _init_schema(self):
-        """Initialize graph schema (indexes, constraints)."""
+        """Initialize graph schema using SchemaManager."""
         try:
-            # Create HNSW vector index for Chunk embeddings
-            # This allows fast vector similarity search
-            self.graph.create_node_vector_index(
-                "Chunk",  # label
-                "embedding",  # property
-                dim=768,
-                similarity_function="cosine"
+            # Create SchemaManager instance with the graph
+            self._schema_manager = SchemaManager(
+                graph=self.graph,
+                logger=self._logger
             )
-            self._logger.info("vector_index_created", label="Chunk", property="embedding")
+
+            # Initialize schema (idempotent - safe to run multiple times)
+            self._schema_manager.init_schema()
+
+            self._logger.info("schema_initialized_via_manager")
+
         except Exception as e:
-            # Index might already exist
-            if "already exists" not in str(e).lower():
-                self._logger.warning("vector_index_creation_warning", error=str(e))
-
-        # Create property indexes for fast lookups
-        property_indexes = [
-            ("Memory", "id"),
-            ("Chunk", "id"),
-            ("Entity", "id"),
-            ("Entity", "name"),
-        ]
-
-        for label, property_name in property_indexes:
-            try:
-                # FalkorDB uses CREATE INDEX syntax
-                index_query = f"CREATE INDEX FOR (n:{label}) ON (n.{property_name})"
-                self.graph.query(index_query)
-                self._logger.info("property_index_created", label=label, property=property_name)
-            except Exception as e:
-                # Index might already exist
-                if "already exists" not in str(e).lower() and "equivalent" not in str(e).lower():
-                    self._logger.warning("property_index_creation_warning", label=label, property=property_name, error=str(e))
+            self._logger.error("schema_initialization_failed", error=str(e))
+            raise
 
     async def add_memory(self, memory: Memory) -> str:
         """
