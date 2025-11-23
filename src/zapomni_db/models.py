@@ -11,9 +11,12 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class Chunk(BaseModel):
-    """Text chunk with index position."""
+    """Text chunk with positional metadata."""
     text: str = Field(..., min_length=1)
     index: int = Field(..., ge=0)
+    start_char: Optional[int] = Field(default=None, ge=0)
+    end_char: Optional[int] = Field(default=None, ge=0)
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class Memory(BaseModel):
