@@ -62,3 +62,21 @@ class QueryResult:
     rows: List[Dict[str, Any]]
     row_count: int
     execution_time_ms: int
+
+
+class Entity(BaseModel):
+    """Entity node in knowledge graph."""
+    name: str = Field(..., min_length=1)
+    type: str = Field(..., min_length=1)
+    description: Optional[str] = Field(default="")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class Relationship(BaseModel):
+    """Relationship edge in knowledge graph."""
+    from_entity_id: str = Field(..., min_length=1)
+    to_entity_id: str = Field(..., min_length=1)
+    relationship_type: str = Field(..., min_length=1)
+    strength: float = Field(default=1.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    context: Optional[str] = None

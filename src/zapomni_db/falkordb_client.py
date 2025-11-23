@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 
 from falkordb import FalkorDB
 
-from zapomni_db.models import Memory, Chunk, SearchResult, QueryResult
+from zapomni_db.models import Memory, Chunk, SearchResult, QueryResult, Entity, Relationship
 from zapomni_db.exceptions import (
     ValidationError,
     DatabaseError,
@@ -142,7 +142,26 @@ class FalkorDBClient:
         except Exception as e:
             # Index might already exist
             if "already exists" not in str(e).lower():
-                self._logger.warning("index_creation_warning", error=str(e))
+                self._logger.warning("vector_index_creation_warning", error=str(e))
+
+        # Create property indexes for fast lookups
+        property_indexes = [
+            ("Memory", "id"),
+            ("Chunk", "id"),
+            ("Entity", "id"),
+            ("Entity", "name"),
+        ]
+
+        for label, property_name in property_indexes:
+            try:
+                # FalkorDB uses CREATE INDEX syntax
+                index_query = f"CREATE INDEX FOR (n:{label}) ON (n.{property_name})"
+                self.graph.query(index_query)
+                self._logger.info("property_index_created", label=label, property=property_name)
+            except Exception as e:
+                # Index might already exist
+                if "already exists" not in str(e).lower() and "equivalent" not in str(e).lower():
+                    self._logger.warning("property_index_creation_warning", label=label, property=property_name, error=str(e))
 
     async def add_memory(self, memory: Memory) -> str:
         """
@@ -590,6 +609,383 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("stats_error", error=str(e))
             raise DatabaseError(f"Failed to retrieve graph statistics: {e}")
+
+    async def add_entity(self, entity: Entity) -> str:
+        """
+        Add an entity node to the knowledge graph.
+
+        Args:
+            entity: Entity object with name, type, description, confidence
+
+        Returns:
+            entity_id: UUID string identifying the entity
+
+        Raises:
+            ValidationError: If entity validation fails
+            DatabaseError: If database write fails after retries
+        """
+        # Validation happens via Pydantic model
+        entity_id = str(uuid.uuid4())
+
+        cypher = """
+        MERGE (e:Entity {name: $name})
+        SET e.id = $entity_id,
+            e.type = $type,
+            e.description = $description,
+            e.confidence = $confidence,
+            e.updated_at = datetime($timestamp)
+        RETURN e.id AS entity_id
+        """
+
+        parameters = {
+            "entity_id": entity_id,
+            "name": entity.name,
+            "type": entity.type,
+            "description": entity.description or "",
+            "confidence": entity.confidence,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+        retry_count = 0
+        while retry_count <= self.max_retries:
+            try:
+                result = await self._execute_cypher(cypher, parameters)
+
+                if result.row_count > 0:
+                    self._logger.info("entity_added", entity_id=entity_id, name=entity.name)
+                    return entity_id
+                else:
+                    raise DatabaseError(f"Entity creation failed: no records returned")
+
+            except (ConnectionError, TimeoutError) as e:
+                retry_count += 1
+                if retry_count > self.max_retries:
+                    raise DatabaseError(
+                        f"Database error during add_entity: connection failed after {self.max_retries} retries: {e}"
+                    )
+                backoff_seconds = 2 ** (retry_count - 1)
+                await asyncio.sleep(backoff_seconds)
+
+            except Exception as e:
+                self._logger.error("add_entity_error", error=str(e))
+                raise DatabaseError(f"Unexpected database error during add_entity: {e}")
+
+    async def add_relationship(
+        self,
+        from_entity_id: str,
+        to_entity_id: str,
+        relationship_type: str,
+        properties: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Add a relationship edge between two entities.
+
+        Args:
+            from_entity_id: Source entity UUID
+            to_entity_id: Target entity UUID
+            relationship_type: Relationship type (MENTIONS, RELATED_TO, USES, etc.)
+            properties: Optional edge properties (strength, confidence, context)
+
+        Returns:
+            relationship_id: UUID string identifying the relationship
+
+        Raises:
+            ValidationError: If entity IDs are invalid
+            DatabaseError: If entities not found or write fails
+        """
+        # Validate UUIDs
+        try:
+            uuid.UUID(from_entity_id)
+            uuid.UUID(to_entity_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid entity UUID: {e}")
+
+        # Extract properties
+        if properties is None:
+            properties = {}
+
+        strength = properties.get("strength", 1.0)
+        confidence = properties.get("confidence", 1.0)
+        context = properties.get("context", "")
+
+        # Validate strength and confidence
+        if not (0.0 <= strength <= 1.0):
+            raise ValidationError(f"strength must be in [0.0, 1.0], got {strength}")
+        if not (0.0 <= confidence <= 1.0):
+            raise ValidationError(f"confidence must be in [0.0, 1.0], got {confidence}")
+
+        relationship_id = str(uuid.uuid4())
+
+        cypher = """
+        MATCH (from:Entity {id: $from_id})
+        MATCH (to:Entity {id: $to_id})
+        CREATE (from)-[r:$rel_type {
+            id: $rel_id,
+            strength: $strength,
+            confidence: $confidence,
+            context: $context,
+            created_at: datetime($timestamp)
+        }]->(to)
+        RETURN r.id AS relationship_id
+        """
+
+        # Note: Cypher doesn't support parameterized relationship types in this way
+        # We need to use string interpolation for the relationship type
+        cypher = f"""
+        MATCH (from:Entity {{id: $from_id}})
+        MATCH (to:Entity {{id: $to_id}})
+        CREATE (from)-[r:{relationship_type} {{
+            id: $rel_id,
+            strength: $strength,
+            confidence: $confidence,
+            context: $context,
+            created_at: datetime($timestamp)
+        }}]->(to)
+        RETURN r.id AS relationship_id
+        """
+
+        parameters = {
+            "from_id": from_entity_id,
+            "to_id": to_entity_id,
+            "rel_id": relationship_id,
+            "strength": strength,
+            "confidence": confidence,
+            "context": context,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+        retry_count = 0
+        while retry_count <= self.max_retries:
+            try:
+                result = await self._execute_cypher(cypher, parameters)
+
+                if result.row_count > 0:
+                    self._logger.info(
+                        "relationship_added",
+                        relationship_id=relationship_id,
+                        type=relationship_type
+                    )
+                    return relationship_id
+                else:
+                    raise DatabaseError(
+                        f"Relationship creation failed: entities not found "
+                        f"(from: {from_entity_id}, to: {to_entity_id})"
+                    )
+
+            except (ConnectionError, TimeoutError) as e:
+                retry_count += 1
+                if retry_count > self.max_retries:
+                    raise DatabaseError(
+                        f"Database error during add_relationship: connection failed after {self.max_retries} retries: {e}"
+                    )
+                backoff_seconds = 2 ** (retry_count - 1)
+                await asyncio.sleep(backoff_seconds)
+
+            except Exception as e:
+                self._logger.error("add_relationship_error", error=str(e))
+                raise DatabaseError(f"Unexpected database error during add_relationship: {e}")
+
+    async def get_related_entities(
+        self,
+        entity_id: str,
+        depth: int = 1,
+        limit: int = 20
+    ) -> List[Entity]:
+        """
+        Get entities related to a given entity via graph traversal.
+
+        Args:
+            entity_id: Starting entity UUID
+            depth: Traversal depth (1-5 hops)
+            limit: Maximum number of related entities to return (max: 100)
+
+        Returns:
+            List of Entity objects sorted by relationship strength
+
+        Raises:
+            ValidationError: If parameters are invalid
+            DatabaseError: If query fails
+        """
+        # Validate entity UUID
+        try:
+            uuid.UUID(entity_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid entity UUID: {e}")
+
+        # Validate depth
+        if not isinstance(depth, int) or depth < 1 or depth > 5:
+            raise ValidationError(f"depth must be in [1, 5], got {depth}")
+
+        # Validate limit
+        if not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValidationError(f"limit must be in [1, 100], got {limit}")
+
+        cypher = f"""
+        MATCH (start:Entity {{id: $entity_id}})
+        MATCH path = (start)-[*1..{depth}]-(related:Entity)
+        WHERE related.id <> $entity_id
+        WITH DISTINCT related,
+             [r IN relationships(path) | r.strength] AS strengths
+        WITH related,
+             reduce(s = 0.0, strength IN strengths | s + strength) / size(strengths) AS avg_strength
+        RETURN related.id AS id,
+               related.name AS name,
+               related.type AS type,
+               related.description AS description,
+               related.confidence AS confidence,
+               avg_strength
+        ORDER BY avg_strength DESC
+        LIMIT {limit}
+        """
+
+        parameters = {"entity_id": entity_id}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            entities = []
+            for row in result.rows:
+                entity = Entity(
+                    name=row["name"],
+                    type=row["type"],
+                    description=row.get("description", ""),
+                    confidence=float(row.get("confidence", 1.0))
+                )
+                entities.append(entity)
+
+            self._logger.info(
+                "related_entities_retrieved",
+                entity_id=entity_id,
+                count=len(entities)
+            )
+
+            return entities
+
+        except Exception as e:
+            self._logger.error("get_related_entities_error", error=str(e))
+            raise DatabaseError(f"Failed to retrieve related entities: {e}")
+
+    async def graph_query(
+        self,
+        cypher: str,
+        parameters: Optional[Dict[str, Any]] = None
+    ) -> QueryResult:
+        """
+        Execute a Cypher query on the graph.
+
+        Args:
+            cypher: Cypher query string (parameterized queries recommended)
+            parameters: Optional query parameters for parameterized queries
+
+        Returns:
+            QueryResult object with rows, row_count, execution_time_ms
+
+        Raises:
+            ValidationError: If query is invalid
+            DatabaseError: If query execution fails
+        """
+        # Validate cypher
+        if not cypher or not cypher.strip():
+            raise ValidationError("cypher query cannot be empty")
+
+        if len(cypher) > 100_000:
+            raise ValidationError(f"cypher query exceeds max length (100,000 chars)")
+
+        # Validate parameters are JSON-serializable
+        if parameters:
+            try:
+                json.dumps(parameters)
+            except (TypeError, ValueError) as e:
+                raise ValidationError(f"parameters must be JSON-serializable: {e}")
+
+        # Execute query with retry
+        retry_count = 0
+        while retry_count <= self.max_retries:
+            try:
+                result = await self._execute_cypher(cypher, parameters or {})
+
+                self._logger.info(
+                    "graph_query_executed",
+                    row_count=result.row_count,
+                    execution_time_ms=result.execution_time_ms
+                )
+
+                return result
+
+            except (ConnectionError, TimeoutError) as e:
+                retry_count += 1
+                if retry_count > self.max_retries:
+                    raise DatabaseError(
+                        f"Database error during graph_query: connection failed after {self.max_retries} retries: {e}"
+                    )
+                backoff_seconds = 2 ** (retry_count - 1)
+                await asyncio.sleep(backoff_seconds)
+
+            except Exception as e:
+                self._logger.error("graph_query_error", error=str(e))
+                raise DatabaseError(f"Unexpected database error during graph_query: {e}")
+
+    async def delete_memory(self, memory_id: str) -> bool:
+        """
+        Delete a memory and its associated chunks.
+
+        Args:
+            memory_id: Memory UUID to delete
+
+        Returns:
+            True if deleted, False if memory not found
+
+        Raises:
+            ValidationError: If memory_id is invalid UUID
+            DatabaseError: If delete operation fails
+        """
+        # Validate UUID
+        try:
+            uuid.UUID(memory_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid memory UUID: {e}")
+
+        cypher = """
+        MATCH (m:Memory {id: $memory_id})
+        OPTIONAL MATCH (m)-[:HAS_CHUNK]->(c:Chunk)
+        DETACH DELETE m, c
+        RETURN count(m) AS deleted_count
+        """
+
+        parameters = {"memory_id": memory_id}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            if result.row_count > 0 and result.rows[0]["deleted_count"] > 0:
+                self._logger.info("memory_deleted", memory_id=memory_id)
+                return True
+            else:
+                self._logger.warning("memory_not_found", memory_id=memory_id)
+                return False
+
+        except Exception as e:
+            self._logger.error("delete_memory_error", error=str(e))
+            raise DatabaseError(f"Failed to delete memory: {e}")
+
+    async def clear_all(self) -> None:
+        """
+        Clear all data from the graph (DELETE all nodes/edges).
+
+        WARNING: This is destructive and irreversible.
+
+        Raises:
+            DatabaseError: If clear operation fails
+        """
+        cypher = "MATCH (n) DETACH DELETE n"
+
+        try:
+            result = await self._execute_cypher(cypher, {})
+            self._logger.warning("graph_cleared", nodes_deleted=result.row_count)
+
+        except Exception as e:
+            self._logger.error("clear_all_error", error=str(e))
+            raise DatabaseError(f"Failed to clear graph: {e}")
 
     async def _execute_cypher(self, query: str, parameters: Dict[str, Any]) -> QueryResult:
         """Execute Cypher query using FalkorDB."""
