@@ -35,6 +35,7 @@ dependencies = [
 
     # Processing
     "langchain>=0.1.0",
+    "tiktoken>=0.5.0",
     "sentence-transformers>=2.2.0",
     "spacy>=3.7.0",
     "rank-bm25>=0.2.2",
@@ -146,6 +147,7 @@ markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (medium speed, uses services)",
     "e2e: End-to-end tests (slow, full stack)",
+    "requires_ollama: Tests that require Ollama to be running",
 ]
 addopts = [
     "--strict-markers",
