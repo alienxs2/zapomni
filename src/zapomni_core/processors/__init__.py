@@ -30,5 +30,22 @@ from zapomni_core.processors.text_processor import TextProcessor
 from zapomni_core.processors.html_processor import HTMLProcessor
 from zapomni_core.processors.pdf_processor import PDFProcessor
 from zapomni_core.processors.markdown_processor import MarkdownProcessor
+from zapomni_core.processors.code_processor import (
+    extract_classes,
+    extract_functions,
+    extract_imports,
+    parse_python,
+    validate_syntax,
+)
 
-__all__ = ["TextProcessor", "HTMLProcessor", "PDFProcessor", "MarkdownProcessor"]
+__all__ = [
+    "TextProcessor",
+    "HTMLProcessor",
+    "PDFProcessor",
+    "MarkdownProcessor",
+    "extract_classes",
+    "extract_functions",
+    "extract_imports",
+    "parse_python",
+    "validate_syntax",
+]
