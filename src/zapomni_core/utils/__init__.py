@@ -8,8 +8,10 @@ License: MIT
 """
 
 from .logger_factory import get_logger, configure_logging
+from .token_counter import TokenCounter
 
 __all__ = [
     "get_logger",
     "configure_logging",
+    "TokenCounter",
 ]
