@@ -6,19 +6,28 @@ embedding, and storage operations.
 
 Main Components:
     TextProcessor: Orchestrates text → chunks → embeddings → storage pipeline
+    HTMLProcessor: Extracts clean text from HTML using trafilatura
 
 Example:
     ```python
-    from zapomni_core.processors import TextProcessor
+    from zapomni_core.processors import TextProcessor, HTMLProcessor
 
+    # Process plain text
     processor = TextProcessor()
     memory_id = await processor.add_text(
         text="Python is a programming language.",
         metadata={"source": "test"}
     )
+
+    # Extract from HTML
+    html_processor = HTMLProcessor()
+    text = html_processor.extract_from_html(html)
+    result = html_processor.extract_with_metadata(html)
     ```
 """
 
 from zapomni_core.processors.text_processor import TextProcessor
+from zapomni_core.processors.html_processor import HTMLProcessor
+from zapomni_core.processors.pdf_processor import PDFProcessor
 
-__all__ = ["TextProcessor"]
+__all__ = ["TextProcessor", "HTMLProcessor", "PDFProcessor"]
