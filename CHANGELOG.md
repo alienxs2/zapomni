@@ -6,10 +6,58 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### In Progress
+
+#### Phase 2: Enhanced Search (v0.2.0 - Target: Q1 2025)
+
+**Core Implementation Complete:**
+- ✅ Entity extraction with SpaCy NER + normalization
+- ✅ Knowledge graph construction (GraphBuilder)
+- ✅ Graph traversal queries (get_related_entities with 1-5 hop depth)
+- ✅ Semantic caching infrastructure (Redis integration)
+- ✅ Hybrid search preparation (BM25 + RRF components)
+
+**MCP Tool Integration (Spec-First Development):**
+- 🔨 `build_graph` tool - Spec in progress, wraps EntityExtractor + GraphBuilder
+- 🔨 `get_related` tool - Spec in progress, wraps get_related_entities()
+- 🔨 `graph_status` tool - Spec in progress, extends get_stats() with graph metrics
+
+**Remaining Work:**
+- [ ] Complete MCP tool implementation after spec approval
+- [ ] BM25 keyword search integration
+- [ ] Hybrid search (RRF fusion) implementation
+
+#### Phase 3: Code Intelligence (v0.3.0 - Target: Q2 2025)
+
+**Core Implementation ~70% Complete:**
+- ✅ Code repository indexing (RepositoryIndexer - 14+ languages)
+- ✅ AST-based code chunking with syntax awareness
+- ✅ Function/class entity extraction from AST
+- ✅ Call graph analysis and dependencies
+- ✅ Memory deletion operations (delete_memory, clear_all)
+
+**MCP Tool Integration (Spec-First Development):**
+- 🔨 `index_codebase` tool - Spec in progress, wraps RepositoryIndexer
+- 🔨 `delete_memory` tool - Spec in progress, with safety confirmations
+- 🔨 `clear_all` tool - Spec in progress, with explicit confirmation required
+- 🔨 `export_graph` tool - Spec in progress, needs core implementation
+
+**Remaining Work:**
+- [ ] Export graph core implementation (GraphML, Cytoscape JSON, Neo4j formats)
+- [ ] Complete MCP tool implementation after spec approval
+- [ ] Code-specific search optimization
+
 ### Planned
-- Phase 2: Enhanced Search (keyword search, graph construction, semantic caching)
-- Phase 3: Code Intelligence (repository indexing, AST-based analysis)
-- Phase 4+: Advanced Features (multi-language support, document expansion)
+
+#### Phase 4+: Advanced Features (Q3+ 2025)
+- Multi-language embeddings support
+- Additional document formats (video transcripts, audio)
+- Performance optimization (query caching, index tuning)
+- HTTP/SSE transport alternatives
+- Configuration profiles (dev/staging/prod)
+- Secrets management integration
+- Real-time collaboration features
+- Advanced analytics dashboard
 
 ## [0.1.0] - 2025-11-24
 

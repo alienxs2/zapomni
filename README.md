@@ -142,21 +142,41 @@ Claude: [Calls search_memory tool]
 
 ### Available MCP Tools
 
-**Phase 1 (MVP):**
+**Phase 1 (MVP) - ✅ Available Now:**
 - `add_memory` - Store text with automatic chunking and embedding
 - `search_memory` - Semantic search across stored memories
 - `get_stats` - View memory statistics (total memories, chunks, size)
 
-**Phase 2 (Future):**
-- `build_graph` - Extract entities and build knowledge graph
-- `get_related` - Find related entities via graph traversal
-- `graph_status` - View knowledge graph statistics
+**Phase 2 (Enhanced Search) - 🔨 Core Ready, MCP Integration In Progress:**
 
-**Phase 3 (Future):**
+*Core functionality implemented, MCP tool wrappers being developed:*
+- `build_graph` - Extract entities and build knowledge graph
+  - ✅ Core: EntityExtractor (SpaCy + LLM) + GraphBuilder implemented
+  - 🔨 MCP Tool: Spec in progress
+- `get_related` - Find related entities via graph traversal
+  - ✅ Core: FalkorDBClient.get_related_entities() implemented
+  - 🔨 MCP Tool: Spec in progress
+- `graph_status` - View enhanced knowledge graph statistics
+  - ✅ Core: Graph metrics in get_stats() implemented
+  - 🔨 MCP Tool: Spec in progress
+
+**Phase 3 (Code Intelligence) - 🔨 Mostly Ready, MCP Integration In Progress:**
+
+*Most functionality implemented, final integration pending:*
 - `index_codebase` - Index code repository with AST analysis
+  - ✅ Core: RepositoryIndexer + AST analysis (14+ languages) implemented
+  - 🔨 MCP Tool: Spec in progress
 - `delete_memory` - Delete specific memory by ID
+  - ✅ Core: FalkorDBClient.delete_memory() implemented
+  - 🔨 MCP Tool: Spec in progress
 - `clear_all` - Clear all memories (with confirmation)
+  - ✅ Core: FalkorDBClient.clear_all() implemented
+  - 🔨 MCP Tool: Spec in progress
 - `export_graph` - Export knowledge graph in various formats
+  - ⏳ Core: Implementation needed (GraphML, Cytoscape JSON, Neo4j)
+  - 🔨 MCP Tool: Spec in progress
+
+**Legend:** ✅ Complete | 🔨 In Development | ⏳ Planned
 
 ---
 
@@ -300,36 +320,63 @@ Coming soon - will include comparisons with other RAG systems.
 
 ## Roadmap
 
-### Phase 1: MVP (Current)
+### Phase 1: MVP ✅ Complete (v0.1.0)
 - [x] Project infrastructure setup
-- [ ] Basic MCP server (stdio transport)
-- [ ] Document chunking and embedding
-- [ ] Vector similarity search
-- [ ] Memory storage in FalkorDB
-- [ ] Core MCP tools (add_memory, search_memory, get_stats)
+- [x] Basic MCP server (stdio transport)
+- [x] Document chunking and embedding
+- [x] Vector similarity search
+- [x] Memory storage in FalkorDB
+- [x] Core MCP tools (add_memory, search_memory, get_stats)
+- [x] Comprehensive test suite (80%+ coverage)
+- [x] Production-ready code quality
+- [x] Full documentation
 
-### Phase 2: Enhanced Search
-- [ ] BM25 keyword search
-- [ ] Hybrid search (RRF fusion)
-- [ ] Entity extraction (SpaCy + LLM)
-- [ ] Knowledge graph construction
-- [ ] Semantic caching (Redis)
-- [ ] Graph traversal queries
+### Phase 2: Enhanced Search 🔨 Core Complete, MCP Tools In Progress (v0.2.0 - Q1 2025)
 
-### Phase 3: Code Intelligence
-- [ ] Code repository indexing
-- [ ] AST-based code chunking
-- [ ] Function/class entity extraction
-- [ ] Call graph analysis
-- [ ] Code-specific search
+**Core Implementation:**
+- [x] Entity extraction (SpaCy NER + normalization)
+- [x] Knowledge graph construction (GraphBuilder)
+- [x] Semantic caching infrastructure (Redis)
+- [x] Graph traversal queries (get_related_entities)
+- [x] Hybrid search preparation (BM25 + RRF)
 
-### Phase 4+: Advanced Features
-- [ ] Multi-language support
-- [ ] Document format expansion
-- [ ] Performance optimization
-- [ ] HTTP/SSE transport
-- [ ] Configuration profiles
-- [ ] Secrets management integration
+**MCP Tool Integration (In Progress):**
+- [ ] `build_graph` tool - Extract entities and build knowledge graph
+- [ ] `get_related` tool - Find related entities via graph traversal
+- [ ] `graph_status` tool - Enhanced knowledge graph statistics
+
+**Remaining:**
+- [ ] BM25 keyword search integration
+- [ ] Hybrid search (RRF fusion) implementation
+
+### Phase 3: Code Intelligence 🔨 70% Complete (v0.3.0 - Q2 2025)
+
+**Core Implementation:**
+- [x] Code repository indexing (RepositoryIndexer)
+- [x] AST-based code chunking (14+ languages)
+- [x] Function/class entity extraction
+- [x] Call graph analysis
+- [x] Memory deletion (delete_memory, clear_all)
+
+**MCP Tool Integration (In Progress):**
+- [ ] `index_codebase` tool - Index code repository with AST analysis
+- [ ] `delete_memory` tool - Delete specific memory by ID
+- [ ] `clear_all` tool - Clear all memories with confirmation
+- [ ] `export_graph` tool - Export knowledge graph (GraphML, Cytoscape JSON, Neo4j)
+
+**Remaining:**
+- [ ] Code-specific search optimization
+- [ ] Export graph core implementation
+
+### Phase 4+: Advanced Features ⏳ Planned (Q3+ 2025)
+- [ ] Multi-language embeddings support
+- [ ] Additional document formats (video transcripts, audio)
+- [ ] Performance optimization (query caching, index tuning)
+- [ ] HTTP/SSE transport alternatives
+- [ ] Configuration profiles (dev/staging/prod)
+- [ ] Secrets management integration (Vault, AWS Secrets Manager)
+- [ ] Real-time collaboration features
+- [ ] Advanced analytics dashboard
 
 ---
 

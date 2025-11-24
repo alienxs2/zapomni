@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-tools-phase-2/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-24T18:37:35.382Z",
+      "trigger": "initial",
+      "approvalId": "approval_1764009455376_whmaxsmtj",
+      "approvalTitle": "Phase 2 MCP Tools - Requirements Document"
+    }
+  ]
+}
