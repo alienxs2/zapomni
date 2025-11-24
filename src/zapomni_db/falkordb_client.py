@@ -562,17 +562,23 @@ class FalkorDBClient:
                 stats["storage"]["avg_chunks_per_memory"] = 0.0
 
             # Index stats
-            index_results = await self._execute_cypher(
-                "CALL db.indexes() YIELD name, type WHERE name = 'chunk_embedding_idx' RETURN name, type",
-                {}
-            )
+            try:
+                index_results = await self._execute_cypher(
+                    "CALL db.indexes() YIELD name, type WHERE name = 'chunk_embedding_idx' RETURN name, type",
+                    {}
+                )
 
-            if index_results.rows:
-                stats["indexes"]["vector_index_name"] = index_results.rows[0]["name"]
-                stats["indexes"]["vector_index_size"] = stats["nodes"]["chunk"]
-            else:
+                if index_results.rows:
+                    stats["indexes"]["vector_index_name"] = index_results.rows[0]["name"]
+                    stats["indexes"]["vector_index_size"] = stats["nodes"]["chunk"]
+                else:
+                    stats["indexes"]["vector_index_name"] = "chunk_embedding_idx"
+                    stats["indexes"]["vector_index_size"] = 0
+            except Exception as e:
+                # db.indexes() may not be available in all FalkorDB versions
+                self._logger.debug("index_query_failed", error=str(e))
                 stats["indexes"]["vector_index_name"] = "chunk_embedding_idx"
-                stats["indexes"]["vector_index_size"] = 0
+                stats["indexes"]["vector_index_size"] = stats["nodes"]["chunk"]
 
             # Health metrics
             stats["health"]["connected"] = True
@@ -582,6 +588,12 @@ class FalkorDBClient:
             total_latency_ms = (end_time - start_time) * 1000
             num_queries = 3
             stats["health"]["query_latency_ms"] = round(total_latency_ms / num_queries, 2)
+
+            # Add backward compatible top-level fields
+            stats["total_memories"] = stats["storage"]["total_memories"]
+            stats["total_chunks"] = stats["storage"]["total_chunks"]
+            stats["database_size_mb"] = 0.0  # Not available in current implementation
+            stats["avg_query_latency_ms"] = stats["health"]["query_latency_ms"]
 
             self._logger.info(
                 "stats_retrieved",

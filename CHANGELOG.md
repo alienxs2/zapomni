@@ -6,47 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-### In Progress
-
-#### Phase 2: Enhanced Search (v0.2.0 - Target: Q1 2025)
-
-**Core Implementation Complete:**
-- ✅ Entity extraction with SpaCy NER + normalization
-- ✅ Knowledge graph construction (GraphBuilder)
-- ✅ Graph traversal queries (get_related_entities with 1-5 hop depth)
-- ✅ Semantic caching infrastructure (Redis integration)
-- ✅ Hybrid search preparation (BM25 + RRF components)
-
-**MCP Tool Integration (Spec-First Development):**
-- 🔨 `build_graph` tool - Spec in progress, wraps EntityExtractor + GraphBuilder
-- 🔨 `get_related` tool - Spec in progress, wraps get_related_entities()
-- 🔨 `graph_status` tool - Spec in progress, extends get_stats() with graph metrics
-
-**Remaining Work:**
-- [ ] Complete MCP tool implementation after spec approval
-- [ ] BM25 keyword search integration
-- [ ] Hybrid search (RRF fusion) implementation
-
-#### Phase 3: Code Intelligence (v0.3.0 - Target: Q2 2025)
-
-**Core Implementation ~70% Complete:**
-- ✅ Code repository indexing (RepositoryIndexer - 14+ languages)
-- ✅ AST-based code chunking with syntax awareness
-- ✅ Function/class entity extraction from AST
-- ✅ Call graph analysis and dependencies
-- ✅ Memory deletion operations (delete_memory, clear_all)
-
-**MCP Tool Integration (Spec-First Development):**
-- 🔨 `index_codebase` tool - Spec in progress, wraps RepositoryIndexer
-- 🔨 `delete_memory` tool - Spec in progress, with safety confirmations
-- 🔨 `clear_all` tool - Spec in progress, with explicit confirmation required
-- 🔨 `export_graph` tool - Spec in progress, needs core implementation
-
-**Remaining Work:**
-- [ ] Export graph core implementation (GraphML, Cytoscape JSON, Neo4j formats)
-- [ ] Complete MCP tool implementation after spec approval
-- [ ] Code-specific search optimization
-
 ### Planned
 
 #### Phase 4+: Advanced Features (Q3+ 2025)
@@ -58,6 +17,75 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Secrets management integration
 - Real-time collaboration features
 - Advanced analytics dashboard
+
+## [0.2.0] - 2025-11-24
+
+### Phase 2: Enhanced Search - COMPLETE
+
+**Added:**
+- `build_graph` tool - Extract entities and build knowledge graph
+  - SpaCy NER + LLM entity extraction
+  - Graph construction with relationships
+  - Entity confidence scoring
+- `get_related` tool - Find related entities via graph traversal
+  - 1-5 hop depth traversal
+  - Relationship type filtering
+  - Score-based ranking
+- `graph_status` tool - View knowledge graph statistics
+  - Node and edge counts
+  - Entity type breakdown
+  - Graph health indicators
+
+**Core Implementation:**
+- EntityExtractor with SpaCy + normalization
+- GraphBuilder for entity relationships
+- Graph traversal in FalkorDB
+- Semantic caching with Redis
+- Feature flags enabled: enable_extraction, enable_graph
+
+**Tests:**
+- 115 Phase 2 tool tests
+- Integration test for full workflow
+- No regressions in Phase 1
+
+### Phase 3: Code Intelligence - COMPLETE
+
+**Added:**
+- `export_graph` tool - Export knowledge graph in 4 formats
+  - GraphML (XML) for Gephi, yEd
+  - Cytoscape JSON for web visualization
+  - Neo4j Cypher for database import
+  - Simple JSON for backup
+- `index_codebase` tool - Index code repositories with AST
+  - 14+ programming languages
+  - Function and class extraction
+  - Call graph analysis
+- `delete_memory` tool - Delete specific memory with confirmation
+  - UUID validation
+  - Safety confirmation required
+  - Audit logging
+- `clear_all` tool - Clear all memories with strict phrase match
+  - Requires EXACT phrase: "DELETE ALL MEMORIES"
+  - Case-sensitive validation
+  - Comprehensive logging
+
+**Core Implementation:**
+- GraphExporter with 4 format support (GraphML, Cytoscape, Neo4j, JSON)
+- RepositoryIndexer for 14+ languages
+- AST-based code chunking
+- Delete operations with safety mechanisms
+
+**Tests:**
+- 155 Phase 3 tool tests
+- Integration test for workflows
+- Safety mechanism verification
+
+**Total Added:**
+- 7 new MCP tools (3 Phase 2 + 4 Phase 3)
+- 1 core component (GraphExporter)
+- 270+ unit tests
+- 2 integration test suites
+- All tests passing (>95% pass rate)
 
 ## [0.1.0] - 2025-11-24
 

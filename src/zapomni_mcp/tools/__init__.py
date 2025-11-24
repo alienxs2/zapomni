@@ -5,6 +5,7 @@ This module contains all MCP tool implementations:
 - add_memory: Store new information in memory
 - search_memory: Retrieve relevant information
 - get_stats: Query system statistics
+- get_related: Find related entities through graph traversal
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
@@ -33,6 +34,9 @@ class MCPTool(Protocol):
 from .add_memory import AddMemoryTool
 from .search_memory import SearchMemoryTool
 from .get_stats import GetStatsTool
+from .get_related import GetRelatedTool
+from .build_graph import BuildGraphTool
+from .graph_status import GraphStatusTool
 
 
 __all__ = [
@@ -40,4 +44,7 @@ __all__ = [
     "AddMemoryTool",
     "SearchMemoryTool",
     "GetStatsTool",
+    "GetRelatedTool",
+    "BuildGraphTool",
+    "GraphStatusTool",
 ]

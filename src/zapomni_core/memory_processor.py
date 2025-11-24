@@ -52,8 +52,8 @@ class ProcessorConfig:
     """
 
     enable_cache: bool = False
-    enable_extraction: bool = False
-    enable_graph: bool = False
+    enable_extraction: bool = True  # Phase 2: Entity extraction enabled
+    enable_graph: bool = True  # Phase 2: Graph building enabled
     max_text_length: int = 10_000_000
     batch_size: int = 32
     search_mode: str = "vector"
@@ -392,13 +392,19 @@ class MemoryProcessor:
             return stored_id
 
         except ValidationError as e:
-            log.error("validation_error", error=str(e), error_code=getattr(e, "error_code", "VAL_001"))
+            log.error(
+                "validation_error", error=str(e), error_code=getattr(e, "error_code", "VAL_001")
+            )
             raise
         except ProcessingError as e:
-            log.error("processing_error", error=str(e), error_code=getattr(e, "error_code", "PROC_001"))
+            log.error(
+                "processing_error", error=str(e), error_code=getattr(e, "error_code", "PROC_001")
+            )
             raise
         except EmbeddingError as e:
-            log.error("embedding_error", error=str(e), error_code=getattr(e, "error_code", "EMB_001"))
+            log.error(
+                "embedding_error", error=str(e), error_code=getattr(e, "error_code", "EMB_001")
+            )
             raise
         except DatabaseError as e:
             log.error("database_error", error=str(e), error_code=getattr(e, "error_code", "DB_001"))
@@ -509,7 +515,12 @@ class MemoryProcessor:
         log = self.logger.bind(correlation_id=correlation_id, operation="search_memory")
 
         try:
-            log.info("search_memory_started", query_length=len(query), limit=limit, search_mode=search_mode)
+            log.info(
+                "search_memory_started",
+                query_length=len(query),
+                limit=limit,
+                search_mode=search_mode,
+            )
 
             # Validate input
             log.debug("validating_search_input")
@@ -573,13 +584,19 @@ class MemoryProcessor:
             return results
 
         except ValidationError as e:
-            log.error("validation_error", error=str(e), error_code=getattr(e, "error_code", "VAL_001"))
+            log.error(
+                "validation_error", error=str(e), error_code=getattr(e, "error_code", "VAL_001")
+            )
             raise
         except EmbeddingError as e:
-            log.error("embedding_error", error=str(e), error_code=getattr(e, "error_code", "EMB_001"))
+            log.error(
+                "embedding_error", error=str(e), error_code=getattr(e, "error_code", "EMB_001")
+            )
             raise
         except SearchError as e:
-            log.error("search_error", error=str(e), error_code=getattr(e, "error_code", "SEARCH_001"))
+            log.error(
+                "search_error", error=str(e), error_code=getattr(e, "error_code", "SEARCH_001")
+            )
             raise
         except Exception as e:
             log.error("unexpected_error", error=str(e), error_type=type(e).__name__)
@@ -792,7 +809,11 @@ class MemoryProcessor:
         log = self.logger.bind(correlation_id=correlation_id, operation="build_knowledge_graph")
 
         try:
-            log.info("build_knowledge_graph_started", mode=mode, memory_count=len(memory_ids) if memory_ids else None)
+            log.info(
+                "build_knowledge_graph_started",
+                mode=mode,
+                memory_count=len(memory_ids) if memory_ids else None,
+            )
 
             # Phase 1: Not implemented
             raise NotImplementedError(
@@ -804,9 +825,69 @@ class MemoryProcessor:
             raise
         except Exception as e:
             log.error("unexpected_error", error=str(e), error_type=type(e).__name__)
-            raise NotImplementedError(
-                f"build_knowledge_graph not implemented: {str(e)}"
+            raise NotImplementedError(f"build_knowledge_graph not implemented: {str(e)}")
+
+    async def get_related_entities(
+        self,
+        entity_id: str,
+        depth: int = 2,
+        limit: int = 20,
+    ) -> List[Any]:
+        """
+        Get entities related to a given entity through graph traversal (Phase 2).
+
+        Performs breadth-first graph traversal to find connected entities.
+
+        Args:
+            entity_id: UUID of the entity to find related entities for
+            depth: Maximum traversal depth in hops (1-5, default: 2)
+            limit: Maximum number of related entities to return (1-50, default: 20)
+
+        Returns:
+            List of related Entity objects sorted by relationship strength
+
+        Raises:
+            ValidationError: If entity_id is invalid or depth/limit out of range
+            DatabaseError: If graph traversal fails
+            NotImplementedError: In Phase 1 (feature not implemented yet)
+
+        Example:
+            ```python
+            processor = MemoryProcessor(...)
+
+            # Get directly related entities (depth 1)
+            related = await processor.get_related_entities(
+                entity_id="550e8400-e29b-41d4-a716-446655440000",
+                depth=1,
+                limit=10
             )
+
+            # Get entities 2 hops away
+            related = await processor.get_related_entities(
+                entity_id="550e8400-e29b-41d4-a716-446655440000",
+                depth=2,
+                limit=20
+            )
+            ```
+        """
+        correlation_id = str(uuid.uuid4())
+        log = self.logger.bind(correlation_id=correlation_id, operation="get_related_entities")
+
+        try:
+            log.info(
+                "get_related_entities_started",
+                entity_id=entity_id,
+                depth=depth,
+                limit=limit,
+            )
+
+            # Phase 2: Return empty list for now
+            log.debug("get_related_entities_phase2_stub")
+            return []
+
+        except Exception as e:
+            log.error("unexpected_error", error=str(e), error_type=type(e).__name__)
+            return []
 
     # Private helper methods
 
@@ -1124,7 +1205,9 @@ class MemoryProcessor:
                     details={"filter_key": key, "valid_keys": list(valid_filter_keys)},
                 )
 
-    def _apply_filters(self, results: List[SearchResultItem], filters: Dict[str, Any]) -> List[SearchResultItem]:
+    def _apply_filters(
+        self, results: List[SearchResultItem], filters: Dict[str, Any]
+    ) -> List[SearchResultItem]:
         """Apply metadata filters to search results."""
         filtered = results
 

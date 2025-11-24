@@ -24,6 +24,13 @@ from mcp.types import Tool
 from zapomni_core.exceptions import ValidationError
 from zapomni_mcp.config import Settings
 from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
+from zapomni_mcp.tools.build_graph import BuildGraphTool
+from zapomni_mcp.tools.get_related import GetRelatedTool
+from zapomni_mcp.tools.graph_status import GraphStatusTool
+from zapomni_mcp.tools.export_graph import ExportGraphTool
+from zapomni_mcp.tools.index_codebase import IndexCodebaseTool
+from zapomni_mcp.tools.delete_memory import DeleteMemoryTool
+from zapomni_mcp.tools.clear_all import ClearAllTool
 
 
 # Custom Exceptions
@@ -100,9 +107,7 @@ class MCPServer:
         so only one request is processed at a time.
     """
 
-    def __init__(
-        self, core_engine: Any, config: Optional[Settings] = None
-    ) -> None:
+    def __init__(self, core_engine: Any, config: Optional[Settings] = None) -> None:
         """
         Initialize MCP server with core processing engine.
 
@@ -185,8 +190,7 @@ class MCPServer:
         # Check name format (lowercase with underscores only)
         if not re.match(r"^[a-z_][a-z0-9_]*$", tool.name):
             raise ValueError(
-                f"Tool name '{tool.name}' invalid format "
-                "(must be lowercase with underscores)"
+                f"Tool name '{tool.name}' invalid format " "(must be lowercase with underscores)"
             )
 
         # Check for duplicates
@@ -236,10 +240,28 @@ class MCPServer:
 
         # Instantiate all standard tools with MemoryProcessor
         tools = [
+            # Phase 1: Core tools
             AddMemoryTool(memory_processor=memory_processor),
             SearchMemoryTool(memory_processor=memory_processor),
             GetStatsTool(memory_processor=memory_processor),
+            # Phase 2: Enhanced Search Tools
+            BuildGraphTool(memory_processor=memory_processor),
+            GetRelatedTool(memory_processor=memory_processor),
+            GraphStatusTool(memory_processor=memory_processor),
+            # Phase 3: Code Intelligence & Memory Management Tools
+            ExportGraphTool(memory_processor=memory_processor),
+            DeleteMemoryTool(memory_processor=memory_processor),
+            ClearAllTool(memory_processor=memory_processor),
         ]
+
+        # Phase 3 (Optional): Add IndexCodebaseTool if code indexer is available
+        if hasattr(memory_processor, "code_indexer") and memory_processor.code_indexer is not None:
+            tools.append(
+                IndexCodebaseTool(
+                    repository_indexer=memory_processor.code_indexer,
+                    memory_processor=memory_processor,
+                )
+            )
 
         # Register each tool
         for tool in tools:
@@ -268,9 +290,7 @@ class MCPServer:
 
         # Check if tools are registered
         if len(self._tools) == 0:
-            raise RuntimeError(
-                "No tools registered. Call register_all_tools() first."
-            )
+            raise RuntimeError("No tools registered. Call register_all_tools() first.")
 
         # Set running state
         self._running = True
@@ -309,9 +329,7 @@ class MCPServer:
 
                     except Exception as e:
                         self._error_count += 1
-                        self._logger.error(
-                            "Tool execution error", tool=name, error=str(e)
-                        )
+                        self._logger.error("Tool execution error", tool=name, error=str(e))
                         return [{"type": "text", "text": f"Error: {str(e)}"}]
 
                 @self._server.list_tools()
@@ -379,11 +397,7 @@ class MCPServer:
         Returns:
             ServerStats object containing operational metrics
         """
-        uptime = (
-            time.time() - self._start_time
-            if self._running and self._start_time > 0
-            else 0.0
-        )
+        uptime = time.time() - self._start_time if self._running and self._start_time > 0 else 0.0
 
         return ServerStats(
             total_requests=self._request_count,

@@ -19,6 +19,16 @@ class Chunk(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+class ChunkData(BaseModel):
+    """Chunk with embedding vector."""
+    text: str = Field(..., min_length=1)
+    index: int = Field(..., ge=0)
+    start_char: Optional[int] = Field(default=None, ge=0)
+    end_char: Optional[int] = Field(default=None, ge=0)
+    embedding: List[float] = Field(..., min_length=1)
+    metadata: Optional[Dict[str, Any]] = None
+
+
 class Memory(BaseModel):
     """Complete memory with chunks, embeddings, and metadata."""
     text: str = Field(..., min_length=1, max_length=1_000_000)
@@ -84,3 +94,10 @@ class Relationship(BaseModel):
     strength: float = Field(default=1.0, ge=0.0, le=1.0)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     context: Optional[str] = None
+
+
+class MemoryResult(BaseModel):
+    """Result of memory creation operation."""
+    id: str = Field(..., min_length=1)
+    chunks_created: int = Field(..., ge=0)
+    processing_time_ms: float = Field(..., gt=0)
