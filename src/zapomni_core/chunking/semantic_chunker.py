@@ -96,7 +96,7 @@ class SemanticChunker:
         self,
         chunk_size: int = 512,
         chunk_overlap: int = 50,
-        min_chunk_size: int = 100,
+        min_chunk_size: Optional[int] = None,
         separators: Optional[List[str]] = None,
     ) -> None:
         """
@@ -105,19 +105,27 @@ class SemanticChunker:
         Args:
             chunk_size: Target chunk size in tokens (default: 512).
             chunk_overlap: Overlap between chunks in tokens (default: 50).
-            min_chunk_size: Minimum chunk size in tokens (default: 100).
+            min_chunk_size: Minimum chunk size in tokens (default: chunk_size // 5).
+                If None, computed as chunk_size // 5, with minimum of 1.
             separators: Custom separators; defaults to paragraph/sentence
                 boundaries if None.
 
         Raises:
             ValueError: If configuration values are out of allowed ranges.
         """
-        if chunk_size < 100 or chunk_size > 2048:
-            raise ValueError("chunk_size must be between 100 and 2048")
+        if chunk_size < 10 or chunk_size > 2048:
+            raise ValueError("chunk_size must be between 10 and 2048")
         if chunk_overlap < 0 or chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be >= 0 and < chunk_size")
-        if min_chunk_size < 50 or min_chunk_size > chunk_size:
-            raise ValueError("min_chunk_size must be between 50 and chunk_size")
+
+        # Use provided min_chunk_size or compute default
+        if min_chunk_size is None:
+            # Default to 100 for normal usage, or proportional for small chunk_size
+            min_chunk_size = 100 if chunk_size >= 100 else max(1, chunk_size // 5)
+        else:
+            # Explicit min_chunk_size: allow down to 1 for testing flexibility
+            if min_chunk_size < 1 or min_chunk_size > chunk_size:
+                raise ValueError("min_chunk_size must be between 1 and chunk_size")
         if separators is not None and len(separators) == 0:
             raise ValueError("separators cannot be empty")
 
@@ -297,16 +305,23 @@ class SemanticChunker:
 
         while i < len(chunks):
             current = chunks[i]
-            current_tokens = self._count_tokens(current.text)
-
+            # Use character length as the primary measure for merge decisions
+            # This is more reliable when chunks have position metadata
+            chunk_size = len(current.text)
             is_last = i == len(chunks) - 1
 
-            if current_tokens >= self.min_chunk_size or (len(chunks) == 1):
+            # Determine if chunk is large enough
+            chunk_is_large = chunk_size >= self.min_chunk_size
+
+            # If current chunk is large enough, append as-is
+            if chunk_is_large:
                 merged.append(current)
                 i += 1
                 continue
 
+            # Current chunk is small
             if not is_last:
+                # Merge with next chunk (regardless of next chunk size)
                 next_chunk = chunks[i + 1]
                 merged_text = current.text + next_chunk.text
                 merged_chunk = Chunk(
@@ -316,8 +331,8 @@ class SemanticChunker:
                     end_char=next_chunk.end_char,
                     metadata=(current.metadata or {}) | (next_chunk.metadata or {}),
                 )
-                chunks[i + 1] = merged_chunk
-                i += 1
+                merged.append(merged_chunk)
+                i += 2  # Skip both current and next chunk - they've been merged
             else:
                 # Last chunk is small: merge with previous merged chunk if possible
                 if merged:
@@ -332,6 +347,7 @@ class SemanticChunker:
                     )
                     merged.append(merged_chunk)
                 else:
+                    # No previous chunk, so append current as-is (even though small)
                     merged.append(current)
                 i += 1
 

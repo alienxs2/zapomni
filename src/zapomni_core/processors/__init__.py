@@ -38,6 +38,7 @@ from zapomni_core.processors.code_processor import (
     validate_syntax,
 )
 from zapomni_core.processors.docx_processor import DOCXProcessor
+from zapomni_core.processors.processor_factory import ProcessorFactory
 
 __all__ = [
     "TextProcessor",
@@ -45,6 +46,7 @@ __all__ = [
     "PDFProcessor",
     "MarkdownProcessor",
     "DOCXProcessor",
+    "ProcessorFactory",
     "extract_classes",
     "extract_functions",
     "extract_imports",

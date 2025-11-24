@@ -1,89 +1,370 @@
 """
-SearchMemory MCP Tool - Placeholder Implementation.
+SearchMemory MCP Tool - Full Implementation.
 
-Searches for relevant information in memory. Currently returns
-empty results until full ZapomniCore integration is complete.
+Searches for relevant information in memory using semantic similarity.
+Delegates to MemoryProcessor for all search operations.
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+import structlog
+from pydantic import ValidationError, BaseModel, StringConstraints, ConfigDict
+from typing_extensions import Annotated
+
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_core.exceptions import (
+    ValidationError as CoreValidationError,
+    SearchError,
+    EmbeddingError,
+    DatabaseError,
+)
+
+
+logger = structlog.get_logger(__name__)
+
+
+class SearchMemoryRequest(BaseModel):
+    """Pydantic model for validating search_memory request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: Annotated[str, StringConstraints(min_length=1, max_length=1000)]
+    limit: int = 10
+    filters: Optional[Dict[str, Any]] = None
 
 
 class SearchMemoryTool:
     """
     MCP tool for searching memories.
 
-    This is a placeholder implementation that validates input
-    and returns empty results. Full implementation will delegate
-    to ZapomniCore.search_memory().
+    This tool validates input, delegates to MemoryProcessor.search_memory(),
+    and formats the response according to MCP protocol.
+
+    Attributes:
+        name: Tool identifier ("search_memory")
+        description: Human-readable tool description
+        input_schema: JSON Schema for input validation
+        memory_processor: MemoryProcessor instance for searching
+        logger: Structured logger for operations
     """
 
     name = "search_memory"
-    description = "Search for relevant information in memory"
+    description = (
+        "Search your personal memory graph for information. "
+        "Performs semantic search to find relevant memories based on meaning, "
+        "not just keyword matching. Returns ranked results with similarity scores. "
+        "Use this when you need to recall previously stored information."
+    )
     input_schema = {
         "type": "object",
         "properties": {
             "query": {
                 "type": "string",
-                "description": "The search query",
+                "description": (
+                    "Natural language search query (e.g., 'information about Python', "
+                    "'my notes on machine learning', 'what did I learn about Docker?')"
+                ),
+                "minLength": 1,
+                "maxLength": 1000,
             },
             "limit": {
                 "type": "integer",
-                "description": "Maximum number of results to return",
+                "description": "Maximum number of results to return (default: 10, max: 100)",
+                "default": 10,
                 "minimum": 1,
                 "maximum": 100,
-                "default": 10,
             },
             "filters": {
                 "type": "object",
-                "description": "Optional filters (tags, date range, etc.)",
+                "description": (
+                    "Optional metadata filters to narrow results. "
+                    "Supported keys: 'tags' (list), 'source' (string), "
+                    "'date_from' (ISO date), 'date_to' (ISO date)"
+                ),
                 "properties": {
-                    "tags": {"type": "array", "items": {"type": "string"}},
-                    "min_relevance": {"type": "number", "minimum": 0, "maximum": 1},
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Only return memories with these tags",
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Only return memories from this source",
+                    },
+                    "date_from": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Only memories created after this date (YYYY-MM-DD)",
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Only memories created before this date (YYYY-MM-DD)",
+                    },
                 },
+                "additionalProperties": False,
             },
         },
         "required": ["query"],
     }
 
-    def __init__(self, core: Any):
+    def __init__(self, memory_processor: MemoryProcessor) -> None:
         """
-        Initialize tool with core engine.
+        Initialize SearchMemoryTool with MemoryProcessor.
 
         Args:
-            core: ZapomniCore instance (placeholder for now)
+            memory_processor: MemoryProcessor instance for executing searches.
+                Must be initialized and connected to database.
+
+        Raises:
+            TypeError: If memory_processor is not a MemoryProcessor instance
+
+        Example:
+            >>> processor = MemoryProcessor(...)
+            >>> tool = SearchMemoryTool(memory_processor=processor)
         """
-        self.core = core
+        if not isinstance(memory_processor, MemoryProcessor):
+            raise TypeError(
+                f"memory_processor must be MemoryProcessor instance, got {type(memory_processor)}"
+            )
+
+        self.memory_processor = memory_processor
+        self.logger = logger.bind(tool=self.name)
+
+        self.logger.info("search_memory_tool_initialized")
 
     async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute search_memory operation.
+        Execute search_memory tool with provided arguments.
+
+        This is the main entry point called by the MCP server when a client
+        invokes the search_memory tool.
 
         Args:
-            arguments: Dict with 'query' (required), 'limit' and 'filters' (optional)
+            arguments: Dictionary containing:
+                - query (str, required): Search query
+                - limit (int, optional): Max results (default: 10)
+                - filters (dict, optional): Metadata filters
 
         Returns:
-            MCP response with search results
+            MCP-formatted response dictionary
+
+        Example:
+            >>> result = await tool.execute({
+            ...     "query": "Python programming",
+            ...     "limit": 5
+            ... })
+            >>> print(result["isError"])
+            False
+        """
+        request_id = id(arguments)  # Simple request ID for logging
+        log = self.logger.bind(request_id=request_id)
+
+        try:
+            # Step 1: Validate input
+            log.info("validating_arguments")
+            request = self._validate_input(arguments)
+
+            # Step 2: Execute search
+            log.info(
+                "executing_search",
+                query_length=len(request.query),
+                limit=request.limit,
+                has_filters=request.filters is not None,
+            )
+            results = await self.memory_processor.search_memory(
+                query=request.query,
+                limit=request.limit,
+                filters=request.filters,
+            )
+
+            # Step 3: Format response
+            log.info("search_completed", result_count=len(results))
+            return self._format_response(results)
+
+        except (ValidationError, CoreValidationError) as e:
+            # Input validation failed
+            log.warning("validation_error", error=str(e))
+            return self._format_error(e)
+
+        except (SearchError, EmbeddingError, DatabaseError) as e:
+            # Search or processing error
+            log.error(
+                "search_error",
+                error_type=type(e).__name__,
+                error=str(e),
+                exc_info=True,
+            )
+            return self._format_error(e)
+
+        except Exception as e:
+            # Unexpected error
+            log.error(
+                "unexpected_error",
+                error_type=type(e).__name__,
+                error=str(e),
+                exc_info=True,
+            )
+            return self._format_error(e)
+
+    def _validate_input(self, arguments: Dict[str, Any]) -> SearchMemoryRequest:
+        """
+        Validate and parse tool arguments into SearchMemoryRequest model.
+
+        Args:
+            arguments: Raw arguments dictionary from MCP client
+
+        Returns:
+            SearchMemoryRequest: Validated request model
 
         Raises:
-            KeyError: If required 'query' argument missing
+            ValidationError: If arguments don't match schema
         """
-        query = arguments["query"]  # Required
-        limit = arguments.get("limit", 10)
-        filters = arguments.get("filters", {})
+        # Validate using Pydantic model
+        try:
+            request = SearchMemoryRequest(**arguments)
+        except ValidationError as e:
+            # Re-raise as is for handling upstream
+            raise
 
-        # Placeholder: Return empty results
-        # TODO: Replace with actual core.search_memory(query, limit, filters) call
-        results = []
+        # Additional validation: query cannot be empty or whitespace only
+        if not request.query or not request.query.strip():
+            raise ValidationError.from_exception_data(
+                "SearchMemoryRequest",
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("query",),
+                        "msg": "query cannot be empty or contain only whitespace",
+                        "input": arguments.get("query", ""),
+                    }
+                ],
+            )
+
+        # Additional validation: limit bounds
+        if request.limit < 1:
+            raise ValidationError.from_exception_data(
+                "SearchMemoryRequest",
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("limit",),
+                        "msg": "limit must be at least 1",
+                        "input": arguments.get("limit", 1),
+                    }
+                ],
+            )
+        if request.limit > 100:
+            raise ValidationError.from_exception_data(
+                "SearchMemoryRequest",
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("limit",),
+                        "msg": "limit cannot exceed 100",
+                        "input": arguments.get("limit", 100),
+                    }
+                ],
+            )
+
+        return request
+
+    def _format_response(self, results: list) -> Dict[str, Any]:
+        """
+        Format search results as MCP response.
+
+        Args:
+            results: List of SearchResultItem objects from processor
+
+        Returns:
+            MCP response dictionary
+        """
+        if not results:
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "No results found matching your query.",
+                    }
+                ],
+                "isError": False,
+            }
+
+        # Build formatted text response
+        lines = [f"Found {len(results)} results:\n"]
+
+        for i, result in enumerate(results, start=1):
+            # Format: "N. [Score: 0.XX] text excerpt"
+            score = f"{result.similarity_score:.2f}"
+            text_preview = result.text[:200]  # First 200 chars
+            if len(result.text) > 200:
+                text_preview += "..."
+
+            # Include tags if present
+            tags_str = ""
+            if result.tags:
+                tags_str = f" [Tags: {', '.join(result.tags)}]"
+
+            lines.append(
+                f"\n{i}. [Score: {score}]{tags_str}\n{text_preview}\n"
+            )
+
+        formatted_text = "".join(lines)
 
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": f"Search completed. Found {len(results)} results for query: '{query}'",
+                    "text": formatted_text,
                 }
             ],
             "isError": False,
+        }
+
+    def _format_error(self, error: Exception) -> Dict[str, Any]:
+        """
+        Format exception into MCP error response.
+
+        Args:
+            error: Exception that occurred during execution
+
+        Returns:
+            MCP error response dictionary
+        """
+        # Determine error message based on exception type
+        if isinstance(error, (ValidationError, CoreValidationError)):
+            # Extract field-level errors if available
+            if hasattr(error, "errors"):
+                error_msgs = []
+                for err in error.errors():
+                    field = ".".join(str(loc) for loc in err["loc"])
+                    message = err["msg"]
+                    error_msgs.append(f"{field}: {message}")
+                error_msg = f"Invalid input - {'; '.join(error_msgs)}"
+            else:
+                error_msg = f"Invalid input: {str(error)}"
+
+        elif isinstance(error, SearchError):
+            error_msg = f"Search failed: {str(error)}"
+
+        elif isinstance(error, EmbeddingError):
+            error_msg = "Failed to process search query. Please try again."
+
+        elif isinstance(error, DatabaseError):
+            error_msg = "Database error during search. Please try again."
+
+        else:
+            # Unknown error - generic message for security
+            error_msg = "An unexpected error occurred during search."
+
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: {error_msg}",
+                }
+            ],
+            "isError": True,
         }

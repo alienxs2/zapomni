@@ -47,13 +47,17 @@ class Memory(BaseModel):
 class SearchResult:
     """Single search result from vector similarity search."""
     memory_id: str
-    chunk_id: str
-    text: str
-    similarity_score: float
-    tags: List[str]
-    source: str
-    timestamp: datetime
-    chunk_index: int
+    content: str
+    relevance_score: float
+    metadata: Optional[Dict[str, Any]] = None
+    # Legacy fields for backward compatibility
+    chunk_id: Optional[str] = None
+    text: Optional[str] = None
+    similarity_score: Optional[float] = None
+    tags: Optional[List[str]] = None
+    source: Optional[str] = None
+    timestamp: Optional[datetime] = None
+    chunk_index: Optional[int] = None
 
 
 @dataclass

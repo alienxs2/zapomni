@@ -159,6 +159,7 @@ class MCPServer:
             "MCPServer initialized",
             server_name=self._config.server_name,
             log_level=self._config.log_level,
+            core_engine_type=type(core_engine).__name__,
         )
 
     def register_tool(self, tool: MCPTool) -> None:
@@ -201,7 +202,7 @@ class MCPServer:
 
         self._logger.info("Tool registered", tool_name=tool.name)
 
-    def register_all_tools(self) -> None:
+    def register_all_tools(self, memory_processor: Optional[Any] = None) -> None:
         """
         Register all standard Zapomni MCP tools.
 
@@ -210,15 +211,34 @@ class MCPServer:
         - search_memory: Retrieve relevant information
         - get_stats: Query system statistics
 
+        Args:
+            memory_processor: Optional MemoryProcessor instance.
+                If None, attempts to use self._core_engine if it's a MemoryProcessor.
+                If provided, uses this instance for all tools.
+
         Raises:
             ValueError: If any tool name conflicts
+            TypeError: If memory_processor type is invalid
             ImportError: If tool modules cannot be imported
         """
-        # Instantiate all standard tools
+        # Determine which processor to use
+        if memory_processor is None:
+            # Try to use core_engine if it's a MemoryProcessor
+            from zapomni_core.memory_processor import MemoryProcessor
+
+            if isinstance(self._core_engine, MemoryProcessor):
+                memory_processor = self._core_engine
+            else:
+                raise TypeError(
+                    f"core_engine must be MemoryProcessor or memory_processor must be provided, "
+                    f"got {type(self._core_engine).__name__}"
+                )
+
+        # Instantiate all standard tools with MemoryProcessor
         tools = [
-            AddMemoryTool(core=self._core_engine),
-            SearchMemoryTool(core=self._core_engine),
-            GetStatsTool(core=self._core_engine),
+            AddMemoryTool(memory_processor=memory_processor),
+            SearchMemoryTool(memory_processor=memory_processor),
+            GetStatsTool(memory_processor=memory_processor),
         ]
 
         # Register each tool
@@ -226,7 +246,9 @@ class MCPServer:
             self.register_tool(tool)
 
         self._logger.info(
-            "All tools registered successfully", tool_count=len(self._tools)
+            "All tools registered successfully",
+            tool_count=len(self._tools),
+            tools=list(self._tools.keys()),
         )
 
     async def run(self) -> None:

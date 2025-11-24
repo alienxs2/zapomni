@@ -38,6 +38,22 @@ from .logging_service import (
     LoggingConfig,
 )
 
+def __getattr__(name):
+    """Lazy import for components to avoid circular imports."""
+    if name == "code_processor":
+        from .processors import code_processor
+        return code_processor
+    elif name == "MemoryProcessor":
+        from .memory_processor import MemoryProcessor
+        return MemoryProcessor
+    elif name == "ProcessorConfig":
+        from .memory_processor import ProcessorConfig
+        return ProcessorConfig
+    elif name == "SearchResultItem":
+        from .memory_processor import SearchResultItem
+        return SearchResultItem
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 __all__ = [
     # Exceptions
     "ZapomniError",
@@ -58,4 +74,10 @@ __all__ = [
     # Logging
     "LoggingService",
     "LoggingConfig",
+    # Memory Processor
+    "MemoryProcessor",
+    "ProcessorConfig",
+    "SearchResultItem",
+    # Processors
+    "code_processor",
 ]

@@ -49,9 +49,9 @@ class TestSemanticChunkerInit:
         assert chunker.separators == ["\n\n", "\n"]
 
     def test_init_chunk_size_too_small_raises(self) -> None:
-        """chunk_size < 100 should raise ValueError."""
+        """chunk_size < 10 should raise ValueError."""
         with pytest.raises(ValueError):
-            SemanticChunker(chunk_size=99)
+            SemanticChunker(chunk_size=9)
 
     def test_init_chunk_size_too_large_raises(self) -> None:
         """chunk_size > 2048 should raise ValueError."""
@@ -69,9 +69,9 @@ class TestSemanticChunkerInit:
             SemanticChunker(chunk_size=256, chunk_overlap=256)
 
     def test_init_min_chunk_size_too_small_raises(self) -> None:
-        """min_chunk_size < 50 should raise ValueError."""
+        """min_chunk_size < 1 should raise ValueError."""
         with pytest.raises(ValueError):
-            SemanticChunker(min_chunk_size=49)
+            SemanticChunker(min_chunk_size=0)
 
     def test_init_min_chunk_size_too_large_raises(self) -> None:
         """min_chunk_size > chunk_size should raise ValueError."""

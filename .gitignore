@@ -2,3 +2,42 @@
 __pycache__/
 *.pyc
 .coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Internal documentation - not for public distribution
+.internal/
+
+# Development tools
+.codex/
+
+# Python cache and build
+*.so
+*.dylib
+
+# Virtual environments
+.env
+.env.local
+env/
+
+# Testing
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

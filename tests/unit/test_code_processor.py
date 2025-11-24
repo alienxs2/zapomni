@@ -98,6 +98,11 @@ from .sub import helper
     assert parsed["imports"] == imports
     assert parsed["functions"] == []
     assert parsed["classes"] == []
+    assert parsed["import_details"] == [
+        {"statement": "import os", "lineno": 2},
+        {"statement": "from typing import List as L, Dict", "lineno": 3},
+        {"statement": "from .sub import helper", "lineno": 4},
+    ]
 
 
 def test_validate_syntax_and_syntax_error_propagation():

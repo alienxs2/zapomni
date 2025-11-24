@@ -1,0 +1,203 @@
+{
+  "comment": "Zapomni MCP Client Configuration Example",
+  "description": "Add this configuration to your Claude CLI or IDE to enable Zapomni memory",
+  "version": "1.0",
+  "mcpServers": {
+    "zapomni": {
+      "command": "python",
+      "args": ["-m", "zapomni_mcp.server"],
+      "description": "Local-first MCP memory system for AI agents",
+      "env": {
+        "FALKORDB_HOST": "localhost",
+        "FALKORDB_PORT": "6379",
+        "FALKORDB_DB": "0",
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
+        "LOG_LEVEL": "INFO",
+        "DEBUG": "false"
+      },
+      "timeout": 30000
+    }
+  },
+  "configurationGuides": {
+    "claude_desktop": {
+      "path": "~/.config/Claude/claude_desktop_config.json",
+      "example": {
+        "mcpServers": {
+          "zapomni": {
+            "command": "python",
+            "args": ["-m", "zapomni_mcp.server"]
+          }
+        }
+      }
+    },
+    "cursor": {
+      "path": ".cursor/config.json",
+      "example": {
+        "mcpServers": {
+          "zapomni": {
+            "command": "python",
+            "args": ["-m", "zapomni_mcp.server"]
+          }
+        }
+      }
+    },
+    "cline": {
+      "path": ".vscode/settings.json",
+      "example": {
+        "cline.mcpServers": {
+          "zapomni": {
+            "command": "python",
+            "args": ["-m", "zapomni_mcp.server"]
+          }
+        }
+      }
+    }
+  },
+  "environmentVariables": {
+    "FALKORDB_HOST": {
+      "default": "localhost",
+      "description": "FalkorDB server host",
+      "required": false
+    },
+    "FALKORDB_PORT": {
+      "default": "6379",
+      "description": "FalkorDB server port",
+      "required": false
+    },
+    "FALKORDB_DB": {
+      "default": "0",
+      "description": "FalkorDB database number",
+      "required": false
+    },
+    "FALKORDB_PASSWORD": {
+      "default": "null",
+      "description": "FalkorDB password (if required)",
+      "required": false
+    },
+    "OLLAMA_BASE_URL": {
+      "default": "http://localhost:11434",
+      "description": "Ollama API base URL",
+      "required": false
+    },
+    "OLLAMA_EMBEDDING_MODEL": {
+      "default": "nomic-embed-text",
+      "description": "Model for embedding generation",
+      "options": [
+        "nomic-embed-text",
+        "all-minilm",
+        "mxbai-embed-large"
+      ],
+      "required": false
+    },
+    "OLLAMA_LLM_MODEL": {
+      "default": "llama2",
+      "description": "Model for LLM reasoning",
+      "options": [
+        "llama2",
+        "neural-chat",
+        "mistral",
+        "dolphin-mixtral"
+      ],
+      "required": false
+    },
+    "MAX_CHUNK_SIZE": {
+      "default": "512",
+      "description": "Maximum size of text chunks (in tokens)",
+      "required": false
+    },
+    "CHUNK_OVERLAP": {
+      "default": "50",
+      "description": "Overlap between chunks (in tokens)",
+      "required": false
+    },
+    "SEARCH_LIMIT": {
+      "default": "10",
+      "description": "Default number of search results",
+      "required": false
+    },
+    "CACHE_TTL": {
+      "default": "300",
+      "description": "Cache time-to-live in seconds",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "default": "INFO",
+      "description": "Logging level",
+      "options": [
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL"
+      ],
+      "required": false
+    },
+    "DEBUG": {
+      "default": "false",
+      "description": "Enable debug mode",
+      "required": false
+    }
+  },
+  "setupSteps": [
+    {
+      "step": 1,
+      "description": "Install Ollama",
+      "command": "curl -fsSL https://ollama.com/install.sh | sh"
+    },
+    {
+      "step": 2,
+      "description": "Pull embedding model",
+      "command": "ollama pull nomic-embed-text"
+    },
+    {
+      "step": 3,
+      "description": "Pull LLM model",
+      "command": "ollama pull llama2"
+    },
+    {
+      "step": 4,
+      "description": "Start Zapomni services",
+      "command": "cd /path/to/zapomni && docker-compose up -d"
+    },
+    {
+      "step": 5,
+      "description": "Add configuration to your MCP client",
+      "file": "See paths above for your specific client"
+    }
+  ],
+  "troubleshooting": {
+    "connection_refused": {
+      "problem": "Cannot connect to FalkorDB",
+      "solutions": [
+        "Verify docker-compose is running: docker-compose ps",
+        "Check FalkorDB logs: docker-compose logs falkordb",
+        "Ensure port 6379 is not blocked"
+      ]
+    },
+    "ollama_not_found": {
+      "problem": "Cannot connect to Ollama",
+      "solutions": [
+        "Verify Ollama is running: curl http://localhost:11434/api/tags",
+        "Install Ollama from https://ollama.com",
+        "Check OLLAMA_BASE_URL environment variable"
+      ]
+    },
+    "embedding_timeout": {
+      "problem": "Embedding generation takes too long",
+      "solutions": [
+        "Use faster model: OLLAMA_EMBEDDING_MODEL=all-minilm",
+        "Reduce chunk size: MAX_CHUNK_SIZE=256",
+        "Increase timeout in configuration"
+      ]
+    },
+    "memory_issues": {
+      "problem": "High memory usage",
+      "solutions": [
+        "Reduce cache size: CACHE_TTL=60",
+        "Lower max concurrent tasks",
+        "Use smaller embedding model"
+      ]
+    }
+  }
+}

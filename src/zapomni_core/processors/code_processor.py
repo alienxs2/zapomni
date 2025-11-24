@@ -180,18 +180,36 @@ def _format_import(node: Union[ast.Import, ast.ImportFrom], code: str) -> str:
     return ast.unparse(node)
 
 
+class _ImportCollector(ast.NodeVisitor):
+    def __init__(self, code: str) -> None:
+        self.code = code
+        self.statements: List[str] = []
+        self.details: List[Dict[str, Any]] = []
+
+    def _record(self, node: Union[ast.Import, ast.ImportFrom]) -> None:
+        statement = _format_import(node, self.code)
+        self.statements.append(statement)
+        self.details.append({"statement": statement, "lineno": node.lineno})
+
+    def visit_Import(self, node: ast.Import) -> None:
+        self._record(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        self._record(node)
+
+
+def _collect_import_metadata(tree: ast.Module, code: str) -> _ImportCollector:
+    collector = _ImportCollector(code)
+    collector.visit(tree)
+    return collector
+
+
 def _collect_imports(tree: ast.Module, code: str) -> List[str]:
-    imports: List[str] = []
+    return _collect_import_metadata(tree, code).statements
 
-    class ImportVisitor(ast.NodeVisitor):
-        def visit_Import(self, node: ast.Import) -> None:
-            imports.append(_format_import(node, code))
 
-        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-            imports.append(_format_import(node, code))
-
-    ImportVisitor().visit(tree)
-    return imports
+def _collect_import_details(tree: ast.Module, code: str) -> List[Dict[str, Any]]:
+    return _collect_import_metadata(tree, code).details
 
 
 def parse_python(code: str) -> Dict[str, Any]:
@@ -205,6 +223,7 @@ def parse_python(code: str) -> Dict[str, Any]:
         "functions": _collect_functions(tree),
         "classes": _collect_classes(tree),
         "imports": _collect_imports(tree, code),
+        "import_details": _collect_import_details(tree, code),
     }
 
 

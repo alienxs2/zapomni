@@ -286,7 +286,7 @@ class FalkorDBClient:
             id: $memory_id,
             text: $text,
             metadata: $metadata,
-            created_at: datetime($timestamp)
+            created_at: $timestamp
         })
 
         // Create Chunk nodes with embeddings
@@ -617,7 +617,7 @@ class FalkorDBClient:
             e.type = $type,
             e.description = $description,
             e.confidence = $confidence,
-            e.updated_at = datetime($timestamp)
+            e.updated_at = $timestamp
         RETURN e.id AS entity_id
         """
 
@@ -700,21 +700,9 @@ class FalkorDBClient:
 
         relationship_id = str(uuid.uuid4())
 
-        cypher = """
-        MATCH (from:Entity {id: $from_id})
-        MATCH (to:Entity {id: $to_id})
-        CREATE (from)-[r:$rel_type {
-            id: $rel_id,
-            strength: $strength,
-            confidence: $confidence,
-            context: $context,
-            created_at: datetime($timestamp)
-        }]->(to)
-        RETURN r.id AS relationship_id
-        """
-
         # Note: Cypher doesn't support parameterized relationship types in this way
         # We need to use string interpolation for the relationship type
+        # Also: FalkorDB doesn't support datetime() function - use ISO format string instead
         cypher = f"""
         MATCH (from:Entity {{id: $from_id}})
         MATCH (to:Entity {{id: $to_id}})
@@ -723,7 +711,7 @@ class FalkorDBClient:
             strength: $strength,
             confidence: $confidence,
             context: $context,
-            created_at: datetime($timestamp)
+            created_at: $timestamp
         }}]->(to)
         RETURN r.id AS relationship_id
         """

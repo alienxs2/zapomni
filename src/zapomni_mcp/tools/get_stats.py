@@ -1,68 +1,232 @@
 """
-GetStats MCP Tool - Placeholder Implementation.
+GetStats MCP Tool - Full Implementation.
 
-Returns memory system statistics. Currently returns dummy stats
-until full ZapomniCore integration is complete.
+Retrieves memory system statistics including memory count, chunks, database size, and performance metrics.
+Delegates to MemoryProcessor for all statistics operations.
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
 from typing import Any, Dict
+import structlog
+
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_core.exceptions import DatabaseError
+
+
+logger = structlog.get_logger(__name__)
 
 
 class GetStatsTool:
     """
     MCP tool for retrieving system statistics.
 
-    This is a placeholder implementation that returns basic stats.
-    Full implementation will delegate to ZapomniCore.get_stats().
+    This tool delegates to MemoryProcessor.get_stats() to retrieve
+    comprehensive system statistics and formats them for display.
+
+    Attributes:
+        name: Tool identifier ("get_stats")
+        description: Human-readable tool description
+        input_schema: JSON Schema for input validation (empty - no params)
+        memory_processor: MemoryProcessor instance for retrieving stats
+        logger: Structured logger for operations
     """
 
     name = "get_stats"
-    description = "Get memory system statistics"
+    description = (
+        "Get statistics about the memory system including total memories, "
+        "chunks, database size, and performance metrics."
+    )
     input_schema = {
         "type": "object",
-        "properties": {},  # No arguments required
+        "properties": {},  # No properties - tool takes no arguments
+        "required": [],  # No required fields
+        "additionalProperties": False,
     }
 
-    def __init__(self, core: Any):
+    def __init__(self, memory_processor: MemoryProcessor) -> None:
         """
-        Initialize tool with core engine.
+        Initialize GetStatsTool with MemoryProcessor.
 
         Args:
-            core: ZapomniCore instance (placeholder for now)
+            memory_processor: MemoryProcessor instance for retrieving statistics.
+                Must be initialized and connected to database.
+
+        Raises:
+            TypeError: If memory_processor is not a MemoryProcessor instance
+
+        Example:
+            >>> processor = MemoryProcessor(...)
+            >>> tool = GetStatsTool(memory_processor=processor)
         """
-        self.core = core
+        if not isinstance(memory_processor, MemoryProcessor):
+            raise TypeError(
+                f"memory_processor must be MemoryProcessor instance, got {type(memory_processor)}"
+            )
+
+        self.memory_processor = memory_processor
+        self.logger = logger.bind(tool=self.name)
+
+        self.logger.info("get_stats_tool_initialized")
 
     async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute get_stats operation.
+        Execute get_stats tool and return system statistics.
+
+        This method retrieves statistics from the memory processor and formats
+        them into an MCP-compliant response. Since this tool requires no
+        parameters, the arguments dict is expected to be empty (but is
+        accepted for consistency with the MCP tool interface).
 
         Args:
-            arguments: Empty dict (no arguments required)
+            arguments: Dictionary of arguments (should be empty {}).
+                Any provided arguments are ignored as per tool spec.
 
         Returns:
-            MCP response with system statistics
-        """
-        # Placeholder: Return dummy stats
-        # TODO: Replace with actual core.get_stats() call
-        stats = {
-            "total_memories": 0,
-            "total_chunks": 0,
-            "graph_nodes": 0,
-            "graph_edges": 0,
-            "embedding_model": "nomic-embed-text:latest",
-            "status": "operational",
-        }
+            Dictionary in MCP response format:
+            {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Formatted statistics string"
+                    }
+                ],
+                "isError": False
+            }
 
-        stats_text = "\n".join([f"{k}: {v}" for k, v in stats.items()])
+        Example:
+            >>> tool = GetStatsTool(memory_processor=processor)
+            >>> result = await tool.execute({})
+            >>> print(result["isError"])
+            False
+        """
+        log = self.logger.bind(request_id=id(arguments))
+
+        try:
+            # Validate arguments (should be empty dict, but accept any)
+            if not isinstance(arguments, dict):
+                log.warning(
+                    "get_stats_invalid_arguments_type",
+                    type=type(arguments).__name__,
+                )
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Error: Arguments must be a dictionary (expected empty {})",
+                        }
+                    ],
+                    "isError": True,
+                }
+
+            # Retrieve statistics from memory processor
+            log.info("get_stats_requested")
+            stats = await self.memory_processor.get_stats()
+            log.debug("stats_retrieved", stats_keys=list(stats.keys()))
+
+            # Format response
+            response = self._format_response(stats)
+            log.info("get_stats_success", stats_keys=list(stats.keys()))
+
+            return response
+
+        except DatabaseError as e:
+            # Database error
+            log.error(
+                "get_stats_database_error",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Error: Failed to retrieve statistics - {str(e)}",
+                    }
+                ],
+                "isError": True,
+            }
+
+        except Exception as e:
+            # Unexpected error
+            log.error(
+                "get_stats_unexpected_error",
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Error: An unexpected error occurred while retrieving statistics",
+                    }
+                ],
+                "isError": True,
+            }
+
+    def _format_response(self, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format raw statistics into MCP response structure.
+
+        Transforms the statistics dictionary from memory processor into a
+        human-readable formatted text response suitable for display.
+
+        Args:
+            stats: Statistics dictionary from MemoryProcessor.get_stats()
+                Expected keys:
+                - total_memories: int (required)
+                - total_chunks: int (required)
+                - database_size_mb: float (required)
+                - avg_chunks_per_memory: float (required)
+                - avg_query_latency_ms: int (optional)
+                - cache_hit_rate: float (optional, 0.0-1.0)
+                - total_entities: int (optional)
+                - total_relationships: int (optional)
+
+        Returns:
+            MCP response dictionary with formatted text content
+        """
+        # Build formatted text output
+        lines = ["Memory System Statistics:"]
+
+        # Required fields (always present)
+        lines.append(f"Total Memories: {stats.get('total_memories', 0):,}")
+        lines.append(f"Total Chunks: {stats.get('total_chunks', 0):,}")
+        lines.append(f"Database Size: {stats.get('database_size_mb', 0.0):.2f} MB")
+        lines.append(
+            f"Average Chunks per Memory: {stats.get('avg_chunks_per_memory', 0.0):.1f}"
+        )
+
+        # Optional fields (only if present and not None)
+        if "total_entities" in stats and stats["total_entities"] is not None:
+            lines.append(f"Total Entities: {stats['total_entities']:,}")
+
+        if "total_relationships" in stats and stats["total_relationships"] is not None:
+            lines.append(f"Total Relationships: {stats['total_relationships']:,}")
+
+        if "cache_hit_rate" in stats and stats["cache_hit_rate"] is not None:
+            hit_rate_pct = stats["cache_hit_rate"] * 100
+            lines.append(f"Cache Hit Rate: {hit_rate_pct:.1f}%")
+
+        if "avg_query_latency_ms" in stats and stats["avg_query_latency_ms"] is not None:
+            lines.append(f"Avg Query Latency: {stats['avg_query_latency_ms']:.1f} ms")
+
+        if "oldest_memory_date" in stats and stats["oldest_memory_date"] is not None:
+            lines.append(f"Oldest Memory: {stats['oldest_memory_date']}")
+
+        if "newest_memory_date" in stats and stats["newest_memory_date"] is not None:
+            lines.append(f"Newest Memory: {stats['newest_memory_date']}")
+
+        # Join into single text block
+        formatted_text = "\n".join(lines)
 
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": f"Memory System Statistics:\n{stats_text}",
+                    "text": formatted_text,
                 }
             ],
             "isError": False,

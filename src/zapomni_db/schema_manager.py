@@ -321,13 +321,16 @@ class SchemaManager:
 
         try:
             # Query all indexes
-            result = self.graph.query("SHOW INDEXES")
             existing_indexes: Dict[str, List[Any]] = {}
-
-            if result.result_set:
-                for row in result.result_set:
-                    index_name = row[0]
-                    existing_indexes[index_name] = row
+            try:
+                result = self.graph.query("SHOW INDEXES")
+                if result.result_set:
+                    for row in result.result_set:
+                        index_name = row[0]
+                        existing_indexes[index_name] = row
+            except Exception:
+                # FalkorDB may not support SHOW INDEXES, assume no indexes exist
+                self.logger.debug("Could not query indexes, assuming none exist")
 
             # Check vector index
             if self.INDEX_VECTOR in existing_indexes:
@@ -443,18 +446,22 @@ class SchemaManager:
             self._execute_cypher("MATCH (n) DETACH DELETE n")
 
             # Drop all indexes (query for existing indexes first)
-            result = self.graph.query("SHOW INDEXES")
-            if result.result_set:
-                for row in result.result_set:
-                    index_name = row[0]
-                    try:
-                        self._execute_cypher(f"DROP INDEX {index_name}")
-                    except Exception as e:
-                        self.logger.warning(
-                            "Failed to drop index",
-                            index_name=index_name,
-                            error=str(e)
-                        )
+            try:
+                result = self.graph.query("SHOW INDEXES")
+                if result.result_set:
+                    for row in result.result_set:
+                        index_name = row[0]
+                        try:
+                            self._execute_cypher(f"DROP INDEX {index_name}")
+                        except Exception as e:
+                            self.logger.warning(
+                                "Failed to drop index",
+                                index_name=index_name,
+                                error=str(e)
+                            )
+            except Exception as e:
+                # FalkorDB may not support SHOW INDEXES, skip index dropping
+                self.logger.debug("Could not query indexes for dropping", error=str(e))
 
             # Reset initialized flag
             self.initialized = False
@@ -481,7 +488,7 @@ class SchemaManager:
             DatabaseError: If query fails
         """
         try:
-            result = self.graph.query(f"SHOW INDEXES")
+            result = self.graph.query("SHOW INDEXES")
             if result.result_set:
                 for row in result.result_set:
                     if row[0] == index_name:
@@ -489,7 +496,9 @@ class SchemaManager:
             return False
 
         except Exception as e:
-            raise DatabaseError(f"Failed to check index existence: {str(e)}") from e
+            # FalkorDB may not support SHOW INDEXES, return False to allow creation to proceed
+            self.logger.debug("Index check failed, assuming index does not exist", error=str(e), index_name=index_name)
+            return False
 
     def _execute_cypher(
         self,
