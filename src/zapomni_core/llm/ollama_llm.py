@@ -14,13 +14,14 @@ License: MIT
 import asyncio
 import json
 import re
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import httpx
 import structlog
 
-from zapomni_core.exceptions import ExtractionError, ValidationError, TimeoutError
+from zapomni_core.exceptions import ExtractionError, TimeoutError, ValidationError
+from zapomni_core.runtime_config import RuntimeConfig
 
 logger = structlog.get_logger()
 
@@ -104,17 +105,30 @@ class OllamaLLMClient:
 
     Attributes:
         base_url: Ollama API URL (e.g., "http://localhost:11434")
-        model_name: Ollama LLM model (default: "qwen2.5:latest")
         timeout: Request timeout in seconds (default: 120)
         max_retries: Maximum retry attempts (default: 2)
         temperature: Generation temperature (default: 0.1 for deterministic output)
 
+    Note:
+        Model selection is managed via RuntimeConfig singleton for hot-reload support.
+        Use RuntimeConfig.get_instance().set_llm_model() to change the model at runtime.
+
     Example:
         ```python
+        # Model is managed via RuntimeConfig (hot-reload support)
+        from zapomni_core.runtime_config import RuntimeConfig
+
+        # Optional: Set model explicitly (updates RuntimeConfig)
         client = OllamaLLMClient(
             base_url="http://localhost:11434",
             model_name="qwen2.5:latest"
         )
+
+        # Or use default RuntimeConfig model
+        client = OllamaLLMClient(base_url="http://localhost:11434")
+
+        # Change model at runtime (affects all clients)
+        RuntimeConfig.get_instance().set_llm_model("llama3:latest")
 
         # Refine entities
         refined = await client.refine_entities(text, spacy_entities)
@@ -127,7 +141,7 @@ class OllamaLLMClient:
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
-        model_name: str = "qwen2.5:latest",
+        model_name: Optional[str] = None,
         timeout: int = 120,
         max_retries: int = 2,
         temperature: float = 0.1,
@@ -138,7 +152,8 @@ class OllamaLLMClient:
 
         Args:
             base_url: Ollama API URL (default: http://localhost:11434)
-            model_name: Ollama LLM model name (default: qwen2.5:latest)
+            model_name: Optional override for Ollama LLM model. If provided, updates RuntimeConfig.
+                        If None, uses current RuntimeConfig value (default: None)
             timeout: Request timeout in seconds (default: 120)
             max_retries: Max retry attempts for transient failures (default: 2)
             temperature: Generation temperature, lower = more deterministic (default: 0.1)
@@ -175,11 +190,17 @@ class OllamaLLMClient:
             )
 
         self.base_url = base_url.rstrip("/")
-        self.model_name = model_name
         self.timeout = timeout
         self.max_retries = max_retries
         self.temperature = temperature
         self.keep_alive = keep_alive
+
+        # Get RuntimeConfig instance
+        self._runtime_config = RuntimeConfig.get_instance()
+
+        # If model_name provided, update RuntimeConfig
+        if model_name is not None:
+            self._runtime_config.set_llm_model(model_name)
 
         # Initialize HTTP client
         self.client = httpx.AsyncClient(
@@ -190,7 +211,7 @@ class OllamaLLMClient:
         logger.info(
             "ollama_llm_client_initialized",
             base_url=base_url,
-            model=model_name,
+            model=self._runtime_config.llm_model,
             timeout=timeout,
             temperature=temperature,
         )
@@ -210,11 +231,14 @@ class OllamaLLMClient:
             ExtractionError: If generation fails after retries
             TimeoutError: If request exceeds timeout
         """
+        # Get current model from RuntimeConfig (supports hot-reload)
+        model_name = self._runtime_config.llm_model
+
         try:
             response = await self.client.post(
                 f"{self.base_url}/api/generate",
                 json={
-                    "model": self.model_name,
+                    "model": model_name,
                     "prompt": prompt,
                     "stream": False,
                     "keep_alive": self.keep_alive,  # Keep model in memory
@@ -237,9 +261,9 @@ class OllamaLLMClient:
 
             elif response.status_code == 404:
                 raise ExtractionError(
-                    message=f"Model '{self.model_name}' not found. Run: ollama pull {self.model_name}",
+                    message=f"Model '{model_name}' not found. Run: ollama pull {model_name}",
                     error_code="EXTR_003",
-                    details={"model": self.model_name},
+                    details={"model": model_name},
                 )
 
             else:
@@ -251,7 +275,7 @@ class OllamaLLMClient:
 
         except httpx.TimeoutException as e:
             if retry_count < self.max_retries:
-                wait_time = 2 ** retry_count
+                wait_time = 2**retry_count
                 logger.warning(
                     "ollama_llm_timeout_retry",
                     retry=retry_count + 1,
@@ -270,7 +294,7 @@ class OllamaLLMClient:
 
         except (httpx.ConnectError, httpx.NetworkError) as e:
             if retry_count < self.max_retries:
-                wait_time = 2 ** retry_count
+                wait_time = 2**retry_count
                 logger.warning(
                     "ollama_llm_connection_retry",
                     retry=retry_count + 1,
@@ -330,8 +354,7 @@ class OllamaLLMClient:
 
         # Format entities for prompt
         entities_json = json.dumps(
-            [{"name": e.get("name", ""), "type": e.get("type", "")} for e in entities],
-            indent=2
+            [{"name": e.get("name", ""), "type": e.get("type", "")} for e in entities], indent=2
         )
 
         # Build prompt
@@ -357,12 +380,14 @@ class OllamaLLMClient:
             validated = []
             for entity in refined:
                 if isinstance(entity, dict) and "name" in entity and "type" in entity:
-                    validated.append({
-                        "name": str(entity.get("name", "")),
-                        "type": str(entity.get("type", "")),
-                        "description": str(entity.get("description", "")),
-                        "confidence": float(entity.get("confidence", 0.9)),
-                    })
+                    validated.append(
+                        {
+                            "name": str(entity.get("name", "")),
+                            "type": str(entity.get("type", "")),
+                            "description": str(entity.get("description", "")),
+                            "confidence": float(entity.get("confidence", 0.9)),
+                        }
+                    )
 
             logger.info(
                 "entities_refined",
@@ -423,8 +448,7 @@ class OllamaLLMClient:
 
         # Format entities for prompt
         entities_json = json.dumps(
-            [{"name": e.get("name", ""), "type": e.get("type", "")} for e in entities],
-            indent=2
+            [{"name": e.get("name", ""), "type": e.get("type", "")} for e in entities], indent=2
         )
 
         # Build prompt
@@ -461,13 +485,15 @@ class OllamaLLMClient:
 
                 # Check both entities exist
                 if source.lower() in valid_names and target.lower() in valid_names:
-                    validated.append({
-                        "source": source,
-                        "target": target,
-                        "type": rel_type,
-                        "confidence": float(rel.get("confidence", 0.8)),
-                        "evidence": str(rel.get("evidence", ""))[:200],  # Limit evidence length
-                    })
+                    validated.append(
+                        {
+                            "source": source,
+                            "target": target,
+                            "type": rel_type,
+                            "confidence": float(rel.get("confidence", 0.8)),
+                            "evidence": str(rel.get("evidence", ""))[:200],  # Limit evidence length
+                        }
+                    )
 
             logger.info(
                 "relationships_extracted",
@@ -508,14 +534,14 @@ class OllamaLLMClient:
 
         # Remove markdown code blocks if present
         if "```json" in text:
-            text = re.sub(r'```json\s*', '', text)
-            text = re.sub(r'```\s*$', '', text)
+            text = re.sub(r"```json\s*", "", text)
+            text = re.sub(r"```\s*$", "", text)
         elif "```" in text:
-            text = re.sub(r'```\s*', '', text)
+            text = re.sub(r"```\s*", "", text)
 
         # Find JSON array in response
         # Look for [ ... ] pattern
-        match = re.search(r'\[[\s\S]*\]', text)
+        match = re.search(r"\[[\s\S]*\]", text)
         if match:
             text = match.group(0)
 
@@ -537,11 +563,14 @@ class OllamaLLMClient:
         Returns:
             True if Ollama is healthy and model is available
         """
+        # Get current model from RuntimeConfig
+        model_name = self._runtime_config.llm_model
+
         try:
             response = await self.client.post(
                 f"{self.base_url}/api/generate",
                 json={
-                    "model": self.model_name,
+                    "model": model_name,
                     "prompt": "Hi",
                     "stream": False,
                     "keep_alive": "5m",  # Short keep_alive for health check

@@ -34,6 +34,7 @@ from zapomni_mcp.tools.get_related import GetRelatedTool
 from zapomni_mcp.tools.graph_status import GraphStatusTool
 from zapomni_mcp.tools.index_codebase import IndexCodebaseTool
 from zapomni_mcp.tools.prune_memory import PruneMemoryTool
+from zapomni_mcp.tools.set_model import SetModelTool
 from zapomni_mcp.tools.workspace_tools import (
     CreateWorkspaceTool,
     DeleteWorkspaceTool,
@@ -302,6 +303,9 @@ class MCPServer:
                 "workspace_tools_not_registered",
                 reason="WorkspaceManager not available (db_client missing)",
             )
+
+        # Phase 5: Configuration hot-reload tools
+        tools.append(SetModelTool())
 
         # Register each tool
         for tool in tools:

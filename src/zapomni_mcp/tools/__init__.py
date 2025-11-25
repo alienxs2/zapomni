@@ -6,6 +6,7 @@ This module contains all MCP tool implementations:
 - search_memory: Retrieve relevant information
 - get_stats: Query system statistics
 - get_related: Find related entities through graph traversal
+- set_model: Hot-reload Ollama LLM model without server restart
 - Workspace tools: create, list, set, get, delete workspaces
 
 Author: Goncharenko Anton aka alienxs2
@@ -39,6 +40,7 @@ from .get_stats import GetStatsTool
 from .graph_status import GraphStatusTool
 from .prune_memory import PruneMemoryTool
 from .search_memory import SearchMemoryTool
+from .set_model import SetModelTool
 from .workspace_tools import (
     CreateWorkspaceTool,
     DeleteWorkspaceTool,
@@ -56,6 +58,7 @@ __all__ = [
     "BuildGraphTool",
     "GraphStatusTool",
     "PruneMemoryTool",
+    "SetModelTool",
     # Workspace tools
     "CreateWorkspaceTool",
     "ListWorkspacesTool",
