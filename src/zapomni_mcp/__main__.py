@@ -37,6 +37,7 @@ logger = LoggingService.get_logger(__name__)
 from zapomni_core.config import ZapomniSettings
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
+from zapomni_core.extractors.entity_extractor import EntityExtractor
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
 from zapomni_mcp.server import MCPServer
@@ -132,12 +133,18 @@ async def main() -> None:
             model_name=settings.ollama_embedding_model,
         )
 
-        # STAGE 5: Initialize MemoryProcessor
+        # STAGE 5: Initialize EntityExtractor for knowledge graph building
+        logger.info("Initializing EntityExtractor")
+        extractor = EntityExtractor()
+        logger.info("EntityExtractor initialized")
+
+        # STAGE 6: Initialize MemoryProcessor
         logger.info("Initializing MemoryProcessor")
         processor = MemoryProcessor(
             db_client=db_client,
             chunker=chunker,
             embedder=embedder,
+            extractor=extractor,
             config=None,  # Use defaults
         )
         logger.info("MemoryProcessor initialized")

@@ -286,6 +286,8 @@ class FalkorDBClient:
         CREATE (m:Memory {
             id: $memory_id,
             text: $text,
+            tags: $tags,
+            source: $source,
             metadata: $metadata,
             created_at: $timestamp
         })
@@ -319,6 +321,8 @@ class FalkorDBClient:
         parameters = {
             "memory_id": memory_id,
             "text": memory.text,
+            "tags": memory.metadata.get("tags", []),
+            "source": memory.metadata.get("source", ""),
             "metadata": json.dumps(memory.metadata),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "chunks_data": chunks_data

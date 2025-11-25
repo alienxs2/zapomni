@@ -316,7 +316,7 @@ class BuildGraphTool:
         """
         try:
             # Get entity extractor from memory processor
-            entity_extractor = self.memory_processor.entity_extractor
+            entity_extractor = self.memory_processor.extractor
 
             if entity_extractor is None:
                 raise ProcessingError(
