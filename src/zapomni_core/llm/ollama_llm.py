@@ -131,6 +131,7 @@ class OllamaLLMClient:
         timeout: int = 120,
         max_retries: int = 2,
         temperature: float = 0.1,
+        keep_alive: str = "24h",
     ) -> None:
         """
         Initialize OllamaLLMClient.
@@ -141,6 +142,8 @@ class OllamaLLMClient:
             timeout: Request timeout in seconds (default: 120)
             max_retries: Max retry attempts for transient failures (default: 2)
             temperature: Generation temperature, lower = more deterministic (default: 0.1)
+            keep_alive: How long to keep model in memory (default: 24h).
+                        Prevents model reload lag. Use "0" to unload immediately.
 
         Raises:
             ValidationError: If base_url is invalid or timeout <= 0
@@ -176,6 +179,7 @@ class OllamaLLMClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self.temperature = temperature
+        self.keep_alive = keep_alive
 
         # Initialize HTTP client
         self.client = httpx.AsyncClient(
@@ -213,6 +217,7 @@ class OllamaLLMClient:
                     "model": self.model_name,
                     "prompt": prompt,
                     "stream": False,
+                    "keep_alive": self.keep_alive,  # Keep model in memory
                     "options": {
                         "temperature": self.temperature,
                         "num_predict": 2048,  # Max tokens to generate
@@ -539,6 +544,7 @@ class OllamaLLMClient:
                     "model": self.model_name,
                     "prompt": "Hi",
                     "stream": False,
+                    "keep_alive": "5m",  # Short keep_alive for health check
                     "options": {"num_predict": 1},
                 },
                 timeout=10.0,
