@@ -47,17 +47,21 @@ class ProcessorConfig:
         enable_cache: Enable semantic embedding cache (Phase 2)
         enable_extraction: Enable entity extraction (Phase 2)
         enable_graph: Enable knowledge graph construction (Phase 2)
+        enable_llm_refinement: Enable LLM-based entity refinement (Phase 2)
         max_text_length: Maximum text length in characters (default: 10MB)
         batch_size: Batch size for embedding generation (default: 32)
         search_mode: Default search mode ("vector", "bm25", "hybrid")
+        llm_model: Ollama LLM model for entity refinement (default: qwen2.5:latest)
     """
 
     enable_cache: bool = False
     enable_extraction: bool = True  # Phase 2: Entity extraction enabled
     enable_graph: bool = True  # Phase 2: Graph building enabled
+    enable_llm_refinement: bool = False  # Phase 2: LLM refinement (off by default)
     max_text_length: int = 10_000_000
     batch_size: int = 32
     search_mode: str = "vector"
+    llm_model: str = "qwen2.5:latest"  # Ollama LLM model for refinement
 
 
 @dataclass
@@ -217,6 +221,7 @@ class MemoryProcessor:
         self._extractor = extractor  # May be None, loaded lazily
         self._graph_builder: Optional[GraphBuilder] = None
         self._spacy_model = None  # Cached SpaCy model
+        self._llm_client = None  # Cached LLM client for entity refinement
 
         # Handle config
         self.config = config or ProcessorConfig()
@@ -260,19 +265,52 @@ class MemoryProcessor:
         return self._spacy_model
 
     @property
+    def llm_client(self):
+        """
+        Lazy-loaded OllamaLLMClient for entity refinement.
+
+        Only loaded if enable_llm_refinement is True.
+        """
+        if self._llm_client is None and self.config.enable_llm_refinement:
+            self.logger.info(
+                "lazy_loading_llm_client",
+                model=self.config.llm_model,
+            )
+            from zapomni_core.llm import OllamaLLMClient
+            self._llm_client = OllamaLLMClient(
+                base_url=self.embedder.base_url,  # Use same Ollama instance
+                model_name=self.config.llm_model,
+                timeout=120,
+                temperature=0.1,
+            )
+            self.logger.info("llm_client_loaded")
+        return self._llm_client
+
+    @property
     def extractor(self):
         """
         Lazy-loaded EntityExtractor.
 
         SpaCy model is loaded on first access (~2-3 seconds).
+        If LLM refinement is enabled, OllamaLLMClient is also attached.
         Subsequent accesses return cached instance.
         """
         if self._extractor is None:
             self.logger.info("lazy_loading_entity_extractor")
             from zapomni_core.extractors.entity_extractor import EntityExtractor
             spacy_model = self._load_spacy_model()
-            self._extractor = EntityExtractor(spacy_model=spacy_model)
-            self.logger.info("entity_extractor_loaded")
+
+            # Create extractor with optional LLM client
+            llm = self.llm_client if self.config.enable_llm_refinement else None
+            self._extractor = EntityExtractor(
+                spacy_model=spacy_model,
+                ollama_client=llm,
+                enable_llm_refinement=self.config.enable_llm_refinement,
+            )
+            self.logger.info(
+                "entity_extractor_loaded",
+                llm_refinement_enabled=self.config.enable_llm_refinement,
+            )
         return self._extractor
 
     @property

@@ -451,16 +451,15 @@ class GraphBuilder:
         text: str,
     ) -> int:
         """
-        Add relationship edges between entities (Phase 2 stub).
-
-        Phase 2: Detect relationships between entities using LLM.
+        Add relationship edges between entities using LLM extraction.
 
         Relationship types:
-        - USES: Entity A uses Entity B (Python uses asyncio)
-        - CREATES: Entity A creates Entity B (Company creates Product)
-        - IS_A: Specialization relationship
+        - CREATED: Person/Org created something
+        - WORKS_FOR: Person works for Organization
+        - LOCATED_IN: Entity is located in a place
+        - PART_OF: Entity is part of another
+        - USES: Entity uses another entity
         - RELATED_TO: General association
-        - MENTIONS: Text mentions relationship
 
         Args:
             entities: List of Entity objects
@@ -470,11 +469,10 @@ class GraphBuilder:
             Number of relationships created
 
         Raises:
-            NotImplementedError: Always in Phase 1 (this is a stub)
+            NotImplementedError: If EntityExtractor doesn't have LLM enabled
             ValidationError: If inputs are invalid
             DatabaseError: If relationship creation fails
         """
-        # Phase 2 stub: Relationship detection not implemented
         if not entities:
             raise ValidationError(
                 message="Entities list cannot be empty",
@@ -487,17 +485,98 @@ class GraphBuilder:
                 error_code="VAL_001",
             )
 
-        # Phase 2: Would use LLM to detect relationships
-        self._logger.debug(
-            "add_relationships_phase2_stub",
-            num_entities=len(entities),
-            status="not_implemented",
-        )
+        if len(entities) < 2:
+            self._logger.debug("not_enough_entities_for_relationships", count=len(entities))
+            return 0
 
-        raise NotImplementedError(
-            "Relationship detection requires Phase 2 LLM integration. "
-            "Initialize GraphBuilder with enable_llm_refinement=True."
-        )
+        # Check if EntityExtractor has LLM enabled
+        if not self.entity_extractor.enable_llm_refinement:
+            self._logger.debug(
+                "llm_not_enabled_for_relationships",
+                status="skipping",
+            )
+            return 0
+
+        try:
+            # Extract relationships using EntityExtractor's LLM
+            relationships = self.entity_extractor.extract_relationships(text, entities)
+
+            if not relationships:
+                self._logger.debug("no_relationships_found")
+                return 0
+
+            # Add relationships to graph
+            created_count = 0
+            for rel in relationships:
+                try:
+                    # Find entity IDs from cache
+                    source_key = f"{rel.source_entity}:{self._find_entity_type(rel.source_entity, entities)}".lower()
+                    target_key = f"{rel.target_entity}:{self._find_entity_type(rel.target_entity, entities)}".lower()
+
+                    source_id = self._entity_map.get(source_key)
+                    target_id = self._entity_map.get(target_key)
+
+                    if not source_id or not target_id:
+                        self._logger.debug(
+                            "relationship_entity_not_found",
+                            source=rel.source_entity,
+                            target=rel.target_entity,
+                        )
+                        continue
+
+                    # Add relationship to database
+                    await self.db_client.add_relationship(
+                        from_entity_id=source_id,
+                        to_entity_id=target_id,
+                        relationship_type=rel.relationship_type,
+                        properties={
+                            "confidence": rel.confidence,
+                            "evidence": rel.evidence[:200] if rel.evidence else "",
+                        },
+                    )
+                    created_count += 1
+
+                    self._logger.debug(
+                        "relationship_created",
+                        source=rel.source_entity,
+                        target=rel.target_entity,
+                        type=rel.relationship_type,
+                    )
+
+                except Exception as e:
+                    self._logger.warning(
+                        "relationship_add_failed",
+                        source=rel.source_entity,
+                        target=rel.target_entity,
+                        error=str(e),
+                    )
+                    continue
+
+            self._logger.info(
+                "relationships_added",
+                extracted=len(relationships),
+                created=created_count,
+            )
+
+            return created_count
+
+        except NotImplementedError:
+            # LLM not available
+            self._logger.debug("llm_not_available_for_relationships")
+            return 0
+        except Exception as e:
+            self._logger.warning(
+                "relationship_extraction_failed",
+                error=str(e),
+            )
+            return 0
+
+    def _find_entity_type(self, entity_name: str, entities: List[ExtractedEntity]) -> str:
+        """Find entity type by name from entities list."""
+        for e in entities:
+            if e.name.lower() == entity_name.lower():
+                return e.type
+        return "UNKNOWN"
 
     def get_graph_stats(self) -> Dict[str, Any]:
         """

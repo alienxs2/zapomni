@@ -15,14 +15,18 @@ License: MIT
 
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional, Set, TYPE_CHECKING
 
 import structlog
 from spacy.language import Language
 
 from zapomni_core.exceptions import ExtractionError, ValidationError
+
+if TYPE_CHECKING:
+    from zapomni_core.llm import OllamaLLMClient
 
 logger = structlog.get_logger()
 
@@ -127,7 +131,7 @@ class EntityExtractor:
     def __init__(
         self,
         spacy_model: Language,
-        ollama_client: Optional['OllamaClient'] = None,
+        ollama_client: Optional['OllamaLLMClient'] = None,
         enable_llm_refinement: bool = False,
         confidence_threshold: float = 0.7,
         entity_types: Optional[Set[str]] = None
@@ -268,9 +272,15 @@ class EntityExtractor:
         entities: List[Entity]
     ) -> List[Relationship]:
         """
-        Extract relationships between entities using LLM (Phase 2 only).
+        Extract relationships between entities using LLM.
 
-        This method is only available when enable_llm_refinement=True.
+        Identifies connections between entities such as:
+        - CREATED: Person/Org created something
+        - WORKS_FOR: Person works for Organization
+        - LOCATED_IN: Entity is located in a place
+        - PART_OF: Entity is part of another
+        - USES: Entity uses another entity
+        - RELATED_TO: General relationship
 
         Args:
             text: Original text where entities were found
@@ -280,13 +290,13 @@ class EntityExtractor:
             List of Relationship objects sorted by confidence
 
         Raises:
-            NotImplementedError: If enable_llm_refinement=False (Phase 1)
+            NotImplementedError: If enable_llm_refinement=False (no LLM client)
             ValidationError: If text empty or entities list empty
         """
-        # Phase 1: Not implemented
-        if not self.enable_llm_refinement:
+        # Require LLM for relationship extraction
+        if not self.enable_llm_refinement or not self.ollama_client:
             raise NotImplementedError(
-                "Relationship extraction requires LLM refinement (Phase 2). "
+                "Relationship extraction requires LLM refinement. "
                 "Initialize with enable_llm_refinement=True and ollama_client."
             )
 
@@ -303,13 +313,42 @@ class EntityExtractor:
                 error_code="VAL_001",
             )
 
-        # Phase 2: Return empty list (stub for now)
-        logger.debug(
-            "extract_relationships_phase2",
+        if len(entities) < 2:
+            # Need at least 2 entities for relationships
+            logger.debug("not_enough_entities_for_relationships", count=len(entities))
+            return []
+
+        # Convert entities to dict format for LLM
+        entities_dict = [
+            {"name": e.name, "type": e.type}
+            for e in entities
+        ]
+
+        # Run async LLM extraction
+        rel_dicts = self._run_async_relationships(text, entities_dict)
+
+        # Convert to Relationship objects
+        relationships = []
+        for rd in rel_dicts:
+            relationship = Relationship(
+                source_entity=rd.get("source", ""),
+                target_entity=rd.get("target", ""),
+                relationship_type=rd.get("type", "RELATED_TO"),
+                confidence=rd.get("confidence", 0.8),
+                evidence=rd.get("evidence", ""),
+            )
+            relationships.append(relationship)
+
+        # Sort by confidence
+        relationships = sorted(relationships, key=lambda r: r.confidence, reverse=True)
+
+        logger.info(
+            "relationships_extracted",
             num_entities=len(entities),
-            status="not_implemented",
+            num_relationships=len(relationships),
         )
-        return []
+
+        return relationships
 
     def normalize_entity(self, entity: str, entity_type: str) -> str:
         """
@@ -451,6 +490,12 @@ class EntityExtractor:
         """
         Internal method: Refine entities using LLM.
 
+        Enhances SpaCy entities with:
+        - Full/canonical names (e.g., "Guido" -> "Guido van Rossum")
+        - Brief descriptions
+        - Improved confidence scores
+        - Validation (removes false positives)
+
         Args:
             text: Original text
             entities: Entities from SpaCy extraction
@@ -464,9 +509,142 @@ class EntityExtractor:
         if not self.ollama_client:
             return entities
 
-        # Phase 2: LLM refinement
-        # For now, return entities as-is (stub)
-        return entities
+        if not entities:
+            return entities
+
+        # Convert entities to dict format for LLM
+        entities_dict = [
+            {"name": e.name, "type": e.type}
+            for e in entities
+        ]
+
+        # Run async LLM refinement
+        refined_dicts = self._run_async_refine(text, entities_dict)
+
+        # Convert back to Entity objects
+        refined_entities = []
+        for rd in refined_dicts:
+            entity = Entity(
+                name=rd.get("name", ""),
+                type=rd.get("type", ""),
+                description=rd.get("description", ""),
+                confidence=rd.get("confidence", 0.9),
+                mentions=1,
+                source_span=None,
+            )
+            # Find original source_span if name matches
+            for orig in entities:
+                if orig.name.lower() == entity.name.lower() or orig.name.lower() in entity.name.lower():
+                    entity.source_span = orig.source_span
+                    entity.mentions = orig.mentions
+                    break
+            refined_entities.append(entity)
+
+        logger.info(
+            "llm_refinement_complete",
+            input_count=len(entities),
+            output_count=len(refined_entities),
+        )
+
+        return refined_entities
+
+    def _run_async_refine(self, text: str, entities_dict: List[dict]) -> List[dict]:
+        """
+        Run entity refinement async call from sync context.
+
+        Creates fresh client and coroutine in target thread to avoid event loop issues.
+        """
+        import concurrent.futures
+
+        # Store client config for recreation in thread
+        base_url = self.ollama_client.base_url
+        model_name = self.ollama_client.model_name
+        timeout = self.ollama_client.timeout
+        temperature = self.ollama_client.temperature
+
+        def run_in_new_loop():
+            """Run in a new event loop with fresh client."""
+            from zapomni_core.llm import OllamaLLMClient
+
+            async def do_refine():
+                # Create fresh client in this thread's event loop
+                client = OllamaLLMClient(
+                    base_url=base_url,
+                    model_name=model_name,
+                    timeout=timeout,
+                    temperature=temperature,
+                )
+                try:
+                    return await client.refine_entities(text, entities_dict)
+                finally:
+                    await client.client.aclose()
+
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(do_refine())
+            finally:
+                new_loop.close()
+
+        try:
+            # Check if we're in an async context
+            asyncio.get_running_loop()
+            # We're in async context - run in thread with new loop
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(run_in_new_loop)
+                return future.result(timeout=120)
+        except RuntimeError:
+            # No running loop - safe to use existing client
+            return asyncio.run(self.ollama_client.refine_entities(text, entities_dict))
+
+    def _run_async_relationships(self, text: str, entities_dict: List[dict]) -> List[dict]:
+        """
+        Run relationship extraction async call from sync context.
+
+        Creates fresh client and coroutine in target thread to avoid event loop issues.
+        """
+        import concurrent.futures
+
+        # Store client config for recreation in thread
+        base_url = self.ollama_client.base_url
+        model_name = self.ollama_client.model_name
+        timeout = self.ollama_client.timeout
+        temperature = self.ollama_client.temperature
+
+        def run_in_new_loop():
+            """Run in a new event loop with fresh client."""
+            from zapomni_core.llm import OllamaLLMClient
+
+            async def do_extract():
+                # Create fresh client in this thread's event loop
+                client = OllamaLLMClient(
+                    base_url=base_url,
+                    model_name=model_name,
+                    timeout=timeout,
+                    temperature=temperature,
+                )
+                try:
+                    return await client.extract_relationships(text, entities_dict)
+                finally:
+                    await client.client.aclose()
+
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(do_extract())
+            finally:
+                new_loop.close()
+
+        try:
+            # Check if we're in an async context
+            asyncio.get_running_loop()
+            # We're in async context - run in thread with new loop
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(run_in_new_loop)
+                return future.result(timeout=120)
+        except RuntimeError:
+            # No running loop - safe to use existing client
+            return asyncio.run(self.ollama_client.extract_relationships(text, entities_dict))
 
     def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:
         """
