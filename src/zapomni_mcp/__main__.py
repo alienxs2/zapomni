@@ -99,7 +99,6 @@ async def main() -> None:
             port=settings.falkordb_port,
             graph_name=settings.graph_name,
             password=settings.falkordb_password.get_secret_value() if settings.falkordb_password else None,
-            timeout=settings.falkordb_connection_timeout,
             pool_size=settings.falkordb_pool_size,
         )
         logger.info(
