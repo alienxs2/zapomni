@@ -227,11 +227,13 @@ class CypherQueryBuilder:
         parameters.update(filter_params)
 
         # STEP 4: Build Cypher query
+        # FalkorDB queryNodes signature: (label, attribute, k, query_vector)
         cypher = f"""
         CALL db.idx.vector.queryNodes(
-            '{self.VECTOR_INDEX_NAME}',
+            'Chunk',
+            'embedding',
             $limit,
-            $query_embedding
+            vecf32($query_embedding)
         ) YIELD node AS c, score
         MATCH (m:Memory)-[:HAS_CHUNK]->(c)
         WHERE score >= $min_similarity

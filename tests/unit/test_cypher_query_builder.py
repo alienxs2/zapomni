@@ -181,7 +181,8 @@ class TestBuildVectorSearchQuery:
 
         # Verify cypher structure
         assert "CALL db.idx.vector.queryNodes" in cypher
-        assert "chunk_embedding_idx" in cypher
+        assert "'Chunk'" in cypher
+        assert "'embedding'" in cypher
         assert "WHERE score >= $min_similarity" in cypher
         assert "ORDER BY score DESC" in cypher
 
