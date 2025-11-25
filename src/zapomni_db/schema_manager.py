@@ -164,10 +164,10 @@ class SchemaManager:
             return
 
         # Build CREATE VECTOR INDEX Cypher query
-        # Note: FalkorDB vector index syntax
+        # Note: FalkorDB does not support named vector indexes in CREATE syntax
+        # Index name is auto-generated from label:property
         cypher_query = f"""
-            CREATE VECTOR INDEX {self.INDEX_VECTOR}
-            FOR (c:{self.NODE_CHUNK})
+            CREATE VECTOR INDEX FOR (c:{self.NODE_CHUNK})
             ON (c.embedding)
             OPTIONS {{
                 dimension: {self.VECTOR_DIMENSION},
@@ -177,7 +177,17 @@ class SchemaManager:
             }}
         """
 
-        self._execute_cypher(cypher_query)
+        try:
+            self._execute_cypher(cypher_query)
+        except Exception as e:
+            # "already indexed" is expected for idempotent operation
+            if "already indexed" in str(e).lower():
+                self.logger.debug(
+                    "Vector index already exists (detected via error)",
+                    index_name=self.INDEX_VECTOR
+                )
+                return
+            raise
 
         self.logger.info(
             "Vector index created successfully",
@@ -269,14 +279,24 @@ class SchemaManager:
                 continue
 
             # Create property index
+            # Note: FalkorDB does not support named indexes in CREATE syntax
             cypher_query = f"""
-                CREATE INDEX {index_name}
-                FOR (n:{node_label})
+                CREATE INDEX FOR (n:{node_label})
                 ON (n.{property_name})
             """
 
-            self._execute_cypher(cypher_query)
-            created_count += 1
+            try:
+                self._execute_cypher(cypher_query)
+                created_count += 1
+            except Exception as e:
+                # "already indexed" is expected for idempotent operation
+                if "already indexed" in str(e).lower():
+                    self.logger.debug(
+                        "Property index already exists (detected via error)",
+                        index_name=index_name
+                    )
+                    continue
+                raise
 
         self.logger.info(
             "Property indexes created",

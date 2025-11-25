@@ -241,11 +241,13 @@ class CypherQueryBuilder:
         WHERE score <= (1.0 - $min_similarity)
         {filter_clause}
         RETURN m.id AS memory_id,
+               c.id AS chunk_id,
                c.text AS text,
                (1.0 - score) AS similarity_score,
                m.tags AS tags,
                m.source AS source,
-               m.created_at AS timestamp
+               m.created_at AS timestamp,
+               c.index AS chunk_index
         ORDER BY score ASC
         """
 

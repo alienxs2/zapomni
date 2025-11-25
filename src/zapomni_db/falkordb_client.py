@@ -492,13 +492,15 @@ class FalkorDBClient:
 
                 search_result = SearchResult(
                     memory_id=row["memory_id"],
-                    chunk_id=row["chunk_id"],
+                    content=row["text"],
+                    relevance_score=float(row["similarity_score"]),
+                    chunk_id=row.get("chunk_id"),
                     text=row["text"],
                     similarity_score=float(row["similarity_score"]),
                     tags=tags,
                     source=row.get("source", ""),
                     timestamp=timestamp,
-                    chunk_index=int(row["chunk_index"])
+                    chunk_index=int(row.get("chunk_index", 0))
                 )
                 results.append(search_result)
             except (KeyError, ValueError, TypeError) as e:
