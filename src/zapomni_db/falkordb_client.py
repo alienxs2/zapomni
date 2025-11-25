@@ -13,6 +13,7 @@ License: MIT
 import asyncio
 import json
 import math
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -32,7 +33,17 @@ from zapomni_db.exceptions import (
     TransactionError,
     ValidationError,
 )
-from zapomni_db.models import Chunk, Entity, Memory, QueryResult, Relationship, SearchResult
+from zapomni_db.models import (
+    DEFAULT_WORKSPACE_ID,
+    Chunk,
+    Entity,
+    Memory,
+    QueryResult,
+    Relationship,
+    SearchResult,
+    Workspace,
+    WorkspaceStats,
+)
 from zapomni_db.pool_config import PoolConfig, RetryConfig
 from zapomni_db.schema_manager import SchemaManager
 
@@ -481,12 +492,17 @@ class FalkorDBClient:
     # MEMORY OPERATIONS
     # ========================================
 
-    async def add_memory(self, memory: Memory) -> str:
+    async def add_memory(
+        self,
+        memory: Memory,
+        workspace_id: Optional[str] = None,
+    ) -> str:
         """
         Store a complete memory with chunks and embeddings in graph database.
 
         Args:
             memory: Memory object containing text, chunks, embeddings, metadata
+            workspace_id: Workspace ID for data isolation. Defaults to "default".
 
         Returns:
             memory_id: UUID string identifying the stored memory
@@ -496,6 +512,8 @@ class FalkorDBClient:
             DatabaseError: If database operations fail
             TransactionError: If transaction state is invalid
         """
+        # Use workspace_id from parameter, memory object, or default
+        effective_workspace_id = workspace_id or memory.workspace_id or DEFAULT_WORKSPACE_ID
         # STEP 1: INPUT VALIDATION
 
         # Validate text
@@ -576,12 +594,15 @@ class FalkorDBClient:
         retry_count = 0
         while retry_count <= self.retry_config.max_retries:
             try:
-                await self._execute_transaction(memory, memory_id, chunk_ids)
+                await self._execute_transaction(
+                    memory, memory_id, chunk_ids, effective_workspace_id
+                )
 
                 self._logger.info(
                     "memory_added",
                     memory_id=memory_id,
                     num_chunks=len(memory.chunks),
+                    workspace_id=effective_workspace_id,
                 )
 
                 return memory_id
@@ -613,6 +634,7 @@ class FalkorDBClient:
         memory: Memory,
         memory_id: str,
         chunk_ids: List[str],
+        workspace_id: str = DEFAULT_WORKSPACE_ID,
     ) -> str:
         """Execute transaction to store memory."""
         if not self._initialized:
@@ -620,23 +642,25 @@ class FalkorDBClient:
 
         # Build Cypher query for atomic transaction
         cypher = """
-        // Create Memory node
+        // Create Memory node with workspace_id
         CREATE (m:Memory {
             id: $memory_id,
             text: $text,
             tags: $tags,
             source: $source,
             metadata: $metadata,
+            workspace_id: $workspace_id,
             created_at: $timestamp
         })
 
-        // Create Chunk nodes with embeddings
+        // Create Chunk nodes with embeddings and workspace_id
         WITH m
         UNWIND $chunks_data AS chunk_data
         CREATE (c:Chunk {
             id: chunk_data.id,
             text: chunk_data.text,
             index: chunk_data.index,
+            workspace_id: $workspace_id,
             embedding: vecf32(chunk_data.embedding)
         })
         CREATE (m)-[:HAS_CHUNK {index: chunk_data.index}]->(c)
@@ -661,6 +685,7 @@ class FalkorDBClient:
             "tags": memory.metadata.get("tags", []),
             "source": memory.metadata.get("source", ""),
             "metadata": json.dumps(memory.metadata),
+            "workspace_id": workspace_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "chunks_data": chunks_data,
         }
@@ -685,6 +710,7 @@ class FalkorDBClient:
         embedding: List[float],
         limit: int = 10,
         filters: Optional[Dict[str, Any]] = None,
+        workspace_id: Optional[str] = None,
     ) -> List[SearchResult]:
         """
         Perform HNSW vector similarity search on chunk embeddings.
@@ -693,6 +719,7 @@ class FalkorDBClient:
             embedding: Query embedding vector (must be 768-dimensional)
             limit: Maximum number of results to return (1-1000)
             filters: Optional metadata filters
+            workspace_id: Workspace ID for data isolation. Defaults to "default".
 
         Returns:
             List of SearchResult objects sorted by similarity (descending)
@@ -702,6 +729,8 @@ class FalkorDBClient:
             QueryError: If database query fails
             DatabaseError: If database operation fails after retries
         """
+        # Determine effective workspace_id
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
         # STEP 1: INPUT VALIDATION
 
         # Validate embedding dimension
@@ -782,6 +811,7 @@ class FalkorDBClient:
             limit=limit,
             filters=filters,
             min_similarity=min_similarity,
+            workspace_id=effective_workspace_id,
         )
 
         # STEP 3: EXECUTE SEARCH
@@ -1223,18 +1253,369 @@ class FalkorDBClient:
             self._logger.error("graph_query_error", error=str(e))
             raise DatabaseError(f"Graph query failed: {e}")
 
-    async def delete_memory(self, memory_id: str) -> bool:
+    async def clear_all(self, workspace_id: Optional[str] = None) -> None:
+        """
+        Clear all data from the graph (DELETE all nodes/edges).
+
+        WARNING: This is destructive and irreversible.
+
+        Args:
+            workspace_id: If provided, only clear data in this workspace.
+                          If None, clears ALL data (dangerous!).
+
+        Raises:
+            DatabaseError: If clear operation fails
+        """
+        if workspace_id:
+            # Clear only data in the specified workspace
+            cypher = """
+            MATCH (n)
+            WHERE n.workspace_id = $workspace_id
+            DETACH DELETE n
+            """
+            parameters = {"workspace_id": workspace_id}
+        else:
+            # Clear all data
+            cypher = "MATCH (n) DETACH DELETE n"
+            parameters = {}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+            self._logger.warning(
+                "graph_cleared",
+                nodes_deleted=result.row_count,
+                workspace_id=workspace_id,
+            )
+
+        except Exception as e:
+            self._logger.error("clear_all_error", error=str(e))
+            raise DatabaseError(f"Failed to clear graph: {e}")
+
+    # ========================================
+    # WORKSPACE OPERATIONS
+    # ========================================
+
+    async def create_workspace(self, workspace: Workspace) -> str:
+        """
+        Create a new workspace in the knowledge graph.
+
+        Args:
+            workspace: Workspace object with id, name, description
+
+        Returns:
+            workspace_id: The workspace ID
+
+        Raises:
+            ValidationError: If workspace validation fails
+            DatabaseError: If workspace already exists or write fails
+        """
+        # Validate workspace id
+        if not workspace.id or not workspace.id.strip():
+            raise ValidationError("Workspace ID cannot be empty")
+
+        # Check for valid characters (alphanumeric, hyphen, underscore)
+        if not re.match(r"^[a-zA-Z0-9_-]+$", workspace.id):
+            raise ValidationError(
+                "Workspace ID must contain only alphanumeric characters, hyphens, and underscores"
+            )
+
+        # Check if workspace already exists
+        existing = await self.get_workspace(workspace.id)
+        if existing:
+            raise DatabaseError(f"Workspace '{workspace.id}' already exists")
+
+        cypher = """
+        CREATE (w:Workspace {
+            id: $workspace_id,
+            name: $name,
+            description: $description,
+            created_at: $created_at,
+            metadata: $metadata
+        })
+        RETURN w.id AS workspace_id
+        """
+
+        parameters = {
+            "workspace_id": workspace.id,
+            "name": workspace.name,
+            "description": workspace.description or "",
+            "created_at": workspace.created_at.isoformat(),
+            "metadata": json.dumps(workspace.metadata or {}),
+        }
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            if result.row_count > 0:
+                self._logger.info(
+                    "workspace_created",
+                    workspace_id=workspace.id,
+                    name=workspace.name,
+                )
+                return workspace.id
+            else:
+                raise DatabaseError("Workspace creation failed: no records returned")
+
+        except Exception as e:
+            self._logger.error("create_workspace_error", error=str(e))
+            raise DatabaseError(f"Failed to create workspace: {e}")
+
+    async def get_workspace(self, workspace_id: str) -> Optional[Workspace]:
+        """
+        Get a workspace by ID.
+
+        Args:
+            workspace_id: Workspace ID to retrieve
+
+        Returns:
+            Workspace object if found, None otherwise
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        cypher = """
+        MATCH (w:Workspace {id: $workspace_id})
+        RETURN w.id AS id,
+               w.name AS name,
+               w.description AS description,
+               w.created_at AS created_at,
+               w.updated_at AS updated_at,
+               w.metadata AS metadata
+        """
+
+        parameters = {"workspace_id": workspace_id}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            if result.row_count > 0:
+                row = result.rows[0]
+                metadata = row.get("metadata", "{}")
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+
+                created_at = row.get("created_at")
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+                updated_at = row.get("updated_at")
+                if isinstance(updated_at, str):
+                    updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+
+                return Workspace(
+                    id=row["id"],
+                    name=row["name"],
+                    description=row.get("description", ""),
+                    created_at=created_at,
+                    updated_at=updated_at,
+                    metadata=metadata,
+                )
+            return None
+
+        except Exception as e:
+            self._logger.error("get_workspace_error", error=str(e))
+            raise DatabaseError(f"Failed to get workspace: {e}")
+
+    async def list_workspaces(self) -> List[Workspace]:
+        """
+        List all workspaces.
+
+        Returns:
+            List of Workspace objects
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        cypher = """
+        MATCH (w:Workspace)
+        RETURN w.id AS id,
+               w.name AS name,
+               w.description AS description,
+               w.created_at AS created_at,
+               w.updated_at AS updated_at,
+               w.metadata AS metadata
+        ORDER BY w.created_at ASC
+        """
+
+        try:
+            result = await self._execute_cypher(cypher, {})
+
+            workspaces = []
+            for row in result.rows:
+                metadata = row.get("metadata", "{}")
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+
+                created_at = row.get("created_at")
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+                updated_at = row.get("updated_at")
+                if isinstance(updated_at, str):
+                    updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+
+                workspaces.append(
+                    Workspace(
+                        id=row["id"],
+                        name=row["name"],
+                        description=row.get("description", ""),
+                        created_at=created_at,
+                        updated_at=updated_at,
+                        metadata=metadata,
+                    )
+                )
+
+            return workspaces
+
+        except Exception as e:
+            self._logger.error("list_workspaces_error", error=str(e))
+            raise DatabaseError(f"Failed to list workspaces: {e}")
+
+    async def delete_workspace(
+        self,
+        workspace_id: str,
+        confirm: bool = False,
+    ) -> bool:
+        """
+        Delete a workspace and optionally all its data.
+
+        IMPORTANT: According to validation report, we must validate workspace exists
+        before deleting to prevent security issues.
+
+        Args:
+            workspace_id: Workspace ID to delete
+            confirm: Must be True to confirm deletion
+
+        Returns:
+            True if deleted, False if workspace not found
+
+        Raises:
+            ValidationError: If workspace_id is the default workspace
+            ValidationError: If confirm is not True
+            DatabaseError: If delete operation fails
+        """
+        # Security: Cannot delete default workspace
+        if workspace_id == DEFAULT_WORKSPACE_ID:
+            raise ValidationError("Cannot delete the default workspace")
+
+        # Safety: Require explicit confirmation
+        if not confirm:
+            raise ValidationError("Deletion requires explicit confirmation (confirm=True)")
+
+        # Security: Verify workspace exists before deleting
+        existing = await self.get_workspace(workspace_id)
+        if not existing:
+            self._logger.warning(
+                "workspace_not_found_for_delete",
+                workspace_id=workspace_id,
+            )
+            return False
+
+        # Delete all data in the workspace first
+        await self.clear_all(workspace_id=workspace_id)
+
+        # Then delete the workspace node itself
+        cypher = """
+        MATCH (w:Workspace {id: $workspace_id})
+        DELETE w
+        RETURN count(w) AS deleted_count
+        """
+
+        parameters = {"workspace_id": workspace_id}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            if result.row_count > 0 and result.rows[0]["deleted_count"] > 0:
+                self._logger.info("workspace_deleted", workspace_id=workspace_id)
+                return True
+            else:
+                self._logger.warning("workspace_not_found", workspace_id=workspace_id)
+                return False
+
+        except Exception as e:
+            self._logger.error("delete_workspace_error", error=str(e))
+            raise DatabaseError(f"Failed to delete workspace: {e}")
+
+    async def get_workspace_stats(
+        self,
+        workspace_id: Optional[str] = None,
+    ) -> WorkspaceStats:
+        """
+        Get statistics for a specific workspace.
+
+        Args:
+            workspace_id: Workspace ID. Defaults to "default".
+
+        Returns:
+            WorkspaceStats object with counts
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
+
+        cypher = """
+        MATCH (m:Memory {workspace_id: $workspace_id})
+        WITH count(m) AS total_memories
+        MATCH (c:Chunk {workspace_id: $workspace_id})
+        WITH total_memories, count(c) AS total_chunks
+        OPTIONAL MATCH (e:Entity {workspace_id: $workspace_id})
+        WITH total_memories, total_chunks, count(e) AS total_entities
+        OPTIONAL MATCH (:Entity {workspace_id: $workspace_id})-[r]->(:Entity {workspace_id: $workspace_id})
+        WITH total_memories, total_chunks, total_entities, count(r) AS total_relationships
+        RETURN total_memories, total_chunks, total_entities, total_relationships
+        """
+
+        parameters = {"workspace_id": effective_workspace_id}
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            if result.row_count > 0:
+                row = result.rows[0]
+                return WorkspaceStats(
+                    workspace_id=effective_workspace_id,
+                    total_memories=row.get("total_memories", 0) or 0,
+                    total_chunks=row.get("total_chunks", 0) or 0,
+                    total_entities=row.get("total_entities", 0) or 0,
+                    total_relationships=row.get("total_relationships", 0) or 0,
+                )
+            else:
+                return WorkspaceStats(
+                    workspace_id=effective_workspace_id,
+                    total_memories=0,
+                    total_chunks=0,
+                    total_entities=0,
+                    total_relationships=0,
+                )
+
+        except Exception as e:
+            self._logger.error("get_workspace_stats_error", error=str(e))
+            raise DatabaseError(f"Failed to get workspace stats: {e}")
+
+    async def delete_memory(
+        self,
+        memory_id: str,
+        workspace_id: Optional[str] = None,
+    ) -> bool:
         """
         Delete a memory and its associated chunks.
 
+        IMPORTANT: According to validation report, we must validate workspace
+        to prevent cross-workspace deletion.
+
         Args:
             memory_id: Memory UUID to delete
+            workspace_id: Workspace ID for validation. If provided, memory must
+                          belong to this workspace.
 
         Returns:
             True if deleted, False if memory not found
 
         Raises:
             ValidationError: If memory_id is invalid UUID
+            ValidationError: If memory exists but in different workspace
             DatabaseError: If delete operation fails
         """
         # Validate UUID
@@ -1242,6 +1623,28 @@ class FalkorDBClient:
             uuid.UUID(memory_id)
         except ValueError as e:
             raise ValidationError(f"Invalid memory UUID: {e}")
+
+        # If workspace_id provided, validate memory belongs to it
+        if workspace_id:
+            check_cypher = """
+            MATCH (m:Memory {id: $memory_id})
+            RETURN m.workspace_id AS workspace_id
+            """
+            check_params = {"memory_id": memory_id}
+
+            try:
+                check_result = await self._execute_cypher(check_cypher, check_params)
+                if check_result.row_count > 0:
+                    actual_workspace = check_result.rows[0].get("workspace_id")
+                    if actual_workspace and actual_workspace != workspace_id:
+                        raise ValidationError(
+                            f"Memory belongs to workspace '{actual_workspace}', "
+                            f"not '{workspace_id}'"
+                        )
+            except ValidationError:
+                raise
+            except Exception:
+                pass  # Memory might not exist, deletion will return False
 
         cypher = """
         MATCH (m:Memory {id: $memory_id})
@@ -1256,7 +1659,11 @@ class FalkorDBClient:
             result = await self._execute_cypher(cypher, parameters)
 
             if result.row_count > 0 and result.rows[0]["deleted_count"] > 0:
-                self._logger.info("memory_deleted", memory_id=memory_id)
+                self._logger.info(
+                    "memory_deleted",
+                    memory_id=memory_id,
+                    workspace_id=workspace_id,
+                )
                 return True
             else:
                 self._logger.warning("memory_not_found", memory_id=memory_id)
@@ -1265,22 +1672,3 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("delete_memory_error", error=str(e))
             raise DatabaseError(f"Failed to delete memory: {e}")
-
-    async def clear_all(self) -> None:
-        """
-        Clear all data from the graph (DELETE all nodes/edges).
-
-        WARNING: This is destructive and irreversible.
-
-        Raises:
-            DatabaseError: If clear operation fails
-        """
-        cypher = "MATCH (n) DETACH DELETE n"
-
-        try:
-            result = await self._execute_cypher(cypher, {})
-            self._logger.warning("graph_cleared", nodes_deleted=result.row_count)
-
-        except Exception as e:
-            self._logger.error("clear_all_error", error=str(e))
-            raise DatabaseError(f"Failed to clear graph: {e}")

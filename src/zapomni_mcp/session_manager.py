@@ -18,9 +18,11 @@ import asyncio
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Dict, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional, Set
 
 import structlog
+
+from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 if TYPE_CHECKING:
     from mcp.server.sse import SseServerTransport
@@ -79,6 +81,7 @@ class SessionState:
         request_count: Number of requests processed in this session
         error_count: Number of errors encountered in this session
         heartbeat_sender: Optional callback to send heartbeat to client
+        current_workspace_id: Current workspace for this session (defaults to "default")
     """
 
     session_id: str
@@ -89,6 +92,7 @@ class SessionState:
     request_count: int = 0
     error_count: int = 0
     heartbeat_sender: Optional[HeartbeatSender] = None
+    current_workspace_id: str = DEFAULT_WORKSPACE_ID
 
 
 class SessionManager:
@@ -311,9 +315,7 @@ class SessionManager:
         if session:
             session.error_count += 1
 
-    def set_heartbeat_sender(
-        self, session_id: str, heartbeat_sender: HeartbeatSender
-    ) -> bool:
+    def set_heartbeat_sender(self, session_id: str, heartbeat_sender: HeartbeatSender) -> bool:
         """
         Set the heartbeat sender callback for a session.
 
@@ -334,6 +336,45 @@ class SessionManager:
             self._logger.debug(
                 "Heartbeat sender set",
                 session_id=session_id,
+            )
+            return True
+        return False
+
+    def get_workspace_id(self, session_id: str) -> str:
+        """
+        Get the current workspace ID for a session.
+
+        Args:
+            session_id: Unique identifier of the session
+
+        Returns:
+            Current workspace ID, or DEFAULT_WORKSPACE_ID if session not found
+        """
+        session = self._sessions.get(session_id)
+        if session:
+            return session.current_workspace_id
+        return DEFAULT_WORKSPACE_ID
+
+    def set_workspace_id(self, session_id: str, workspace_id: str) -> bool:
+        """
+        Set the current workspace ID for a session.
+
+        Args:
+            session_id: Unique identifier of the session
+            workspace_id: New workspace ID to set
+
+        Returns:
+            True if session found and workspace set, False otherwise
+        """
+        session = self._sessions.get(session_id)
+        if session:
+            old_workspace = session.current_workspace_id
+            session.current_workspace_id = workspace_id
+            self._logger.info(
+                "Workspace changed",
+                session_id=session_id,
+                old_workspace=old_workspace,
+                new_workspace=workspace_id,
             )
             return True
         return False

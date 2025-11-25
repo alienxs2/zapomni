@@ -10,30 +10,29 @@ License: MIT
 
 from __future__ import annotations
 
-import uuid
-import json
 import asyncio
+import json
+import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
-from contextlib import asynccontextmanager
+from typing import Any, Dict, List, Optional
 
 import structlog
 
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.exceptions import (
-    ValidationError,
+    DatabaseError,
     EmbeddingError,
     ExtractionError,
-    SearchError,
-    DatabaseError,
     ProcessingError,
+    SearchError,
+    ValidationError,
 )
-from zapomni_db import FalkorDBClient
-from zapomni_db.models import Chunk, Memory, SearchResult
 from zapomni_core.graph.graph_builder import GraphBuilder
-
+from zapomni_db import FalkorDBClient
+from zapomni_db.models import DEFAULT_WORKSPACE_ID, Chunk, Memory, SearchResult, Workspace
 
 logger = structlog.get_logger(__name__)
 
@@ -260,6 +259,7 @@ class MemoryProcessor:
         if self._spacy_model is None:
             self.logger.info("lazy_loading_spacy_model", model="en_core_web_sm")
             import spacy
+
             self._spacy_model = spacy.load("en_core_web_sm")
             self.logger.info("spacy_model_loaded")
         return self._spacy_model
@@ -277,6 +277,7 @@ class MemoryProcessor:
                 model=self.config.llm_model,
             )
             from zapomni_core.llm import OllamaLLMClient
+
             self._llm_client = OllamaLLMClient(
                 base_url=self.embedder.base_url,  # Use same Ollama instance
                 model_name=self.config.llm_model,
@@ -298,6 +299,7 @@ class MemoryProcessor:
         if self._extractor is None:
             self.logger.info("lazy_loading_entity_extractor")
             from zapomni_core.extractors.entity_extractor import EntityExtractor
+
             spacy_model = self._load_spacy_model()
 
             # Create extractor with optional LLM client
@@ -336,6 +338,7 @@ class MemoryProcessor:
         self,
         text: str,
         metadata: Optional[Dict[str, Any]] = None,
+        workspace_id: Optional[str] = None,
     ) -> str:
         """
         Add memory to system with full processing pipeline.
@@ -348,6 +351,11 @@ class MemoryProcessor:
         4. Extract entities (Phase 2, if enabled)
         5. Store in FalkorDB (chunks + embeddings + metadata + entities)
         6. Return memory ID (UUID)
+
+        Args:
+            text: Text content to remember
+            metadata: Optional metadata dict
+            workspace_id: Workspace ID for data isolation. Defaults to "default".
 
         The pipeline is **transactional** - if any stage fails, no data is stored.
         All errors are caught, logged, and re-raised with context.
@@ -408,7 +416,13 @@ class MemoryProcessor:
             ```
         """
         correlation_id = str(uuid.uuid4())
-        log = self.logger.bind(correlation_id=correlation_id, operation="add_memory")
+        # Determine effective workspace_id
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
+        log = self.logger.bind(
+            correlation_id=correlation_id,
+            operation="add_memory",
+            workspace_id=effective_workspace_id,
+        )
 
         try:
             if not isinstance(text, str):
@@ -418,7 +432,11 @@ class MemoryProcessor:
                     details={"text_type": str(type(text))},
                 )
 
-            log.info("add_memory_started", text_length=len(text) if text else 0)
+            log.info(
+                "add_memory_started",
+                text_length=len(text) if text else 0,
+                workspace_id=effective_workspace_id,
+            )
 
             # STAGE 1: Validate Input
             log.debug("validating_input")
@@ -472,6 +490,7 @@ class MemoryProcessor:
                 metadata=final_metadata,
                 entities=entities,
                 relationships=relationships,
+                workspace_id=effective_workspace_id,
             )
             log.info("memory_stored", memory_id=stored_id)
 
@@ -480,6 +499,7 @@ class MemoryProcessor:
                 "add_memory_completed",
                 memory_id=stored_id,
                 chunks=len(chunks),
+                workspace_id=effective_workspace_id,
                 success=True,
             )
             return stored_id
@@ -516,6 +536,7 @@ class MemoryProcessor:
         limit: int = 10,
         filters: Optional[Dict[str, Any]] = None,
         search_mode: str = "vector",
+        workspace_id: Optional[str] = None,
     ) -> List[SearchResultItem]:
         """
         Search memories using specified search mode.
@@ -605,7 +626,13 @@ class MemoryProcessor:
             ```
         """
         correlation_id = str(uuid.uuid4())
-        log = self.logger.bind(correlation_id=correlation_id, operation="search_memory")
+        # Determine effective workspace_id
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
+        log = self.logger.bind(
+            correlation_id=correlation_id,
+            operation="search_memory",
+            workspace_id=effective_workspace_id,
+        )
 
         try:
             log.info(
@@ -613,6 +640,7 @@ class MemoryProcessor:
                 query_length=len(query),
                 limit=limit,
                 search_mode=search_mode,
+                workspace_id=effective_workspace_id,
             )
 
             # Validate input
@@ -632,7 +660,11 @@ class MemoryProcessor:
             # Execute search based on mode
             log.debug("executing_search", search_mode=search_mode)
             if search_mode == "vector":
-                db_results = await self.db_client.vector_search(query_embedding, limit=limit)
+                db_results = await self.db_client.vector_search(
+                    query_embedding,
+                    limit=limit,
+                    workspace_id=effective_workspace_id,
+                )
             else:
                 # Phase 2: Other search modes not yet implemented
                 log.warning("search_mode_not_implemented", search_mode=search_mode)
@@ -1191,6 +1223,7 @@ class MemoryProcessor:
         metadata: Dict[str, Any],
         entities: Optional[List[Any]] = None,
         relationships: Optional[List[Any]] = None,
+        workspace_id: Optional[str] = None,
     ) -> str:
         """
         Store memory in FalkorDB (private helper).
@@ -1205,6 +1238,7 @@ class MemoryProcessor:
             metadata: Metadata dict (includes timestamp)
             entities: Optional entities (Phase 2)
             relationships: Optional relationships (Phase 2)
+            workspace_id: Workspace ID for data isolation. Defaults to "default".
 
         Returns:
             memory_id: Same as input (for consistency)
@@ -1212,20 +1246,23 @@ class MemoryProcessor:
         Raises:
             DatabaseError: If DB operation fails
         """
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
+
         try:
             # Extract original text from chunks
             text = "".join([chunk.text for chunk in chunks])
 
-            # Create Memory model
+            # Create Memory model with workspace_id
             memory = Memory(
                 text=text,
                 chunks=chunks,
                 embeddings=embeddings,
                 metadata=metadata,
+                workspace_id=effective_workspace_id,
             )
 
-            # Store in database
-            stored_id = await self.db_client.add_memory(memory)
+            # Store in database with workspace_id
+            stored_id = await self.db_client.add_memory(memory, workspace_id=effective_workspace_id)
             return stored_id
 
         except DatabaseError:

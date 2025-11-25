@@ -8,12 +8,13 @@ Author: Goncharenko Anton aka alienxs2
 TDD Implementation: Code written to pass tests from specifications.
 """
 
-import uuid
 import re
-from typing import List, Dict, Any, Optional, Tuple
+import uuid
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from zapomni_db.exceptions import ValidationError
+from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 
 class CypherQueryBuilder:
@@ -53,10 +54,7 @@ class CypherQueryBuilder:
         """
         pass
 
-    def build_add_memory_query(
-        self,
-        memory: "Memory"
-    ) -> Tuple[str, Dict[str, Any]]:
+    def build_add_memory_query(self, memory: "Memory") -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query to insert a Memory with its Chunks and embeddings.
 
@@ -120,12 +118,14 @@ class CypherQueryBuilder:
         # Build chunks data array with embeddings
         chunks_data = []
         for i, (chunk, embedding) in enumerate(zip(memory.chunks, memory.embeddings)):
-            chunks_data.append({
-                "id": chunk_ids[i],
-                "text": chunk.text,
-                "index": chunk.index,
-                "embedding": embedding
-            })
+            chunks_data.append(
+                {
+                    "id": chunk_ids[i],
+                    "text": chunk.text,
+                    "index": chunk.index,
+                    "embedding": embedding,
+                }
+            )
 
         parameters = {
             "memory_id": memory_id,
@@ -133,7 +133,7 @@ class CypherQueryBuilder:
             "source": memory.metadata.get("source", ""),
             "tags": memory.metadata.get("tags", []),
             "created_at": created_at,
-            "chunks": chunks_data
+            "chunks": chunks_data,
         }
 
         # STEP 5: Build Cypher query
@@ -164,7 +164,8 @@ class CypherQueryBuilder:
         embedding: List[float],
         limit: int = 10,
         filters: Optional[Dict[str, Any]] = None,
-        min_similarity: float = 0.5
+        min_similarity: float = 0.5,
+        workspace_id: Optional[str] = None,
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query for vector similarity search using HNSW index.
@@ -181,6 +182,7 @@ class CypherQueryBuilder:
                 - date_from: datetime - Memories created after this date
                 - date_to: datetime - Memories created before this date
             min_similarity: Minimum similarity threshold (0.0-1.0)
+            workspace_id: Workspace ID for data isolation. Defaults to "default".
 
         Returns:
             Tuple of (cypher_string, parameters_dict)
@@ -197,7 +199,8 @@ class CypherQueryBuilder:
                 embedding=[0.1] * 768,
                 limit=10,
                 filters={"tags": ["python", "coding"]},
-                min_similarity=0.7
+                min_similarity=0.7,
+                workspace_id="my-workspace"
             )
             # Returns parameterized query with CALL db.idx.vector.queryNodes
             ```
@@ -206,20 +209,20 @@ class CypherQueryBuilder:
         self._validate_embedding(embedding)
 
         if not isinstance(limit, int) or limit < 1 or limit > 1000:
-            raise ValidationError(
-                f"limit must be int in range [1, 1000], got {limit}"
-            )
+            raise ValidationError(f"limit must be int in range [1, 1000], got {limit}")
 
         if not isinstance(min_similarity, (int, float)) or not (0.0 <= min_similarity <= 1.0):
-            raise ValidationError(
-                f"min_similarity must be in [0.0, 1.0], got {min_similarity}"
-            )
+            raise ValidationError(f"min_similarity must be in [0.0, 1.0], got {min_similarity}")
+
+        # Determine effective workspace_id
+        effective_workspace_id = workspace_id or DEFAULT_WORKSPACE_ID
 
         # STEP 2: Build parameters with base query parameters
         parameters = {
             "query_embedding": embedding,
             "limit": limit,
-            "min_similarity": min_similarity
+            "min_similarity": min_similarity,
+            "workspace_id": effective_workspace_id,
         }
 
         # STEP 3: Build filter clause and merge parameters
@@ -230,6 +233,7 @@ class CypherQueryBuilder:
         # FalkorDB queryNodes signature: (label, attribute, k, query_vector)
         # Note: FalkorDB returns cosine DISTANCE (0=identical, 2=opposite)
         # Convert min_similarity to max_distance: max_distance = 1 - min_similarity
+        # IMPORTANT: workspace_id filter must come AFTER YIELD clause (in-filtering pattern)
         cypher = f"""
         CALL db.idx.vector.queryNodes(
             'Chunk',
@@ -237,8 +241,10 @@ class CypherQueryBuilder:
             $limit,
             vecf32($query_embedding)
         ) YIELD node AS c, score
+        WHERE c.workspace_id = $workspace_id
         MATCH (m:Memory)-[:HAS_CHUNK]->(c)
         WHERE score <= (1.0 - $min_similarity)
+        AND m.workspace_id = $workspace_id
         {filter_clause}
         RETURN m.id AS memory_id,
                c.id AS chunk_id,
@@ -247,17 +253,15 @@ class CypherQueryBuilder:
                m.tags AS tags,
                m.source AS source,
                m.created_at AS timestamp,
-               c.index AS chunk_index
+               c.index AS chunk_index,
+               m.workspace_id AS workspace_id
         ORDER BY score ASC
         """
 
         return (cypher, parameters)
 
     def build_graph_traversal_query(
-        self,
-        entity_id: str,
-        depth: int = 1,
-        limit: int = 20
+        self, entity_id: str, depth: int = 1, limit: int = 20
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query for graph traversal to find related entities.
@@ -301,20 +305,13 @@ class CypherQueryBuilder:
         self._validate_uuid(entity_id)
 
         if not isinstance(depth, int) or depth < 1 or depth > 5:
-            raise ValidationError(
-                f"depth must be int in range [1, 5], got {depth}"
-            )
+            raise ValidationError(f"depth must be int in range [1, 5], got {depth}")
 
         if not isinstance(limit, int) or limit < 1 or limit > 100:
-            raise ValidationError(
-                f"limit must be int in range [1, 100], got {limit}"
-            )
+            raise ValidationError(f"limit must be int in range [1, 100], got {limit}")
 
         # STEP 2: Build parameters
-        parameters = {
-            "entity_id": entity_id,
-            "limit": limit
-        }
+        parameters = {"entity_id": entity_id, "limit": limit}
 
         # STEP 3: Build Cypher query with variable-length pattern
         pattern = f"[rels*1..{depth}]"
@@ -373,10 +370,7 @@ class CypherQueryBuilder:
 
         return (cypher, {})
 
-    def build_delete_memory_query(
-        self,
-        memory_id: str
-    ) -> Tuple[str, Dict[str, Any]]:
+    def build_delete_memory_query(self, memory_id: str) -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query to delete a Memory and its associated Chunks.
 
@@ -406,9 +400,7 @@ class CypherQueryBuilder:
         self._validate_uuid(memory_id)
 
         # STEP 2: Build parameters
-        parameters = {
-            "memory_id": memory_id
-        }
+        parameters = {"memory_id": memory_id}
 
         # STEP 3: Build Cypher query
         cypher = """
@@ -420,10 +412,7 @@ class CypherQueryBuilder:
 
         return (cypher, parameters)
 
-    def build_add_entity_query(
-        self,
-        entity: "Entity"
-    ) -> Tuple[str, Dict[str, Any]]:
+    def build_add_entity_query(self, entity: "Entity") -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query to add an Entity node to the knowledge graph.
 
@@ -475,7 +464,7 @@ class CypherQueryBuilder:
             "type": entity.type,
             "description": entity.description or "",
             "confidence": entity.confidence,
-            "created_at": created_at
+            "created_at": created_at,
         }
 
         # STEP 4: Build Cypher query
@@ -498,7 +487,7 @@ class CypherQueryBuilder:
         from_entity_id: str,
         to_entity_id: str,
         relationship_type: str,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Generate Cypher query to add a relationship between two entities.
@@ -555,7 +544,7 @@ class CypherQueryBuilder:
             "from_id": from_entity_id,
             "to_id": to_entity_id,
             "rel_id": relationship_id,
-            "created_at": created_at
+            "created_at": created_at,
         }
 
         # Extract properties with defaults
@@ -640,10 +629,7 @@ class CypherQueryBuilder:
         if not all(isinstance(x, (int, float)) for x in embedding):
             raise ValidationError("Embedding must contain only numeric values")
 
-    def _build_filter_clause(
-        self,
-        filters: Optional[Dict[str, Any]]
-    ) -> Tuple[str, Dict[str, Any]]:
+    def _build_filter_clause(self, filters: Optional[Dict[str, Any]]) -> Tuple[str, Dict[str, Any]]:
         """
         Build parameterized WHERE clause from metadata filters.
 

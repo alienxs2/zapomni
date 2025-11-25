@@ -9,18 +9,18 @@ License: MIT
 """
 
 from typing import Any, Dict, Optional
+
 import structlog
-from pydantic import ValidationError, BaseModel, StringConstraints, ConfigDict
+from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
 from typing_extensions import Annotated
 
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    SearchError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
+    SearchError,
 )
-
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
 
 logger = structlog.get_logger(__name__)
 
@@ -33,6 +33,7 @@ class SearchMemoryRequest(BaseModel):
     query: Annotated[str, StringConstraints(min_length=1, max_length=1000)]
     limit: int = 10
     filters: Optional[Dict[str, Any]] = None
+    workspace_id: str = None  # Optional workspace ID override
 
 
 class SearchMemoryTool:
@@ -106,6 +107,12 @@ class SearchMemoryTool:
                 },
                 "additionalProperties": False,
             },
+            "workspace_id": {
+                "type": "string",
+                "description": (
+                    "Optional workspace ID. If not specified, uses the current session workspace."
+                ),
+            },
         },
         "required": ["query"],
     }
@@ -168,16 +175,19 @@ class SearchMemoryTool:
             request = self._validate_input(arguments)
 
             # Step 2: Execute search
+            workspace_id = arguments.get("workspace_id")
             log.info(
                 "executing_search",
                 query_length=len(request.query),
                 limit=request.limit,
                 has_filters=request.filters is not None,
+                workspace_id=workspace_id,
             )
             results = await self.memory_processor.search_memory(
                 query=request.query,
                 limit=request.limit,
                 filters=request.filters,
+                workspace_id=workspace_id,
             )
 
             # Step 3: Format response
@@ -307,9 +317,7 @@ class SearchMemoryTool:
             if result.tags:
                 tags_str = f" [Tags: {', '.join(result.tags)}]"
 
-            lines.append(
-                f"\n{i}. [Score: {score}]{tags_str}\n{text_preview}\n"
-            )
+            lines.append(f"\n{i}. [Score: {score}]{tags_str}\n{text_preview}\n")
 
         formatted_text = "".join(lines)
 

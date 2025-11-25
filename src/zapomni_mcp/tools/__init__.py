@@ -6,12 +6,13 @@ This module contains all MCP tool implementations:
 - search_memory: Retrieve relevant information
 - get_stats: Query system statistics
 - get_related: Find related entities through graph traversal
+- Workspace tools: create, list, set, get, delete workspaces
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Protocol, Any, Dict
+from typing import Any, Dict, Protocol
 
 
 class MCPTool(Protocol):
@@ -32,12 +33,18 @@ class MCPTool(Protocol):
 
 
 from .add_memory import AddMemoryTool
-from .search_memory import SearchMemoryTool
-from .get_stats import GetStatsTool
-from .get_related import GetRelatedTool
 from .build_graph import BuildGraphTool
+from .get_related import GetRelatedTool
+from .get_stats import GetStatsTool
 from .graph_status import GraphStatusTool
-
+from .search_memory import SearchMemoryTool
+from .workspace_tools import (
+    CreateWorkspaceTool,
+    DeleteWorkspaceTool,
+    GetCurrentWorkspaceTool,
+    ListWorkspacesTool,
+    SetCurrentWorkspaceTool,
+)
 
 __all__ = [
     "MCPTool",
@@ -47,4 +54,10 @@ __all__ = [
     "GetRelatedTool",
     "BuildGraphTool",
     "GraphStatusTool",
+    # Workspace tools
+    "CreateWorkspaceTool",
+    "ListWorkspacesTool",
+    "SetCurrentWorkspaceTool",
+    "GetCurrentWorkspaceTool",
+    "DeleteWorkspaceTool",
 ]

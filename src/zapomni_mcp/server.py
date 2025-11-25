@@ -22,6 +22,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool
 
 from zapomni_core.exceptions import ValidationError
+from zapomni_core.workspace_manager import WorkspaceManager
+from zapomni_db.models import DEFAULT_WORKSPACE_ID
 from zapomni_mcp.config import Settings, SSEConfig
 from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
 from zapomni_mcp.tools.build_graph import BuildGraphTool
@@ -31,6 +33,13 @@ from zapomni_mcp.tools.export_graph import ExportGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
 from zapomni_mcp.tools.graph_status import GraphStatusTool
 from zapomni_mcp.tools.index_codebase import IndexCodebaseTool
+from zapomni_mcp.tools.workspace_tools import (
+    CreateWorkspaceTool,
+    DeleteWorkspaceTool,
+    GetCurrentWorkspaceTool,
+    ListWorkspacesTool,
+    SetCurrentWorkspaceTool,
+)
 
 # Custom Exceptions
 
@@ -138,6 +147,12 @@ class MCPServer:
         self._request_count = 0
         self._error_count = 0
         self._start_time = 0.0
+
+        # Initialize workspace manager (will be created when db_client is available)
+        self._workspace_manager: Optional[WorkspaceManager] = None
+
+        # Session manager will be set by SSE transport
+        self._session_manager: Optional[Any] = None
 
         # Setup structured logging to stderr
         structlog.configure(
@@ -261,6 +276,24 @@ class MCPServer:
                     repository_indexer=memory_processor.code_indexer,
                     memory_processor=memory_processor,
                 )
+            )
+
+        # Phase 4: Workspace management tools
+        workspace_manager = self.get_workspace_manager()
+        if workspace_manager is not None:
+            tools.extend(
+                [
+                    CreateWorkspaceTool(workspace_manager=workspace_manager),
+                    ListWorkspacesTool(workspace_manager=workspace_manager),
+                    SetCurrentWorkspaceTool(workspace_manager=workspace_manager, mcp_server=self),
+                    GetCurrentWorkspaceTool(workspace_manager=workspace_manager, mcp_server=self),
+                    DeleteWorkspaceTool(workspace_manager=workspace_manager),
+                ]
+            )
+        else:
+            self._logger.warning(
+                "workspace_tools_not_registered",
+                reason="WorkspaceManager not available (db_client missing)",
             )
 
         # Register each tool
@@ -623,6 +656,80 @@ class MCPServer:
             uptime_seconds=uptime,
             running=self._running,
         )
+
+    def get_workspace_manager(self) -> Optional[WorkspaceManager]:
+        """
+        Get or create the WorkspaceManager instance.
+
+        Creates the WorkspaceManager lazily when first accessed,
+        using the db_client from the core engine.
+
+        Returns:
+            WorkspaceManager instance, or None if db_client not available
+        """
+        if self._workspace_manager is not None:
+            return self._workspace_manager
+
+        # Try to get db_client from core engine
+        if hasattr(self._core_engine, "db_client"):
+            db_client = self._core_engine.db_client
+            if db_client is not None:
+                self._workspace_manager = WorkspaceManager(db_client=db_client)
+                self._logger.info("WorkspaceManager initialized")
+                return self._workspace_manager
+
+        return None
+
+    def resolve_workspace_id(self, session_id: Optional[str] = None) -> str:
+        """
+        Resolve the current workspace_id for a request.
+
+        Resolution order:
+        1. If session_id provided and session_manager available,
+           get workspace from session state
+        2. Otherwise, return DEFAULT_WORKSPACE_ID
+
+        Args:
+            session_id: Optional session ID for SSE transport
+
+        Returns:
+            Resolved workspace_id string
+        """
+        # Try to get from session if available
+        if session_id and self._session_manager is not None:
+            try:
+                workspace_id = self._session_manager.get_workspace_id(session_id)
+                if workspace_id:
+                    return workspace_id
+            except Exception as e:
+                self._logger.warning(
+                    "Failed to get workspace from session",
+                    session_id=session_id,
+                    error=str(e),
+                )
+
+        return DEFAULT_WORKSPACE_ID
+
+    def set_session_workspace(
+        self,
+        session_id: str,
+        workspace_id: str,
+    ) -> bool:
+        """
+        Set the workspace_id for a session.
+
+        Args:
+            session_id: Session ID
+            workspace_id: Workspace ID to set
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if self._session_manager is None:
+            self._logger.warning("Session manager not available")
+            return False
+
+        return self._session_manager.set_workspace_id(session_id, workspace_id)
 
     def _setup_signal_handlers(self) -> None:
         """

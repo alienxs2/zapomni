@@ -9,18 +9,18 @@ License: MIT
 """
 
 from typing import Any, Dict, Tuple
+
 import structlog
-from pydantic import ValidationError, BaseModel, StringConstraints, ConfigDict
+from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
 from typing_extensions import Annotated
 
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
     ProcessingError,
 )
-
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
 
 logger = structlog.get_logger(__name__)
 
@@ -32,6 +32,7 @@ class AddMemoryRequest(BaseModel):
 
     text: Annotated[str, StringConstraints(min_length=1, max_length=10_000_000)]
     metadata: Dict[str, Any] = {}
+    workspace_id: str = None  # Optional workspace ID override
 
 
 class AddMemoryResponse(BaseModel):
@@ -104,6 +105,12 @@ class AddMemoryTool:
                 },
                 "additionalProperties": True,
             },
+            "workspace_id": {
+                "type": "string",
+                "description": (
+                    "Optional workspace ID. If not specified, uses the current session workspace."
+                ),
+            },
         },
         "required": ["text"],
         "additionalProperties": False,
@@ -168,14 +175,17 @@ class AddMemoryTool:
             text, metadata = self._validate_arguments(arguments)
 
             # Step 2: Process memory via processor
+            workspace_id = arguments.get("workspace_id")
             log.info(
                 "processing_memory",
                 text_length=len(text),
                 has_metadata=bool(metadata),
+                workspace_id=workspace_id,
             )
             memory_id = await self.memory_processor.add_memory(
                 text=text,
                 metadata=metadata or {},
+                workspace_id=workspace_id,
             )
 
             # Step 3: Get preview of text for response
@@ -268,11 +278,7 @@ class AddMemoryTool:
         Returns:
             MCP response dictionary
         """
-        message = (
-            f"Memory stored successfully.\n"
-            f"ID: {memory_id}\n"
-            f"Preview: {text_preview}"
-        )
+        message = f"Memory stored successfully.\n" f"ID: {memory_id}\n" f"Preview: {text_preview}"
 
         return {
             "content": [
