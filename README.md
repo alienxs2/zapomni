@@ -28,6 +28,16 @@
 
 ---
 
+> ⚠️ **ВНИМАНИЕ / WARNING**
+>
+> Проект находится в активной стадии разработки и **пока не работает полностью**.
+> Используйте на свой страх и риск. Стабильный релиз планируется позже.
+>
+> This project is under active development and **is not fully functional yet**.
+> Use at your own risk. Stable release coming later.
+
+---
+
 ## Overview
 
 Zapomni is a **local-first MCP (Model Context Protocol) memory server** that provides AI agents with intelligent, contextual, and private long-term memory. Built on a unified vector + graph database architecture (FalkorDB) and powered by local LLM runtime (Ollama), Zapomni delivers enterprise-grade RAG capabilities with zero external dependencies and guaranteed data privacy.
@@ -110,7 +120,7 @@ Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
   "mcpServers": {
     "zapomni": {
       "command": "python",
-      "args": ["-m", "zapomni_mcp.server"],
+      "args": ["-m", "zapomni_mcp"],
       "env": {
         "FALKORDB_HOST": "localhost",
         "OLLAMA_BASE_URL": "http://localhost:11434"
@@ -229,7 +239,7 @@ pre-commit run --all-files
 docker-compose up -d
 
 # Run in development mode
-python -m zapomni_mcp.server
+python -m zapomni_mcp
 
 # Monitor logs
 docker-compose logs -f
