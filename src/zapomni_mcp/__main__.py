@@ -135,7 +135,9 @@ async def main() -> None:
 
         # STAGE 5: Initialize EntityExtractor for knowledge graph building
         logger.info("Initializing EntityExtractor")
-        extractor = EntityExtractor()
+        import spacy
+        spacy_model = spacy.load("en_core_web_sm")
+        extractor = EntityExtractor(spacy_model=spacy_model)
         logger.info("EntityExtractor initialized")
 
         # STAGE 6: Initialize MemoryProcessor
