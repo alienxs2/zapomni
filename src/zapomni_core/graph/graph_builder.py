@@ -262,10 +262,16 @@ class GraphBuilder:
             )
 
         try:
-            # STEP 1: Extract entities
+            # STEP 1: Extract entities using async method to avoid blocking event loop
             self._logger.debug("extracting_entities", text_length=len(text))
 
-            extracted_entities = self.entity_extractor.extract_entities(text)
+            # Use async extraction if available (SSE transport), fallback to sync
+            if hasattr(self.entity_extractor, 'extract_entities_async'):
+                extracted_entities = await self.entity_extractor.extract_entities_async(text)
+            else:
+                # Fallback for older EntityExtractor instances without async support
+                extracted_entities = self.entity_extractor.extract_entities(text)
+
             self._logger.info(
                 "entities_extracted",
                 num_entities=len(extracted_entities),

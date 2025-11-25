@@ -22,7 +22,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool
 
 from zapomni_core.exceptions import ValidationError
-from zapomni_mcp.config import Settings
+from zapomni_mcp.config import Settings, SSEConfig
 from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
 from zapomni_mcp.tools.build_graph import BuildGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
@@ -243,7 +243,8 @@ class MCPServer:
             # Phase 1: Core tools
             AddMemoryTool(memory_processor=memory_processor),
             SearchMemoryTool(memory_processor=memory_processor),
-            GetStatsTool(memory_processor=memory_processor),
+            # GetStatsTool gets mcp_server reference for dynamic session_manager access in SSE mode
+            GetStatsTool(memory_processor=memory_processor, mcp_server=self),
             # Phase 2: Enhanced Search Tools
             BuildGraphTool(memory_processor=memory_processor),
             GetRelatedTool(memory_processor=memory_processor),
@@ -358,6 +359,120 @@ class MCPServer:
             # Ensure shutdown is called
             self.shutdown()
 
+    async def run_sse(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+        cors_origins: list[str] = None,
+    ) -> None:
+        """
+        Start the MCP server with SSE transport.
+
+        This enables multiple concurrent client connections via HTTP.
+        The SSE transport provides:
+        - GET /sse: Establish SSE connection for MCP communication
+        - POST /messages/{session_id}: Send JSON-RPC messages to session
+
+        Args:
+            host: Bind address (default: 127.0.0.1 for local only)
+            port: HTTP port (default: 8000)
+            cors_origins: Allowed CORS origins (default: ["*"])
+
+        Raises:
+            RuntimeError: If server is already running
+            OSError: If port is already in use
+        """
+        import uvicorn
+        from zapomni_mcp.sse_transport import create_sse_app
+
+        # Check if already running
+        if self._running:
+            raise RuntimeError("Server is already running")
+
+        # Check if tools are registered
+        if len(self._tools) == 0:
+            raise RuntimeError("No tools registered. Call register_all_tools() first.")
+
+        # Create SSE configuration
+        config = SSEConfig(
+            host=host,
+            port=port,
+            cors_origins=cors_origins or ["*"],
+        )
+
+        # Create Starlette app with SSE routes
+        app = create_sse_app(mcp_server=self, config=config)
+
+        # Set running state
+        self._running = True
+        self._start_time = time.time()
+
+        self._logger.info(
+            "Starting SSE server",
+            host=host,
+            port=port,
+            tool_count=len(self._tools),
+            tools=list(self._tools.keys()),
+            cors_origins=config.cors_origins,
+        )
+
+        # Register tools with MCP server (same as stdio mode)
+        @self._server.call_tool()
+        async def handle_call_tool(name: str, arguments: dict) -> list:
+            """Handle tool call from MCP client."""
+            self._request_count += 1
+
+            try:
+                if name not in self._tools:
+                    self._error_count += 1
+                    return [
+                        {
+                            "type": "text",
+                            "text": f"Error: Unknown tool '{name}'",
+                        }
+                    ]
+
+                # Execute tool
+                result = await self._tools[name].execute(arguments)
+
+                # Return content from result
+                return result.get("content", [])
+
+            except Exception as e:
+                self._error_count += 1
+                self._logger.error("Tool execution error", tool=name, error=str(e))
+                return [{"type": "text", "text": f"Error: {str(e)}"}]
+
+        @self._server.list_tools()
+        async def handle_list_tools() -> list[Tool]:
+            """List all available tools."""
+            return [
+                Tool(
+                    name=tool.name,
+                    description=tool.description,
+                    inputSchema=tool.input_schema,
+                )
+                for tool in self._tools.values()
+            ]
+
+        # Configure uvicorn server
+        uvicorn_config = uvicorn.Config(
+            app,
+            host=host,
+            port=port,
+            log_level="info",
+        )
+        server = uvicorn.Server(uvicorn_config)
+
+        try:
+            await server.serve()
+        except Exception as e:
+            self._logger.error("SSE server error", error=str(e))
+            raise
+        finally:
+            # Graceful shutdown sequence
+            await self._graceful_shutdown_sse()
+
     def shutdown(self) -> None:
         """
         Gracefully shut down the MCP server.
@@ -389,6 +504,69 @@ class MCPServer:
                 else 0
             ),
         )
+
+    async def _graceful_shutdown_sse(self) -> None:
+        """
+        Graceful shutdown sequence for SSE transport.
+
+        This method performs cleanup in the correct order:
+        1. Close all active SSE sessions
+        2. Cleanup EntityExtractor thread pool
+        3. Call standard shutdown
+
+        This is called automatically when the SSE server exits.
+        """
+        self._logger.info("Starting graceful SSE shutdown...")
+
+        # Step 1: Close all active sessions
+        if hasattr(self, '_session_manager') and self._session_manager is not None:
+            try:
+                closed_count = await self._session_manager.close_all_sessions()
+                self._logger.info(
+                    "SSE sessions closed",
+                    closed_count=closed_count,
+                )
+            except Exception as e:
+                self._logger.error(
+                    "Error closing SSE sessions",
+                    error=str(e),
+                )
+
+        # Step 2: Cleanup EntityExtractor thread pool
+        await self._cleanup_entity_extractor()
+
+        # Step 3: Standard shutdown
+        self.shutdown()
+
+    async def _cleanup_entity_extractor(self) -> None:
+        """
+        Cleanup EntityExtractor thread pool during shutdown.
+
+        Waits for pending extractions to complete (with timeout)
+        before shutting down the executor.
+        """
+        try:
+            # Check if we have a memory processor with entity extractor
+            if hasattr(self._core_engine, '_entity_extractor'):
+                extractor = self._core_engine._entity_extractor
+                if extractor is not None and hasattr(extractor, 'shutdown'):
+                    self._logger.info("Shutting down EntityExtractor...")
+                    extractor.shutdown()
+                    self._logger.info("EntityExtractor shutdown complete")
+
+            # Also check memory_processor.extractor pattern
+            if hasattr(self._core_engine, 'extractor'):
+                extractor = self._core_engine.extractor
+                if extractor is not None and hasattr(extractor, 'shutdown'):
+                    self._logger.info("Shutting down EntityExtractor (via extractor)...")
+                    extractor.shutdown()
+                    self._logger.info("EntityExtractor shutdown complete")
+
+        except Exception as e:
+            self._logger.warning(
+                "Error during EntityExtractor cleanup",
+                error=str(e),
+            )
 
     def get_stats(self) -> ServerStats:
         """

@@ -40,7 +40,7 @@ class FalkorDBClient:
     performing vector similarity search, and executing graph queries.
     """
 
-    DEFAULT_POOL_SIZE = 10
+    DEFAULT_POOL_SIZE = 20  # Increased for SSE concurrent connections
     DEFAULT_VECTOR_DIMENSION = 768
     DEFAULT_MAX_RETRIES = 3
 
@@ -100,6 +100,12 @@ class FalkorDBClient:
             port=port,
             graph=graph_name
         )
+
+        # Pool monitoring state
+        self._active_connections = 0
+        self._total_queries = 0
+        self._pool_wait_count = 0
+        self._pool_utilization_high_logged = False
 
         # Lazy connection - will connect on first operation
         try:
@@ -612,9 +618,20 @@ class FalkorDBClient:
             stats["database_size_mb"] = 0.0  # Not available in current implementation
             stats["avg_query_latency_ms"] = stats["health"]["query_latency_ms"]
 
+            # Add pool monitoring stats
+            stats["pool"] = {
+                "size": self.pool_size,
+                "active_connections": self._active_connections,
+                "total_queries": self._total_queries,
+                "utilization_percent": round(
+                    (self._active_connections / self.pool_size) * 100, 1
+                ) if self.pool_size > 0 else 0.0,
+            }
+
             self._logger.info(
                 "stats_retrieved",
-                total_nodes=stats["nodes"]["total"]
+                total_nodes=stats["nodes"]["total"],
+                pool_active=self._active_connections,
             )
 
             return stats
@@ -989,29 +1006,51 @@ class FalkorDBClient:
             raise DatabaseError(f"Failed to clear graph: {e}")
 
     async def _execute_cypher(self, query: str, parameters: Dict[str, Any]) -> QueryResult:
-        """Execute Cypher query using FalkorDB."""
+        """Execute Cypher query using FalkorDB with pool monitoring."""
         if not self._initialized:
             raise ConnectionError("Not initialized")
 
-        # Execute query in thread pool (FalkorDB is sync)
-        result = await asyncio.to_thread(self.graph.query, query, parameters)
+        # Pool monitoring: track active connections
+        self._active_connections += 1
+        self._total_queries += 1
 
-        # Convert FalkorDB result to our QueryResult format
-        rows = []
-        for record in result.result_set:
-            # Convert result record to dict
-            row_dict = {}
-            for i, col_header in enumerate(result.header):
-                # col_header is [type_id, column_name]
-                col_name = col_header[1]
-                row_dict[col_name] = record[i]
-            rows.append(row_dict)
+        # Log warning if pool utilization exceeds 80%
+        utilization = self._active_connections / self.pool_size
+        if utilization > 0.8 and not self._pool_utilization_high_logged:
+            self._logger.warning(
+                "pool_utilization_high",
+                active_connections=self._active_connections,
+                pool_size=self.pool_size,
+                utilization_percent=round(utilization * 100, 1),
+            )
+            self._pool_utilization_high_logged = True
+        elif utilization <= 0.5:
+            # Reset the flag when utilization drops
+            self._pool_utilization_high_logged = False
 
-        return QueryResult(
-            rows=rows,
-            row_count=len(rows),
-            execution_time_ms=int(result.run_time_ms) if hasattr(result, 'run_time_ms') else 0
-        )
+        try:
+            # Execute query in thread pool (FalkorDB is sync)
+            result = await asyncio.to_thread(self.graph.query, query, parameters)
+
+            # Convert FalkorDB result to our QueryResult format
+            rows = []
+            for record in result.result_set:
+                # Convert result record to dict
+                row_dict = {}
+                for i, col_header in enumerate(result.header):
+                    # col_header is [type_id, column_name]
+                    col_name = col_header[1]
+                    row_dict[col_name] = record[i]
+                rows.append(row_dict)
+
+            return QueryResult(
+                rows=rows,
+                row_count=len(rows),
+                execution_time_ms=int(result.run_time_ms) if hasattr(result, 'run_time_ms') else 0
+            )
+        finally:
+            # Pool monitoring: release connection
+            self._active_connections -= 1
 
     def close(self) -> None:
         """

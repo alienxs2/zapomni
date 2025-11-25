@@ -86,10 +86,10 @@ class ZapomniSettings(BaseSettings):
     )
 
     falkordb_pool_size: int = Field(
-        default=10,
+        default=20,
         ge=1,
-        le=100,
-        description="FalkorDB connection pool size"
+        le=200,
+        description="FalkorDB connection pool size (increased for SSE concurrency)"
     )
 
     # ========================================
@@ -266,6 +266,52 @@ class ZapomniSettings(BaseSettings):
     enable_semantic_cache: bool = Field(
         default=False,
         description="Enable semantic embedding cache (Phase 2)"
+    )
+
+    # ========================================
+    # SSE TRANSPORT CONFIGURATION
+    # ========================================
+
+    sse_host: str = Field(
+        default="127.0.0.1",
+        description="SSE server bind address (127.0.0.1 for local only)"
+    )
+
+    sse_port: int = Field(
+        default=8000,
+        ge=1,
+        le=65535,
+        description="SSE server port"
+    )
+
+    sse_cors_origins: str = Field(
+        default="*",
+        description="Comma-separated CORS origins (* for all)"
+    )
+
+    sse_heartbeat_interval: int = Field(
+        default=30,
+        ge=5,
+        le=300,
+        description="SSE heartbeat interval in seconds"
+    )
+
+    sse_max_connection_lifetime: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description="Maximum SSE connection lifetime in seconds"
+    )
+
+    # ========================================
+    # EXECUTOR CONFIGURATION
+    # ========================================
+
+    entity_extractor_workers: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Thread pool workers for entity extraction"
     )
 
     # ========================================

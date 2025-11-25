@@ -303,6 +303,10 @@ class BuildGraphTool:
         """
         Extract entities from text using EntityExtractor.
 
+        Uses async extraction to avoid blocking the event loop during
+        CPU-bound SpaCy NLP operations. This is essential for SSE transport
+        where multiple concurrent connections share the same event loop.
+
         Args:
             text: Text to extract entities from
             confidence_threshold: Minimum confidence threshold
@@ -324,8 +328,13 @@ class BuildGraphTool:
                     error_code="PROC_001",
                 )
 
-            # Extract entities
-            entities = entity_extractor.extract_entities(text)
+            # Extract entities using async method to avoid blocking event loop
+            # Falls back to sync if async method not available (backward compatibility)
+            if hasattr(entity_extractor, 'extract_entities_async'):
+                entities = await entity_extractor.extract_entities_async(text)
+            else:
+                # Fallback for older EntityExtractor instances without async support
+                entities = entity_extractor.extract_entities(text)
 
             self.logger.debug("entities_extracted", num_entities=len(entities))
 

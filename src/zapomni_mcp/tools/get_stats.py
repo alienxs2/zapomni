@@ -4,15 +4,20 @@ GetStats MCP Tool - Full Implementation.
 Retrieves memory system statistics including memory count, chunks, database size, and performance metrics.
 Delegates to MemoryProcessor for all statistics operations.
 
+Also includes SSE transport metrics when available (active connections, total requests, etc.).
+
 Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, TYPE_CHECKING
 import structlog
 
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import DatabaseError
+
+if TYPE_CHECKING:
+    from zapomni_mcp.session_manager import SessionManager
 
 
 logger = structlog.get_logger(__name__)
@@ -24,12 +29,14 @@ class GetStatsTool:
 
     This tool delegates to MemoryProcessor.get_stats() to retrieve
     comprehensive system statistics and formats them for display.
+    When running in SSE mode, also includes transport metrics.
 
     Attributes:
         name: Tool identifier ("get_stats")
         description: Human-readable tool description
         input_schema: JSON Schema for input validation (empty - no params)
         memory_processor: MemoryProcessor instance for retrieving stats
+        session_manager: Optional SessionManager for SSE metrics
         logger: Structured logger for operations
     """
 
@@ -45,13 +52,23 @@ class GetStatsTool:
         "additionalProperties": False,
     }
 
-    def __init__(self, memory_processor: MemoryProcessor) -> None:
+    def __init__(
+        self,
+        memory_processor: MemoryProcessor,
+        session_manager: Optional["SessionManager"] = None,
+        mcp_server: Optional[Any] = None,
+    ) -> None:
         """
         Initialize GetStatsTool with MemoryProcessor.
 
         Args:
             memory_processor: MemoryProcessor instance for retrieving statistics.
                 Must be initialized and connected to database.
+            session_manager: Optional SessionManager for SSE transport metrics.
+                When provided, includes connection metrics in response.
+            mcp_server: Optional MCPServer instance to dynamically access session_manager.
+                If session_manager is not provided, will try to access _session_manager
+                attribute from mcp_server at runtime (for SSE mode).
 
         Raises:
             TypeError: If memory_processor is not a MemoryProcessor instance
@@ -59,6 +76,12 @@ class GetStatsTool:
         Example:
             >>> processor = MemoryProcessor(...)
             >>> tool = GetStatsTool(memory_processor=processor)
+
+            # With SSE metrics:
+            >>> tool = GetStatsTool(memory_processor=processor, session_manager=session_mgr)
+
+            # Or via MCPServer for dynamic access:
+            >>> tool = GetStatsTool(memory_processor=processor, mcp_server=server)
         """
         if not isinstance(memory_processor, MemoryProcessor):
             raise TypeError(
@@ -66,9 +89,29 @@ class GetStatsTool:
             )
 
         self.memory_processor = memory_processor
+        self._session_manager = session_manager
+        self._mcp_server = mcp_server
         self.logger = logger.bind(tool=self.name)
 
-        self.logger.info("get_stats_tool_initialized")
+        self.logger.info(
+            "get_stats_tool_initialized",
+            has_session_manager=session_manager is not None,
+            has_mcp_server=mcp_server is not None,
+        )
+
+    @property
+    def session_manager(self) -> Optional["SessionManager"]:
+        """
+        Get session manager (either direct or via MCPServer).
+
+        Returns:
+            SessionManager if available, None otherwise
+        """
+        if self._session_manager is not None:
+            return self._session_manager
+        if self._mcp_server is not None and hasattr(self._mcp_server, '_session_manager'):
+            return self._mcp_server._session_manager
+        return None
 
     async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -218,6 +261,18 @@ class GetStatsTool:
 
         if "newest_memory_date" in stats and stats["newest_memory_date"] is not None:
             lines.append(f"Newest Memory: {stats['newest_memory_date']}")
+
+        # Add SSE transport metrics if session manager is available
+        if self.session_manager is not None:
+            lines.append("")  # Blank line separator
+            lines.append("SSE Transport Metrics:")
+            metrics = self.session_manager.get_metrics()
+            lines.append(f"Active Connections: {metrics.current_active_connections}")
+            lines.append(f"Peak Connections: {metrics.peak_connections}")
+            lines.append(f"Total Connections Created: {metrics.total_connections_created}")
+            lines.append(f"Total Connections Closed: {metrics.total_connections_closed}")
+            lines.append(f"Total Requests Processed: {metrics.total_requests_processed}")
+            lines.append(f"Total Errors: {metrics.total_errors}")
 
         # Join into single text block
         formatted_text = "\n".join(lines)

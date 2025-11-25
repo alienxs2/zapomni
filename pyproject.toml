@@ -30,6 +30,10 @@ dependencies = [
     "falkordb>=1.2.0",
     "redis>=5.0.0",
 
+    # SSE Transport
+    "uvicorn[standard]>=0.30.0",
+    "starlette>=0.38.0",
+
     # LLM & Embeddings
     "httpx>=0.25.0",
 
@@ -67,6 +71,9 @@ dev = [
     "pytest-watch>=4.2.0",
     "pytest-xdist>=3.5.0",
     "pytest-mock>=3.12.0",
+
+    # Load Testing
+    "locust>=2.20.0",
 
     # Linting & Formatting
     "black>=24.1.0",

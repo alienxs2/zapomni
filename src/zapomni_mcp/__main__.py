@@ -2,22 +2,34 @@
 Entry point for zapomni_mcp MCP server.
 
 This module serves as the main entry point when running:
-    python -m zapomni_mcp.server
+    python -m zapomni_mcp
+
+Supports two transport modes:
+- SSE (default): HTTP-based Server-Sent Events for concurrent connections
+- stdio: Standard I/O for single client connections
+
+Usage:
+    python -m zapomni_mcp                          # Start with SSE (default)
+    python -m zapomni_mcp --transport sse          # Start with SSE explicitly
+    python -m zapomni_mcp --transport stdio        # Start with stdio
+    python -m zapomni_mcp --host 0.0.0.0 --port 9000  # Custom SSE host/port
 
 CRITICAL: Logging is configured FIRST before importing any other zapomni modules
 to prevent "Logging not configured" errors from module-level logger initialization.
 
 The initialization sequence is:
 1. Configure logging service
-2. Import configuration and core modules
-3. Initialize MemoryProcessor with database, chunker, and embedder
-4. Create MCPServer and register all tools
-5. Start the async server loop
+2. Parse command-line arguments
+3. Import configuration and core modules
+4. Initialize MemoryProcessor with database, chunker, and embedder
+5. Create MCPServer and register all tools
+6. Start the async server loop (SSE or stdio based on transport)
 
 Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+import argparse
 import asyncio
 import os
 import sys
@@ -41,10 +53,67 @@ from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
 from zapomni_mcp.server import MCPServer
-from zapomni_mcp.config import Settings
+from zapomni_mcp.config import Settings, SSEConfig
 
 
-async def main() -> None:
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments.
+
+    Returns:
+        Parsed argument namespace
+    """
+    parser = argparse.ArgumentParser(
+        description="Zapomni MCP Server - Memory and Knowledge Graph for AI Assistants",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python -m zapomni_mcp                          # Start with SSE (default)
+  python -m zapomni_mcp --transport sse          # Start with SSE explicitly
+  python -m zapomni_mcp --transport stdio        # Start with stdio
+  python -m zapomni_mcp --host 0.0.0.0 --port 9000  # Custom SSE host/port
+
+Environment Variables:
+  FALKORDB_HOST              FalkorDB host (default: localhost)
+  FALKORDB_PORT              FalkorDB port (default: 6379)
+  OLLAMA_BASE_URL            Ollama base URL (default: http://localhost:11434)
+  OLLAMA_EMBEDDING_MODEL     Embedding model (default: nomic-embed-text)
+  ZAPOMNI_SSE_HOST           SSE server host (default: 127.0.0.1)
+  ZAPOMNI_SSE_PORT           SSE server port (default: 8000)
+  ZAPOMNI_SSE_CORS_ORIGINS   Comma-separated CORS origins (default: *)
+        """,
+    )
+
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default="sse",
+        help="Transport type: 'sse' for HTTP Server-Sent Events (default), 'stdio' for standard I/O",
+    )
+
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="SSE server host (default: 127.0.0.1, or ZAPOMNI_SSE_HOST env var)",
+    )
+
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="SSE server port (default: 8000, or ZAPOMNI_SSE_PORT env var)",
+    )
+
+    parser.add_argument(
+        "--cors-origins",
+        default=None,
+        help="Comma-separated CORS origins for SSE (default: *, or ZAPOMNI_SSE_CORS_ORIGINS env var)",
+    )
+
+    return parser.parse_args()
+
+
+async def main(args: argparse.Namespace) -> None:
     """
     Main entry point for MCP server.
 
@@ -56,7 +125,10 @@ async def main() -> None:
     5. Creates MemoryProcessor that coordinates the pipeline
     6. Creates MCPServer with the processor
     7. Registers all standard tools
-    8. Runs the async server loop
+    8. Runs the async server loop (SSE or stdio based on args.transport)
+
+    Args:
+        args: Parsed command-line arguments
 
     Environment Variables:
         FALKORDB_HOST: FalkorDB host (default: "localhost")
@@ -71,6 +143,7 @@ async def main() -> None:
     """
     logger.info(
         "Starting MCP server initialization",
+        transport=args.transport,
         log_level="INFO",
     )
 
@@ -165,12 +238,37 @@ async def main() -> None:
             tools=list(server._tools.keys()),
         )
 
-        # STAGE 8: Run the server
-        logger.info(
-            "Starting MCP server loop",
-            transport="stdio",
-        )
-        await server.run()
+        # STAGE 8: Run the server with selected transport
+        if args.transport == "stdio":
+            # Standard I/O transport (original behavior)
+            logger.info(
+                "Starting MCP server with stdio transport",
+                transport="stdio",
+            )
+            await server.run()
+        else:
+            # SSE transport (new default)
+            # Load SSE config from environment with CLI overrides
+            sse_config = SSEConfig.from_env()
+
+            # Apply CLI overrides
+            host = args.host if args.host is not None else sse_config.host
+            port = args.port if args.port is not None else sse_config.port
+
+            # Parse CORS origins
+            if args.cors_origins is not None:
+                cors_origins = [origin.strip() for origin in args.cors_origins.split(",")]
+            else:
+                cors_origins = sse_config.cors_origins
+
+            logger.info(
+                "Starting MCP server with SSE transport",
+                transport="sse",
+                host=host,
+                port=port,
+                cors_origins=cors_origins,
+            )
+            await server.run_sse(host=host, port=port, cors_origins=cors_origins)
 
     except ValueError as e:
         logger.error(
@@ -206,4 +304,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = parse_args()
+    asyncio.run(main(args))

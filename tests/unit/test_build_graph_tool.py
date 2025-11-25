@@ -82,23 +82,25 @@ class TestBuildGraphToolExecute:
     @pytest.fixture
     def mock_entity_extractor(self):
         """Create a mock EntityExtractor."""
+        entities = [
+            Entity(
+                name="Python",
+                type="TECHNOLOGY",
+                description="Programming language",
+                confidence=0.95,
+            ),
+            Entity(
+                name="Guido van Rossum",
+                type="PERSON",
+                description="Python creator",
+                confidence=0.90,
+            ),
+        ]
         extractor = Mock()
-        extractor.extract_entities = Mock(
-            return_value=[
-                Entity(
-                    name="Python",
-                    type="TECHNOLOGY",
-                    description="Programming language",
-                    confidence=0.95,
-                ),
-                Entity(
-                    name="Guido van Rossum",
-                    type="PERSON",
-                    description="Python creator",
-                    confidence=0.90,
-                ),
-            ]
-        )
+        # Sync method for backward compatibility
+        extractor.extract_entities = Mock(return_value=entities)
+        # Async method for SSE transport (Phase 2)
+        extractor.extract_entities_async = AsyncMock(return_value=entities)
         return extractor
 
     @pytest.fixture
@@ -120,6 +122,8 @@ class TestBuildGraphToolExecute:
     def mock_processor(self, mock_entity_extractor, mock_graph_builder):
         """Create a mock MemoryProcessor."""
         processor = Mock(spec=MemoryProcessor)
+        # Both property names for compatibility (code uses .extractor)
+        processor.extractor = mock_entity_extractor
         processor.entity_extractor = mock_entity_extractor
         processor.graph_builder = mock_graph_builder
         return processor
@@ -251,8 +255,8 @@ class TestBuildGraphToolExecute:
     @pytest.mark.asyncio
     async def test_execute_extractor_error(self, tool, mock_processor):
         """Test execution when entity extractor raises ExtractionError."""
-        # Setup
-        mock_processor.entity_extractor.extract_entities = Mock(
+        # Setup - async method since code uses extract_entities_async
+        mock_processor.extractor.extract_entities_async = AsyncMock(
             side_effect=ExtractionError(message="Extraction failed", error_code="EXTR_001")
         )
         arguments = {"text": "Test text"}
@@ -299,8 +303,8 @@ class TestBuildGraphToolExecute:
     @pytest.mark.asyncio
     async def test_execute_unexpected_error(self, tool, mock_processor):
         """Test execution when unexpected exception is raised."""
-        # Setup
-        mock_processor.entity_extractor = None
+        # Setup - set extractor to None to trigger error
+        mock_processor.extractor = None
         arguments = {"text": "Test text"}
 
         # Execute
@@ -326,8 +330,8 @@ class TestBuildGraphToolExecute:
     @pytest.mark.asyncio
     async def test_execute_with_no_entities(self, tool, mock_processor):
         """Test execution when no entities are extracted."""
-        # Setup
-        mock_processor.entity_extractor.extract_entities = Mock(return_value=[])
+        # Setup - use async method since code uses extract_entities_async
+        mock_processor.extractor.extract_entities_async = AsyncMock(return_value=[])
         arguments = {"text": "No entities here"}
 
         # Execute

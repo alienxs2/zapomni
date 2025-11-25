@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import List, Optional, Set, TYPE_CHECKING
 
@@ -134,7 +135,8 @@ class EntityExtractor:
         ollama_client: Optional['OllamaLLMClient'] = None,
         enable_llm_refinement: bool = False,
         confidence_threshold: float = 0.7,
-        entity_types: Optional[Set[str]] = None
+        entity_types: Optional[Set[str]] = None,
+        executor_workers: int = 5,
     ) -> None:
         """
         Initialize EntityExtractor with NER pipeline.
@@ -145,11 +147,13 @@ class EntityExtractor:
             enable_llm_refinement: Enable LLM-based refinement (default: False)
             confidence_threshold: Minimum confidence to keep entity (0.0-1.0)
             entity_types: Set of entity types to extract (default: all supported)
+            executor_workers: Number of thread pool workers for async extraction (default: 5)
 
         Raises:
             ValueError: If spacy_model doesn't have NER component
             ValueError: If confidence_threshold not in [0.0, 1.0]
             ValueError: If enable_llm_refinement=True but ollama_client is None
+            ValueError: If executor_workers < 1
         """
         # Validate SpaCy model has NER component
         if not spacy_model.has_pipe("ner"):
@@ -170,17 +174,31 @@ class EntityExtractor:
                 "enable_llm_refinement=True requires ollama_client to be provided"
             )
 
+        # Validate executor workers
+        if executor_workers < 1:
+            raise ValueError(
+                f"executor_workers must be >= 1, got {executor_workers}"
+            )
+
         self.spacy_nlp = spacy_model
         self.ollama_client = ollama_client
         self.enable_llm_refinement = enable_llm_refinement
         self.confidence_threshold = confidence_threshold
         self.entity_types = entity_types or self.DEFAULT_ENTITY_TYPES
 
+        # Thread pool for CPU-bound SpaCy operations (async SSE transport)
+        self._executor = ThreadPoolExecutor(
+            max_workers=executor_workers,
+            thread_name_prefix="entity_extractor_",
+        )
+        self._executor_workers = executor_workers
+
         logger.info(
             "entity_extractor_initialized",
             enable_llm_refinement=enable_llm_refinement,
             confidence_threshold=confidence_threshold,
             num_entity_types=len(self.entity_types),
+            executor_workers=executor_workers,
         )
 
     def extract_entities(self, text: str) -> List[Entity]:
@@ -672,3 +690,66 @@ class EntityExtractor:
                 existing.confidence = max(existing.confidence, entity.confidence)
 
         return list(seen.values())
+
+    async def extract_entities_async(self, text: str) -> List[Entity]:
+        """
+        Async wrapper for entity extraction that runs in thread pool.
+
+        This method allows the CPU-bound SpaCy NLP operations to run without
+        blocking the asyncio event loop. Essential for SSE transport where
+        multiple concurrent connections share the same event loop.
+
+        The existing sync `extract_entities()` method is preserved for backward
+        compatibility with non-async code paths.
+
+        Args:
+            text: Input text to extract entities from (max 100,000 chars)
+
+        Returns:
+            List of Entity objects sorted by confidence (high to low)
+
+        Raises:
+            ValidationError: If text is empty or exceeds max length
+            ExtractionError: If SpaCy processing fails
+
+        Example:
+            ```python
+            # In async context (e.g., MCP tool handler)
+            entities = await extractor.extract_entities_async(text)
+
+            # In sync context (backward compatible)
+            entities = extractor.extract_entities(text)
+            ```
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            self._executor,
+            self.extract_entities,
+            text,
+        )
+
+    def shutdown(self) -> None:
+        """
+        Cleanup resources including the thread pool executor.
+
+        This should be called during graceful shutdown to ensure all pending
+        extractions complete before the application exits.
+
+        The shutdown waits for currently executing tasks to complete but
+        does not cancel pending tasks in the queue.
+
+        This method is idempotent - safe to call multiple times.
+
+        Example:
+            ```python
+            # During server shutdown
+            extractor.shutdown()
+            ```
+        """
+        if hasattr(self, '_executor') and self._executor is not None:
+            logger.info(
+                "entity_extractor_shutting_down",
+                executor_workers=self._executor_workers,
+            )
+            self._executor.shutdown(wait=True, cancel_futures=False)
+            logger.info("entity_extractor_shutdown_complete")
