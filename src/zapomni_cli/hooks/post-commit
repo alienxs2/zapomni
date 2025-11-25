@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# Zapomni Git Hook - post-commit
+#
+# Triggers re-indexing of files changed in the latest commit.
+# Runs in background to avoid blocking Git operations.
+
+# Get repository root
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$REPO_ROOT" ]; then
+    exit 0
+fi
+
+# Get list of changed files in HEAD commit
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
+
+if [ -z "$CHANGED_FILES" ]; then
+    exit 0
+fi
+
+# Log hook execution
+LOG_FILE="$REPO_ROOT/.git/zapomni-hooks.log"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] post-commit: Detected changes in commit $(git rev-parse --short HEAD)" >> "$LOG_FILE"
+
+# Trigger re-indexing in background using MCP tool
+# Note: This assumes zapomni MCP server is running and accessible
+# TODO: Call index_codebase MCP tool with changed files
+echo "$CHANGED_FILES" | while read file; do
+    echo "  - $file" >> "$LOG_FILE"
+done
+
+# Exit successfully (never block Git operations)
+exit 0

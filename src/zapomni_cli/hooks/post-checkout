@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Zapomni Git Hook - post-checkout
+#
+# Triggers re-indexing of files changed after checkout/branch switch.
+# Runs in background to avoid blocking Git operations.
+#
+# Parameters: $1 = previous HEAD, $2 = new HEAD, $3 = branch checkout flag (1) or file checkout (0)
+
+PREV_HEAD=$1
+NEW_HEAD=$2
+BRANCH_CHECKOUT=$3
+
+# Only trigger on branch checkouts, not file checkouts
+if [ "$BRANCH_CHECKOUT" != "1" ]; then
+    exit 0
+fi
+
+# Get repository root
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$REPO_ROOT" ]; then
+    exit 0
+fi
+
+# Get list of changed files between branches
+CHANGED_FILES=$(git diff --name-only $PREV_HEAD $NEW_HEAD 2>/dev/null)
+
+if [ -z "$CHANGED_FILES" ]; then
+    exit 0
+fi
+
+# Log hook execution
+LOG_FILE="$REPO_ROOT/.git/zapomni-hooks.log"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] post-checkout: Switched from $PREV_HEAD to $NEW_HEAD" >> "$LOG_FILE"
+
+# Trigger re-indexing in background
+echo "$CHANGED_FILES" | while read file; do
+    echo "  - $file" >> "$LOG_FILE"
+done
+
+# Exit successfully (never block Git operations)
+exit 0

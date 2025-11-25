@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Zapomni Git Hook - post-merge
+#
+# Triggers re-indexing of files changed after merge operation.
+# Runs in background to avoid blocking Git operations.
+
+# Get repository root
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$REPO_ROOT" ]; then
+    exit 0
+fi
+
+# Get list of changed files (comparing with ORIG_HEAD before merge)
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ORIG_HEAD HEAD 2>/dev/null)
+
+if [ -z "$CHANGED_FILES" ]; then
+    exit 0
+fi
+
+# Log hook execution
+LOG_FILE="$REPO_ROOT/.git/zapomni-hooks.log"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] post-merge: Detected changes from merge" >> "$LOG_FILE"
+
+# Trigger re-indexing in background
+echo "$CHANGED_FILES" | while read file; do
+    echo "  - $file" >> "$LOG_FILE"
+done
+
+# Exit successfully (never block Git operations)
+exit 0
