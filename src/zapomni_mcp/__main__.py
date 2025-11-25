@@ -37,7 +37,7 @@ logger = LoggingService.get_logger(__name__)
 from zapomni_core.config import ZapomniSettings
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
-from zapomni_core.extractors.entity_extractor import EntityExtractor
+# EntityExtractor is loaded lazily by MemoryProcessor when needed
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
 from zapomni_mcp.server import MCPServer
@@ -133,21 +133,16 @@ async def main() -> None:
             model_name=settings.ollama_embedding_model,
         )
 
-        # STAGE 5: Initialize EntityExtractor for knowledge graph building
-        logger.info("Initializing EntityExtractor")
-        import spacy
-        spacy_model = spacy.load("en_core_web_sm")
-        extractor = EntityExtractor(spacy_model=spacy_model)
-        logger.info("EntityExtractor initialized")
-
-        # STAGE 6: Initialize MemoryProcessor
-        logger.info("Initializing MemoryProcessor")
+        # STAGE 5: Initialize MemoryProcessor
+        # Note: EntityExtractor and GraphBuilder are loaded LAZILY on first use
+        # This speeds up MCP server startup significantly (~3 sec faster)
+        logger.info("Initializing MemoryProcessor (SpaCy/EntityExtractor loaded lazily)")
         processor = MemoryProcessor(
             db_client=db_client,
             chunker=chunker,
             embedder=embedder,
-            extractor=extractor,
-            config=None,  # Use defaults
+            extractor=None,  # Lazy loading - SpaCy loads on first build_graph call
+            config=None,
         )
         logger.info("MemoryProcessor initialized")
 

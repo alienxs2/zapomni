@@ -32,6 +32,7 @@ from zapomni_core.exceptions import (
 )
 from zapomni_db import FalkorDBClient
 from zapomni_db.models import Chunk, Memory, SearchResult
+from zapomni_core.graph.graph_builder import GraphBuilder
 
 
 logger = structlog.get_logger(__name__)
@@ -208,9 +209,14 @@ class MemoryProcessor:
         self.db_client = db_client
         self.chunker = chunker
         self.embedder = embedder
-        self.extractor = extractor
         self.cache = cache
         self.task_manager = task_manager
+
+        # Lazy-loaded components (Phase 2)
+        # These are loaded on first access to speed up MCP server startup
+        self._extractor = extractor  # May be None, loaded lazily
+        self._graph_builder: Optional[GraphBuilder] = None
+        self._spacy_model = None  # Cached SpaCy model
 
         # Handle config
         self.config = config or ProcessorConfig()
@@ -238,6 +244,55 @@ class MemoryProcessor:
             extraction_enabled=self.config.enable_extraction,
             graph_enabled=self.config.enable_graph,
         )
+
+    def _load_spacy_model(self):
+        """
+        Load SpaCy model lazily on first use.
+
+        This is called internally when extractor or graph_builder is first accessed.
+        Loading SpaCy takes ~2-3 seconds, so we defer it until actually needed.
+        """
+        if self._spacy_model is None:
+            self.logger.info("lazy_loading_spacy_model", model="en_core_web_sm")
+            import spacy
+            self._spacy_model = spacy.load("en_core_web_sm")
+            self.logger.info("spacy_model_loaded")
+        return self._spacy_model
+
+    @property
+    def extractor(self):
+        """
+        Lazy-loaded EntityExtractor.
+
+        SpaCy model is loaded on first access (~2-3 seconds).
+        Subsequent accesses return cached instance.
+        """
+        if self._extractor is None:
+            self.logger.info("lazy_loading_entity_extractor")
+            from zapomni_core.extractors.entity_extractor import EntityExtractor
+            spacy_model = self._load_spacy_model()
+            self._extractor = EntityExtractor(spacy_model=spacy_model)
+            self.logger.info("entity_extractor_loaded")
+        return self._extractor
+
+    @property
+    def graph_builder(self) -> Optional[GraphBuilder]:
+        """
+        Lazy-loaded GraphBuilder.
+
+        Requires EntityExtractor, which requires SpaCy model.
+        All are loaded on first access if not already initialized.
+        """
+        if self._graph_builder is None:
+            self.logger.info("lazy_loading_graph_builder")
+            # This will trigger lazy loading of extractor if needed
+            extractor = self.extractor
+            self._graph_builder = GraphBuilder(
+                entity_extractor=extractor,
+                db_client=self.db_client,
+            )
+            self.logger.info("graph_builder_loaded")
+        return self._graph_builder
 
     async def add_memory(
         self,
@@ -353,7 +408,7 @@ class MemoryProcessor:
             # STAGE 4: Extract Entities (Phase 2, optional)
             entities = None
             relationships = None
-            if self.config.enable_extraction and self.extractor is not None:
+            if self.config.enable_extraction and self._extractor is not None:
                 try:
                     log.debug("extracting_entities")
                     entities, relationships = await self._extract_entities(text, chunks)
@@ -1073,7 +1128,7 @@ class MemoryProcessor:
             ExtractionError: If extraction fails
             NotImplementedError: In Phase 1
         """
-        if self.extractor is None:
+        if self._extractor is None:
             raise ExtractionError(
                 message="Entity extractor not configured",
                 error_code="EXTR_001",
