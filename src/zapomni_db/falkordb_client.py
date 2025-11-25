@@ -26,6 +26,7 @@ from zapomni_db.exceptions import (
     TransactionError
 )
 from zapomni_db.schema_manager import SchemaManager
+from zapomni_db.cypher_query_builder import CypherQueryBuilder
 
 
 logger = structlog.get_logger(__name__)
@@ -443,11 +444,21 @@ class FalkorDBClient:
                         f"Validation failed: filters['min_similarity'] must be in [0.0, 1.0], got {min_sim}"
                     )
 
-        # STEP 2: EXECUTE SEARCH WITH RETRY
+        # STEP 2: BUILD QUERY USING CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        min_similarity = filters.get("min_similarity", 0.5) if filters else 0.5
+        cypher, params = query_builder.build_vector_search_query(
+            embedding=embedding,
+            limit=limit,
+            filters=filters,
+            min_similarity=min_similarity
+        )
+
+        # STEP 3: EXECUTE SEARCH WITH RETRY
         retry_count = 0
         while retry_count <= self.max_retries:
             try:
-                result = await self._execute_cypher("MATCH ...", {})
+                result = await self._execute_cypher(cypher, params)
                 return self._parse_search_results(result)
 
             except (ConnectionError, TimeoutError) as e:
