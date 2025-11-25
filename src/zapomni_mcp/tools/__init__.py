@@ -37,6 +37,7 @@ from .build_graph import BuildGraphTool
 from .get_related import GetRelatedTool
 from .get_stats import GetStatsTool
 from .graph_status import GraphStatusTool
+from .prune_memory import PruneMemoryTool
 from .search_memory import SearchMemoryTool
 from .workspace_tools import (
     CreateWorkspaceTool,
@@ -54,6 +55,7 @@ __all__ = [
     "GetRelatedTool",
     "BuildGraphTool",
     "GraphStatusTool",
+    "PruneMemoryTool",
     # Workspace tools
     "CreateWorkspaceTool",
     "ListWorkspacesTool",

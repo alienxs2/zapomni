@@ -10,18 +10,19 @@ License: MIT
 
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
+
 import structlog
-from pydantic import ValidationError, BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 from typing_extensions import Annotated
 
 from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    ProcessingError,
     DatabaseError,
+    ProcessingError,
 )
-
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 logger = structlog.get_logger(__name__)
 
@@ -98,6 +99,7 @@ class IndexCodebaseResponse(BaseModel):
     languages: Dict[str, int]
     total_lines: int
     processing_time_ms: float
+    stale_count: int = 0  # Count of stale memories (deleted files)
 
 
 class IndexCodebaseTool:
@@ -107,6 +109,12 @@ class IndexCodebaseTool:
     This tool validates input, scans repositories using CodeRepositoryIndexer,
     extracts code structure information, and formats the response according
     to MCP protocol.
+
+    Delta Indexing Support:
+        Before indexing, marks existing code memories as stale.
+        After processing each file, marks it fresh.
+        Remaining stale memories indicate deleted files.
+        Use prune_memory tool to clean up stale entries.
 
     Attributes:
         name: Tool identifier ("index_codebase")
@@ -249,6 +257,25 @@ class IndexCodebaseTool:
                 include_tests,
             ) = self._validate_arguments(arguments)
 
+            # Step 1.5: Delta indexing - Mark existing memories as stale
+            workspace_id = DEFAULT_WORKSPACE_ID
+            marked_stale = 0
+            if hasattr(self.memory_processor, "db_client") and self.memory_processor.db_client:
+                try:
+                    marked_stale = await self.memory_processor.db_client.mark_code_memories_stale(
+                        workspace_id
+                    )
+                    log.info(
+                        "memories_marked_stale_for_delta",
+                        marked_stale=marked_stale,
+                        workspace_id=workspace_id,
+                    )
+                except Exception as e:
+                    log.warning(
+                        "failed_to_mark_stale",
+                        error=str(e),
+                    )
+
             # Step 2: Index repository
             log.info(
                 "indexing_repository",
@@ -265,10 +292,31 @@ class IndexCodebaseTool:
             # Step 4: Calculate statistics
             stats = self._calculate_statistics(files, index_result)
 
-            # Step 5: Store code as memories (optional - for advanced features)
-            # This would store individual code files/functions as memories
+            # Step 5: Store code as memories and mark fresh (delta indexing)
             memories_created = 0
-            # await self._store_code_memories(files)
+            if hasattr(self.memory_processor, "db_client") and self.memory_processor.db_client:
+                memories_created = await self._store_code_memories_with_delta(
+                    files, workspace_id
+                )
+
+            # Step 5.5: Count remaining stale memories
+            stale_count = 0
+            if hasattr(self.memory_processor, "db_client") and self.memory_processor.db_client:
+                try:
+                    stale_count = await self.memory_processor.db_client.count_stale_memories(
+                        workspace_id
+                    )
+                    if stale_count > 0:
+                        log.info(
+                            "stale_memories_detected",
+                            stale_count=stale_count,
+                            hint="Use prune_memory tool to clean up",
+                        )
+                except Exception as e:
+                    log.warning(
+                        "failed_to_count_stale",
+                        error=str(e),
+                    )
 
             # Step 6: Format success response
             processing_time_ms = (time.time() - start_time) * 1000
@@ -278,6 +326,8 @@ class IndexCodebaseTool:
                 files_indexed=stats["files_indexed"],
                 functions=stats["functions_found"],
                 classes=stats["classes_found"],
+                memories_created=memories_created,
+                stale_count=stale_count,
                 processing_time_ms=processing_time_ms,
             )
 
@@ -289,6 +339,7 @@ class IndexCodebaseTool:
                 languages=stats["languages"],
                 total_lines=stats["total_lines"],
                 processing_time_ms=processing_time_ms,
+                stale_count=stale_count,
             )
 
         except (ValidationError, CoreValidationError) as e:
@@ -526,6 +577,95 @@ class IndexCodebaseTool:
 
         return memories_created
 
+    async def _store_code_memories_with_delta(
+        self,
+        files: List[Dict[str, Any]],
+        workspace_id: str,
+    ) -> int:
+        """
+        Store code files as memories with delta indexing support.
+
+        For each file:
+        1. Check if memory exists (mark fresh if so)
+        2. Create new memory if not exists
+        3. Track metrics
+
+        Args:
+            files: List of code file dictionaries
+            workspace_id: Workspace ID for operations
+
+        Returns:
+            Number of new memories created
+        """
+        memories_created = 0
+        memories_refreshed = 0
+
+        db_client = self.memory_processor.db_client
+
+        for file_dict in files:
+            try:
+                file_path = file_dict.get("path")
+                relative_path = file_dict.get("relative_path")
+                extension = file_dict.get("extension")
+                lines = file_dict.get("lines", 0)
+
+                if not file_path:
+                    continue
+
+                # Try to mark existing memory as fresh
+                existing_id = await db_client.mark_memory_fresh(
+                    file_path=file_path,
+                    workspace_id=workspace_id,
+                )
+
+                if existing_id:
+                    # Memory exists and is now fresh
+                    memories_refreshed += 1
+                    self.logger.debug(
+                        "memory_refreshed",
+                        file_path=file_path,
+                        memory_id=existing_id,
+                    )
+                else:
+                    # New file - create memory
+                    summary = (
+                        f"Code file: {relative_path}\n"
+                        f"Type: {extension}\n"
+                        f"Lines: {lines}"
+                    )
+
+                    metadata = {
+                        "source": "code_indexer",
+                        "file_path": file_path,
+                        "relative_path": relative_path,
+                        "extension": extension,
+                        "lines": lines,
+                    }
+
+                    await self.memory_processor.add_memory(summary, metadata)
+                    memories_created += 1
+                    self.logger.debug(
+                        "memory_created",
+                        file_path=file_path,
+                    )
+
+            except Exception as e:
+                self.logger.warning(
+                    "failed_to_process_file_for_delta",
+                    file_path=file_dict.get("path"),
+                    error=str(e),
+                )
+                continue
+
+        self.logger.info(
+            "delta_indexing_complete",
+            memories_created=memories_created,
+            memories_refreshed=memories_refreshed,
+            workspace_id=workspace_id,
+        )
+
+        return memories_created
+
     def _format_success(
         self,
         repo_path: str,
@@ -535,6 +675,7 @@ class IndexCodebaseTool:
         languages: Dict[str, int],
         total_lines: int,
         processing_time_ms: float,
+        stale_count: int = 0,
     ) -> Dict[str, Any]:
         """
         Format successful indexing as MCP response.
@@ -547,6 +688,7 @@ class IndexCodebaseTool:
             languages: Dictionary of language counts
             total_lines: Total lines of code
             processing_time_ms: Processing time in milliseconds
+            stale_count: Count of stale memories (deleted files)
 
         Returns:
             MCP response dictionary
@@ -571,6 +713,13 @@ class IndexCodebaseTool:
             f"Total lines: {total_lines:,}\n"
             f"Indexing time: {processing_time_sec:.2f}s"
         )
+
+        # Add stale count warning if there are stale memories
+        if stale_count > 0:
+            message += (
+                f"\n\n[!] {stale_count} stale memories detected (deleted files).\n"
+                f"Run prune_memory(strategy='stale_code') to clean up."
+            )
 
         return {
             "content": [

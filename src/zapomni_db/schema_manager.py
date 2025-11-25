@@ -8,9 +8,10 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Dict, Any, Optional, List
-from falkordb import Graph
+from typing import Any, Dict, List, Optional
+
 import structlog
+from falkordb import Graph
 from structlog.stdlib import BoundLogger
 
 from zapomni_db.exceptions import DatabaseError, QuerySyntaxError
@@ -68,12 +69,10 @@ class SchemaManager:
     INDEX_MEMORY_ID: str = "memory_id_idx"
     INDEX_ENTITY_NAME: str = "entity_name_idx"
     INDEX_TIMESTAMP: str = "timestamp_idx"
+    INDEX_MEMORY_STALE: str = "memory_stale_idx"
+    INDEX_MEMORY_FILE_PATH: str = "memory_file_path_idx"
 
-    def __init__(
-        self,
-        graph: Graph,
-        logger: Optional[BoundLogger] = None
-    ) -> None:
+    def __init__(self, graph: Graph, logger: Optional[BoundLogger] = None) -> None:
         """
         Initialize SchemaManager.
 
@@ -157,10 +156,7 @@ class SchemaManager:
 
         # Check if index already exists (idempotent)
         if self._index_exists(self.INDEX_VECTOR):
-            self.logger.debug(
-                "Vector index already exists, skipping",
-                index_name=self.INDEX_VECTOR
-            )
+            self.logger.debug("Vector index already exists, skipping", index_name=self.INDEX_VECTOR)
             return
 
         # Build CREATE VECTOR INDEX Cypher query
@@ -183,8 +179,7 @@ class SchemaManager:
             # "already indexed" is expected for idempotent operation
             if "already indexed" in str(e).lower():
                 self.logger.debug(
-                    "Vector index already exists (detected via error)",
-                    index_name=self.INDEX_VECTOR
+                    "Vector index already exists (detected via error)", index_name=self.INDEX_VECTOR
                 )
                 return
             raise
@@ -192,7 +187,7 @@ class SchemaManager:
         self.logger.info(
             "Vector index created successfully",
             index_name=self.INDEX_VECTOR,
-            dimension=self.VECTOR_DIMENSION
+            dimension=self.VECTOR_DIMENSION,
         )
 
     def create_graph_schema(self) -> None:
@@ -221,25 +216,12 @@ class SchemaManager:
         self.logger.debug("Defining graph schema (node/edge labels)")
 
         # Document node labels
-        node_labels = [
-            self.NODE_MEMORY,
-            self.NODE_CHUNK,
-            self.NODE_ENTITY,
-            self.NODE_DOCUMENT
-        ]
+        node_labels = [self.NODE_MEMORY, self.NODE_CHUNK, self.NODE_ENTITY, self.NODE_DOCUMENT]
 
         # Document edge labels
-        edge_labels = [
-            self.EDGE_HAS_CHUNK,
-            self.EDGE_MENTIONS,
-            self.EDGE_RELATED_TO
-        ]
+        edge_labels = [self.EDGE_HAS_CHUNK, self.EDGE_MENTIONS, self.EDGE_RELATED_TO]
 
-        self.logger.info(
-            "Graph schema defined",
-            node_labels=node_labels,
-            edge_labels=edge_labels
-        )
+        self.logger.info("Graph schema defined", node_labels=node_labels, edge_labels=edge_labels)
 
     def create_property_indexes(self) -> None:
         """
@@ -264,7 +246,10 @@ class SchemaManager:
             (self.INDEX_MEMORY_ID, self.NODE_MEMORY, "id"),
             (self.INDEX_ENTITY_NAME, self.NODE_ENTITY, "name"),
             (self.INDEX_TIMESTAMP, self.NODE_MEMORY, "timestamp"),
-            ("chunk_memory_id_idx", self.NODE_CHUNK, "memory_id")
+            ("chunk_memory_id_idx", self.NODE_CHUNK, "memory_id"),
+            # Garbage collection indexes
+            (self.INDEX_MEMORY_STALE, self.NODE_MEMORY, "stale"),
+            (self.INDEX_MEMORY_FILE_PATH, self.NODE_MEMORY, "file_path"),
         ]
 
         created_count = 0
@@ -272,10 +257,7 @@ class SchemaManager:
         for index_name, node_label, property_name in indexes:
             # Check if index already exists (idempotent)
             if self._index_exists(index_name):
-                self.logger.debug(
-                    "Property index already exists, skipping",
-                    index_name=index_name
-                )
+                self.logger.debug("Property index already exists, skipping", index_name=index_name)
                 continue
 
             # Create property index
@@ -292,16 +274,13 @@ class SchemaManager:
                 # "already indexed" is expected for idempotent operation
                 if "already indexed" in str(e).lower():
                     self.logger.debug(
-                        "Property index already exists (detected via error)",
-                        index_name=index_name
+                        "Property index already exists (detected via error)", index_name=index_name
                     )
                     continue
                 raise
 
         self.logger.info(
-            "Property indexes created",
-            created_count=created_count,
-            total_indexes=len(indexes)
+            "Property indexes created", created_count=created_count, total_indexes=len(indexes)
         )
 
     def verify_schema(self) -> Dict[str, Any]:
@@ -330,13 +309,10 @@ class SchemaManager:
         status: Dict[str, Any] = {
             "version": self.schema_version,
             "initialized": False,
-            "indexes": {
-                "vector_index": {},
-                "property_indexes": {}
-            },
+            "indexes": {"vector_index": {}, "property_indexes": {}},
             "node_labels": [],
             "edge_labels": [],
-            "issues": []
+            "issues": [],
         }
 
         try:
@@ -358,14 +334,14 @@ class SchemaManager:
                     "exists": True,
                     "name": self.INDEX_VECTOR,
                     "dimension": self.VECTOR_DIMENSION,
-                    "similarity": self.SIMILARITY_FUNCTION
+                    "similarity": self.SIMILARITY_FUNCTION,
                 }
             else:
                 status["indexes"]["vector_index"] = {
                     "exists": False,
                     "name": self.INDEX_VECTOR,
                     "dimension": 0,
-                    "similarity": ""
+                    "similarity": "",
                 }
                 status["issues"].append("Vector index not found")
 
@@ -380,12 +356,12 @@ class SchemaManager:
                 if index_name in existing_indexes:
                     status["indexes"]["property_indexes"][index_name] = {
                         "exists": True,
-                        "property": property_name
+                        "property": property_name,
                     }
                 else:
                     status["indexes"]["property_indexes"][index_name] = {
                         "exists": False,
-                        "property": property_name
+                        "property": property_name,
                     }
                     status["issues"].append(f"Property index {index_name} not found")
 
@@ -394,13 +370,9 @@ class SchemaManager:
                 self.NODE_MEMORY,
                 self.NODE_CHUNK,
                 self.NODE_ENTITY,
-                self.NODE_DOCUMENT
+                self.NODE_DOCUMENT,
             ]
-            status["edge_labels"] = [
-                self.EDGE_HAS_CHUNK,
-                self.EDGE_MENTIONS,
-                self.EDGE_RELATED_TO
-            ]
+            status["edge_labels"] = [self.EDGE_HAS_CHUNK, self.EDGE_MENTIONS, self.EDGE_RELATED_TO]
 
             # Set initialized flag
             status["initialized"] = len(status["issues"]) == 0
@@ -408,7 +380,7 @@ class SchemaManager:
             self.logger.info(
                 "Schema verification complete",
                 initialized=status["initialized"],
-                issues_count=len(status["issues"])
+                issues_count=len(status["issues"]),
             )
 
             return status
@@ -417,11 +389,7 @@ class SchemaManager:
             self.logger.error("Schema verification failed", error=str(e))
             raise DatabaseError(f"Failed to verify schema: {str(e)}") from e
 
-    def migrate(
-        self,
-        from_version: str,
-        to_version: str
-    ) -> None:
+    def migrate(self, from_version: str, to_version: str) -> None:
         """
         Migrate schema from one version to another (future).
 
@@ -475,9 +443,7 @@ class SchemaManager:
                             self._execute_cypher(f"DROP INDEX {index_name}")
                         except Exception as e:
                             self.logger.warning(
-                                "Failed to drop index",
-                                index_name=index_name,
-                                error=str(e)
+                                "Failed to drop index", index_name=index_name, error=str(e)
                             )
             except Exception as e:
                 # FalkorDB may not support SHOW INDEXES, skip index dropping
@@ -517,14 +483,14 @@ class SchemaManager:
 
         except Exception as e:
             # FalkorDB may not support SHOW INDEXES, return False to allow creation to proceed
-            self.logger.debug("Index check failed, assuming index does not exist", error=str(e), index_name=index_name)
+            self.logger.debug(
+                "Index check failed, assuming index does not exist",
+                error=str(e),
+                index_name=index_name,
+            )
             return False
 
-    def _execute_cypher(
-        self,
-        query: str,
-        parameters: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def _execute_cypher(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> None:
         """
         Execute Cypher query with error handling (private helper).
 

@@ -19,18 +19,20 @@ Test Coverage:
 Total: 41 comprehensive tests
 """
 
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
 from falkordb import Graph
+
+from zapomni_db.exceptions import DatabaseError, QuerySyntaxError
 
 # Will be implemented - TDD RED phase
 from zapomni_db.schema_manager import SchemaManager
-from zapomni_db.exceptions import DatabaseError, QuerySyntaxError
-
 
 # ============================================================================
 # __init__ TESTS (5 tests)
 # ============================================================================
+
 
 class TestSchemaManagerInit:
     """Test SchemaManager initialization."""
@@ -89,6 +91,7 @@ class TestSchemaManagerInit:
 # ============================================================================
 # init_schema TESTS (10 tests from Level 3 spec)
 # ============================================================================
+
 
 class TestSchemaManagerInitSchema:
     """Test init_schema() based on Level 3 function specification."""
@@ -154,9 +157,7 @@ class TestSchemaManagerInitSchema:
     def test_init_schema_database_error(self, mock_manager):
         """Test DatabaseError propagates correctly."""
         # Simulate database error during vector index creation
-        mock_manager.create_vector_index = Mock(
-            side_effect=DatabaseError("Connection lost")
-        )
+        mock_manager.create_vector_index = Mock(side_effect=DatabaseError("Connection lost"))
 
         with pytest.raises(DatabaseError, match="Connection lost"):
             mock_manager.init_schema()
@@ -217,6 +218,7 @@ class TestSchemaManagerInitSchema:
 # create_vector_index TESTS (5 tests)
 # ============================================================================
 
+
 class TestSchemaManagerCreateVectorIndex:
     """Test create_vector_index() method."""
 
@@ -240,7 +242,8 @@ class TestSchemaManagerCreateVectorIndex:
         mock_manager._execute_cypher.assert_called_once()
         cypher_query = mock_manager._execute_cypher.call_args[0][0]
         assert "CREATE VECTOR INDEX" in cypher_query
-        assert "chunk_embedding_idx" in cypher_query
+        # Note: FalkorDB does not support named vector indexes in CREATE syntax
+        # Index name is auto-generated, so we only verify the structure
         assert "Chunk" in cypher_query
         assert "embedding" in cypher_query
 
@@ -270,18 +273,14 @@ class TestSchemaManagerCreateVectorIndex:
 
     def test_create_vector_index_database_error(self, mock_manager):
         """Test DatabaseError on index creation failure."""
-        mock_manager._execute_cypher = Mock(
-            side_effect=DatabaseError("Disk full")
-        )
+        mock_manager._execute_cypher = Mock(side_effect=DatabaseError("Disk full"))
 
         with pytest.raises(DatabaseError, match="Disk full"):
             mock_manager.create_vector_index()
 
     def test_create_vector_index_query_syntax_error(self, mock_manager):
         """Test QuerySyntaxError on invalid Cypher."""
-        mock_manager._execute_cypher = Mock(
-            side_effect=QuerySyntaxError("Invalid syntax")
-        )
+        mock_manager._execute_cypher = Mock(side_effect=QuerySyntaxError("Invalid syntax"))
 
         with pytest.raises(QuerySyntaxError, match="Invalid syntax"):
             mock_manager.create_vector_index()
@@ -290,6 +289,7 @@ class TestSchemaManagerCreateVectorIndex:
 # ============================================================================
 # create_graph_schema TESTS (3 tests)
 # ============================================================================
+
 
 class TestSchemaManagerCreateGraphSchema:
     """Test create_graph_schema() method."""
@@ -331,6 +331,7 @@ class TestSchemaManagerCreateGraphSchema:
 # create_property_indexes TESTS (4 tests)
 # ============================================================================
 
+
 class TestSchemaManagerCreatePropertyIndexes:
     """Test create_property_indexes() method."""
 
@@ -347,12 +348,14 @@ class TestSchemaManagerCreatePropertyIndexes:
         """Test all property indexes created successfully."""
         mock_manager.create_property_indexes()
 
-        # Should check for all 4 indexes
+        # Should check for all 6 indexes (including GC indexes)
         expected_indexes = [
             "memory_id_idx",
             "entity_name_idx",
             "timestamp_idx",
-            "chunk_memory_id_idx"
+            "chunk_memory_id_idx",
+            "memory_stale_idx",
+            "memory_file_path_idx",
         ]
 
         actual_calls = [call[0][0] for call in mock_manager._index_exists.call_args_list]
@@ -362,6 +365,7 @@ class TestSchemaManagerCreatePropertyIndexes:
 
     def test_create_property_indexes_skip_existing(self, mock_manager):
         """Test existing indexes are skipped (idempotent)."""
+
         # Simulate memory_id_idx already exists
         def index_exists_side_effect(index_name):
             return index_name == "memory_id_idx"
@@ -370,8 +374,9 @@ class TestSchemaManagerCreatePropertyIndexes:
 
         mock_manager.create_property_indexes()
 
-        # Should execute CREATE INDEX for 3 missing indexes (not for memory_id_idx)
-        assert mock_manager._execute_cypher.call_count == 3
+        # Should execute CREATE INDEX for 5 missing indexes (not for memory_id_idx)
+        # Total indexes: 6 (original 4 + 2 GC indexes), minus 1 existing = 5
+        assert mock_manager._execute_cypher.call_count == 5
 
     def test_create_property_indexes_correct_cypher(self, mock_manager):
         """Test property indexes created with correct Cypher syntax."""
@@ -380,8 +385,8 @@ class TestSchemaManagerCreatePropertyIndexes:
         # Check that Cypher queries contain expected patterns
         cypher_calls = [call[0][0] for call in mock_manager._execute_cypher.call_args_list]
 
-        # Should have 4 CREATE INDEX queries
-        assert len(cypher_calls) == 4
+        # Should have 6 CREATE INDEX queries (including 2 GC indexes)
+        assert len(cypher_calls) == 6
 
         # All should be CREATE INDEX
         for query in cypher_calls:
@@ -389,9 +394,7 @@ class TestSchemaManagerCreatePropertyIndexes:
 
     def test_create_property_indexes_database_error(self, mock_manager):
         """Test DatabaseError propagates correctly."""
-        mock_manager._execute_cypher = Mock(
-            side_effect=DatabaseError("Index creation failed")
-        )
+        mock_manager._execute_cypher = Mock(side_effect=DatabaseError("Index creation failed"))
 
         with pytest.raises(DatabaseError, match="Index creation failed"):
             mock_manager.create_property_indexes()
@@ -400,6 +403,7 @@ class TestSchemaManagerCreatePropertyIndexes:
 # ============================================================================
 # verify_schema TESTS (5 tests)
 # ============================================================================
+
 
 class TestSchemaManagerVerifySchema:
     """Test verify_schema() method."""
@@ -473,21 +477,28 @@ class TestSchemaManagerVerifySchema:
         assert "entity_name_idx" in prop_indexes
         assert prop_indexes["entity_name_idx"]["exists"] is True
 
-    def test_verify_schema_database_error(self):
-        """Test DatabaseError when verification fails."""
+    def test_verify_schema_graceful_degradation(self):
+        """Test verify_schema handles query failure gracefully.
+
+        When SHOW INDEXES fails, the method should continue and report
+        missing indexes as issues rather than raising an error.
+        """
         mock_graph = MagicMock(spec=Graph)
         manager = SchemaManager(graph=mock_graph)
 
         # Simulate query failure
         mock_graph.query = Mock(side_effect=Exception("Query failed"))
 
-        with pytest.raises(DatabaseError):
-            manager.verify_schema()
+        # Should not raise, but return status with issues
+        status = manager.verify_schema()
+        assert status["initialized"] is False
+        assert len(status["issues"]) > 0
 
 
 # ============================================================================
 # migrate TESTS (2 tests - future feature)
 # ============================================================================
+
 
 class TestSchemaManagerMigrate:
     """Test migrate() method (future feature)."""
@@ -507,6 +518,7 @@ class TestSchemaManagerMigrate:
 
         # Should accept from_version and to_version
         import inspect
+
         sig = inspect.signature(manager.migrate)
         params = list(sig.parameters.keys())
 
@@ -517,6 +529,7 @@ class TestSchemaManagerMigrate:
 # ============================================================================
 # drop_all TESTS (3 tests)
 # ============================================================================
+
 
 class TestSchemaManagerDropAll:
     """Test drop_all() method."""
@@ -563,6 +576,7 @@ class TestSchemaManagerDropAll:
 # _index_exists TESTS (2 tests - private helper)
 # ============================================================================
 
+
 class TestSchemaManagerIndexExists:
     """Test _index_exists() private helper."""
 
@@ -598,6 +612,7 @@ class TestSchemaManagerIndexExists:
 # ============================================================================
 # _execute_cypher TESTS (2 tests - private helper)
 # ============================================================================
+
 
 class TestSchemaManagerExecuteCypher:
     """Test _execute_cypher() private helper."""

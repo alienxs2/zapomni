@@ -642,7 +642,7 @@ class FalkorDBClient:
 
         # Build Cypher query for atomic transaction
         cypher = """
-        // Create Memory node with workspace_id
+        // Create Memory node with workspace_id and GC properties
         CREATE (m:Memory {
             id: $memory_id,
             text: $text,
@@ -650,7 +650,10 @@ class FalkorDBClient:
             source: $source,
             metadata: $metadata,
             workspace_id: $workspace_id,
-            created_at: $timestamp
+            created_at: $timestamp,
+            stale: false,
+            last_seen_at: $timestamp,
+            file_path: $file_path
         })
 
         // Create Chunk nodes with embeddings and workspace_id
@@ -679,6 +682,9 @@ class FalkorDBClient:
             for i, (chunk, embedding) in enumerate(zip(memory.chunks, memory.embeddings))
         ]
 
+        # Extract file_path from metadata if present (for code indexer memories)
+        file_path = memory.metadata.get("file_path", "")
+
         parameters = {
             "memory_id": memory_id,
             "text": memory.text,
@@ -688,6 +694,7 @@ class FalkorDBClient:
             "workspace_id": workspace_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "chunks_data": chunks_data,
+            "file_path": file_path,
         }
 
         # Execute query with retry logic
@@ -1672,3 +1679,558 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("delete_memory_error", error=str(e))
             raise DatabaseError(f"Failed to delete memory: {e}")
+
+    # ========================================
+    # GARBAGE COLLECTION OPERATIONS
+    # ========================================
+
+    async def mark_code_memories_stale(
+        self,
+        workspace_id: str,
+    ) -> int:
+        """
+        Mark all code memories as stale before re-indexing.
+
+        This is the first step in the mark-and-sweep garbage collection
+        approach. After indexing, memories that remain stale indicate
+        files that no longer exist.
+
+        Args:
+            workspace_id: Workspace to mark
+
+        Returns:
+            Count of memories marked as stale
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        cypher = """
+        MATCH (m:Memory)
+        WHERE m.source = 'code_indexer'
+          AND m.workspace_id = $workspace_id
+        SET m.stale = true
+        RETURN count(m) AS marked_count
+        """
+
+        try:
+            result = await self._execute_cypher(cypher, {"workspace_id": workspace_id})
+
+            count = 0
+            if result.row_count > 0:
+                count = result.rows[0].get("marked_count", 0) or 0
+
+            self._logger.info(
+                "memories_marked_stale",
+                workspace_id=workspace_id,
+                count=count,
+            )
+            return count
+
+        except Exception as e:
+            self._logger.error("mark_stale_error", error=str(e))
+            raise DatabaseError(f"Failed to mark memories stale: {e}")
+
+    async def mark_memory_fresh(
+        self,
+        file_path: str,
+        workspace_id: str,
+    ) -> Optional[str]:
+        """
+        Mark a specific memory as fresh (not stale) during indexing.
+
+        Also updates last_seen_at timestamp. This method uses the
+        file_path property for exact matching (addresses validation
+        report warning about CONTAINS matching).
+
+        Args:
+            file_path: Absolute file path
+            workspace_id: Workspace ID
+
+        Returns:
+            Memory ID if found and updated, None otherwise
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        cypher = """
+        MATCH (m:Memory)
+        WHERE m.source = 'code_indexer'
+          AND m.workspace_id = $workspace_id
+          AND m.file_path = $file_path
+        SET m.stale = false,
+            m.last_seen_at = datetime()
+        RETURN m.id AS memory_id
+        """
+
+        try:
+            result = await self._execute_cypher(cypher, {
+                "workspace_id": workspace_id,
+                "file_path": file_path,
+            })
+
+            if result.row_count > 0:
+                memory_id = result.rows[0].get("memory_id")
+                self._logger.debug(
+                    "memory_marked_fresh",
+                    memory_id=memory_id,
+                    file_path=file_path,
+                )
+                return memory_id
+            return None
+
+        except Exception as e:
+            self._logger.error("mark_fresh_error", error=str(e))
+            raise DatabaseError(f"Failed to mark memory fresh: {e}")
+
+    async def count_stale_memories(
+        self,
+        workspace_id: str,
+    ) -> int:
+        """
+        Count stale memories in workspace.
+
+        Args:
+            workspace_id: Workspace to query
+
+        Returns:
+            Count of stale memories
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        cypher = """
+        MATCH (m:Memory)
+        WHERE m.source = 'code_indexer'
+          AND m.workspace_id = $workspace_id
+          AND m.stale = true
+        RETURN count(m) AS count
+        """
+
+        try:
+            result = await self._execute_cypher(cypher, {"workspace_id": workspace_id})
+            return result.rows[0].get("count", 0) if result.row_count > 0 else 0
+
+        except Exception as e:
+            self._logger.error("count_stale_error", error=str(e))
+            raise DatabaseError(f"Failed to count stale memories: {e}")
+
+    async def get_stale_memories_preview(
+        self,
+        workspace_id: str,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Get preview of stale memories for dry-run.
+
+        Args:
+            workspace_id: Workspace to query
+            limit: Maximum preview items
+
+        Returns:
+            {
+                "memory_count": int,
+                "chunk_count": int,
+                "preview": List[Dict]
+            }
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        # Count query
+        count_cypher = """
+        MATCH (m:Memory)
+        WHERE m.source = 'code_indexer'
+          AND m.workspace_id = $workspace_id
+          AND m.stale = true
+        OPTIONAL MATCH (m)-[:HAS_CHUNK]->(c:Chunk)
+        RETURN count(DISTINCT m) AS memory_count,
+               count(DISTINCT c) AS chunk_count
+        """
+
+        try:
+            count_result = await self._execute_cypher(
+                count_cypher, {"workspace_id": workspace_id}
+            )
+
+            memory_count = 0
+            chunk_count = 0
+            if count_result.row_count > 0:
+                memory_count = count_result.rows[0].get("memory_count", 0) or 0
+                chunk_count = count_result.rows[0].get("chunk_count", 0) or 0
+
+            # Preview query
+            preview_cypher = """
+            MATCH (m:Memory)
+            WHERE m.source = 'code_indexer'
+              AND m.workspace_id = $workspace_id
+              AND m.stale = true
+            OPTIONAL MATCH (m)-[:HAS_CHUNK]->(c:Chunk)
+            WITH m, count(c) AS chunk_count
+            RETURN m.id AS id,
+                   m.file_path AS file_path,
+                   m.metadata AS metadata,
+                   m.created_at AS created_at,
+                   chunk_count
+            ORDER BY m.created_at DESC
+            LIMIT $limit
+            """
+
+            preview_result = await self._execute_cypher(preview_cypher, {
+                "workspace_id": workspace_id,
+                "limit": limit,
+            })
+
+            preview = []
+            for row in preview_result.rows:
+                # Extract relative_path from metadata if available
+                metadata = row.get("metadata", "{}")
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+
+                preview.append({
+                    "id": row.get("id"),
+                    "type": "Memory",
+                    "file_path": row.get("file_path") or metadata.get("file_path"),
+                    "relative_path": metadata.get("relative_path"),
+                    "created_at": row.get("created_at"),
+                    "chunk_count": row.get("chunk_count", 0),
+                })
+
+            return {
+                "memory_count": memory_count,
+                "chunk_count": chunk_count,
+                "preview": preview,
+            }
+
+        except Exception as e:
+            self._logger.error("preview_stale_error", error=str(e))
+            raise DatabaseError(f"Failed to get stale memories preview: {e}")
+
+    async def delete_stale_memories(
+        self,
+        workspace_id: str,
+        confirm: bool = False,
+    ) -> Dict[str, int]:
+        """
+        Delete all stale memories and their chunks.
+
+        SAFETY: Requires confirm=True to actually delete.
+
+        Args:
+            workspace_id: Workspace to clean
+            confirm: Must be True to perform deletion
+
+        Returns:
+            {"deleted_memories": int, "deleted_chunks": int}
+
+        Raises:
+            ValidationError: If confirm is not True
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        if not confirm:
+            raise ValidationError(
+                "Deletion requires explicit confirmation (confirm=True)"
+            )
+
+        # Count first (since DETACH DELETE doesn't return counts reliably)
+        count_result = await self.get_stale_memories_preview(workspace_id, limit=1)
+        memory_count = count_result["memory_count"]
+        chunk_count = count_result["chunk_count"]
+
+        if memory_count == 0:
+            self._logger.info(
+                "no_stale_memories_to_delete",
+                workspace_id=workspace_id,
+            )
+            return {"deleted_memories": 0, "deleted_chunks": 0}
+
+        # Delete query - DETACH DELETE removes nodes and all relationships
+        delete_cypher = """
+        MATCH (m:Memory)
+        WHERE m.source = 'code_indexer'
+          AND m.workspace_id = $workspace_id
+          AND m.stale = true
+        OPTIONAL MATCH (m)-[:HAS_CHUNK]->(c:Chunk)
+        DETACH DELETE m, c
+        """
+
+        try:
+            await self._execute_cypher(delete_cypher, {"workspace_id": workspace_id})
+
+            self._logger.info(
+                "stale_memories_deleted",
+                workspace_id=workspace_id,
+                deleted_memories=memory_count,
+                deleted_chunks=chunk_count,
+            )
+
+            return {
+                "deleted_memories": memory_count,
+                "deleted_chunks": chunk_count,
+            }
+
+        except Exception as e:
+            self._logger.error("delete_stale_error", error=str(e))
+            raise DatabaseError(f"Failed to delete stale memories: {e}")
+
+    async def get_orphaned_chunks_preview(
+        self,
+        workspace_id: str,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Get preview of orphaned chunks (chunks without parent Memory).
+
+        Args:
+            workspace_id: Workspace to query
+            limit: Maximum preview items
+
+        Returns:
+            {"count": int, "preview": List[Dict]}
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        count_cypher = """
+        MATCH (c:Chunk)
+        WHERE c.workspace_id = $workspace_id
+          AND NOT (:Memory)-[:HAS_CHUNK]->(c)
+        RETURN count(c) AS count
+        """
+
+        try:
+            count_result = await self._execute_cypher(
+                count_cypher, {"workspace_id": workspace_id}
+            )
+            count = (
+                count_result.rows[0].get("count", 0)
+                if count_result.row_count > 0
+                else 0
+            )
+
+            preview_cypher = """
+            MATCH (c:Chunk)
+            WHERE c.workspace_id = $workspace_id
+              AND NOT (:Memory)-[:HAS_CHUNK]->(c)
+            RETURN c.id AS id,
+                   size(c.text) AS text_length
+            LIMIT $limit
+            """
+
+            preview_result = await self._execute_cypher(preview_cypher, {
+                "workspace_id": workspace_id,
+                "limit": limit,
+            })
+
+            preview = [
+                {
+                    "id": row.get("id"),
+                    "type": "Chunk",
+                    "text_length": row.get("text_length", 0),
+                }
+                for row in preview_result.rows
+            ]
+
+            return {"count": count, "preview": preview}
+
+        except Exception as e:
+            self._logger.error("preview_orphaned_chunks_error", error=str(e))
+            raise DatabaseError(f"Failed to get orphaned chunks preview: {e}")
+
+    async def delete_orphaned_chunks(
+        self,
+        workspace_id: str,
+        confirm: bool = False,
+    ) -> int:
+        """
+        Delete chunks without parent memories.
+
+        SAFETY: Requires confirm=True to actually delete.
+
+        Args:
+            workspace_id: Workspace to clean
+            confirm: Must be True to perform deletion
+
+        Returns:
+            Number of chunks deleted
+
+        Raises:
+            ValidationError: If confirm is not True
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        if not confirm:
+            raise ValidationError(
+                "Deletion requires explicit confirmation (confirm=True)"
+            )
+
+        # Count first
+        count_result = await self.get_orphaned_chunks_preview(workspace_id, limit=1)
+        count = count_result["count"]
+
+        if count == 0:
+            self._logger.info(
+                "no_orphaned_chunks_to_delete",
+                workspace_id=workspace_id,
+            )
+            return 0
+
+        # Delete query
+        delete_cypher = """
+        MATCH (c:Chunk)
+        WHERE c.workspace_id = $workspace_id
+          AND NOT (:Memory)-[:HAS_CHUNK]->(c)
+        DETACH DELETE c
+        """
+
+        try:
+            await self._execute_cypher(delete_cypher, {"workspace_id": workspace_id})
+
+            self._logger.info(
+                "orphaned_chunks_deleted",
+                workspace_id=workspace_id,
+                count=count,
+            )
+
+            return count
+
+        except Exception as e:
+            self._logger.error("delete_orphaned_chunks_error", error=str(e))
+            raise DatabaseError(f"Failed to delete orphaned chunks: {e}")
+
+    async def get_orphaned_entities_preview(
+        self,
+        workspace_id: str,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Get preview of orphaned entities (no MENTIONS and no RELATED_TO edges).
+
+        Args:
+            workspace_id: Workspace to query
+            limit: Maximum preview items
+
+        Returns:
+            {"count": int, "preview": List[Dict]}
+
+        Raises:
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        count_cypher = """
+        MATCH (e:Entity)
+        WHERE e.workspace_id = $workspace_id
+          AND NOT (:Chunk)-[:MENTIONS]->(e)
+          AND NOT (e)-[:RELATED_TO]-(:Entity)
+        RETURN count(e) AS count
+        """
+
+        try:
+            count_result = await self._execute_cypher(
+                count_cypher, {"workspace_id": workspace_id}
+            )
+            count = (
+                count_result.rows[0].get("count", 0)
+                if count_result.row_count > 0
+                else 0
+            )
+
+            preview_cypher = """
+            MATCH (e:Entity)
+            WHERE e.workspace_id = $workspace_id
+              AND NOT (:Chunk)-[:MENTIONS]->(e)
+              AND NOT (e)-[:RELATED_TO]-(:Entity)
+            RETURN e.id AS id,
+                   e.name AS name,
+                   e.type AS type
+            LIMIT $limit
+            """
+
+            preview_result = await self._execute_cypher(preview_cypher, {
+                "workspace_id": workspace_id,
+                "limit": limit,
+            })
+
+            preview = [
+                {
+                    "id": row.get("id"),
+                    "type": "Entity",
+                    "name": row.get("name"),
+                    "entity_type": row.get("type"),
+                }
+                for row in preview_result.rows
+            ]
+
+            return {"count": count, "preview": preview}
+
+        except Exception as e:
+            self._logger.error("preview_orphaned_entities_error", error=str(e))
+            raise DatabaseError(f"Failed to get orphaned entities preview: {e}")
+
+    async def delete_orphaned_entities(
+        self,
+        workspace_id: str,
+        confirm: bool = False,
+    ) -> int:
+        """
+        Delete entities without mentions and without relationships.
+
+        SAFETY: Requires confirm=True to actually delete.
+
+        Args:
+            workspace_id: Workspace to clean
+            confirm: Must be True to perform deletion
+
+        Returns:
+            Number of entities deleted
+
+        Raises:
+            ValidationError: If confirm is not True
+            ConnectionError: If not initialized
+            DatabaseError: If query fails
+        """
+        if not confirm:
+            raise ValidationError(
+                "Deletion requires explicit confirmation (confirm=True)"
+            )
+
+        # Count first
+        count_result = await self.get_orphaned_entities_preview(workspace_id, limit=1)
+        count = count_result["count"]
+
+        if count == 0:
+            self._logger.info(
+                "no_orphaned_entities_to_delete",
+                workspace_id=workspace_id,
+            )
+            return 0
+
+        # Delete query
+        delete_cypher = """
+        MATCH (e:Entity)
+        WHERE e.workspace_id = $workspace_id
+          AND NOT (:Chunk)-[:MENTIONS]->(e)
+          AND NOT (e)-[:RELATED_TO]-(:Entity)
+        DETACH DELETE e
+        """
+
+        try:
+            await self._execute_cypher(delete_cypher, {"workspace_id": workspace_id})
+
+            self._logger.info(
+                "orphaned_entities_deleted",
+                workspace_id=workspace_id,
+                count=count,
+            )
+
+            return count
+
+        except Exception as e:
+            self._logger.error("delete_orphaned_entities_error", error=str(e))
+            raise DatabaseError(f"Failed to delete orphaned entities: {e}")

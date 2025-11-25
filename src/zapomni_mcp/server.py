@@ -33,6 +33,7 @@ from zapomni_mcp.tools.export_graph import ExportGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
 from zapomni_mcp.tools.graph_status import GraphStatusTool
 from zapomni_mcp.tools.index_codebase import IndexCodebaseTool
+from zapomni_mcp.tools.prune_memory import PruneMemoryTool
 from zapomni_mcp.tools.workspace_tools import (
     CreateWorkspaceTool,
     DeleteWorkspaceTool,
@@ -276,6 +277,12 @@ class MCPServer:
                     repository_indexer=memory_processor.code_indexer,
                     memory_processor=memory_processor,
                 )
+            )
+
+        # Phase 3.5: Add PruneMemoryTool for garbage collection
+        if hasattr(memory_processor, "db_client") and memory_processor.db_client is not None:
+            tools.append(
+                PruneMemoryTool(db_client=memory_processor.db_client)
             )
 
         # Phase 4: Workspace management tools
