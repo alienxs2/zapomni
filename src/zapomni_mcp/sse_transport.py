@@ -472,8 +472,79 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
         )
     )
 
+    async def handle_dashboard(request: Request) -> Response:
+        """Serve dashboard HTML page."""
+        from pathlib import Path
+        dashboard_path = Path(__file__).parent / "ui" / "dashboard.html"
+        if dashboard_path.exists():
+            return Response(dashboard_path.read_text(), media_type="text/html")
+        return Response("Dashboard not found", status_code=404)
+
+    async def handle_graph_api(request: Request) -> Response:
+        """Return graph data for visualization."""
+        workspace_id = request.query_params.get("workspace", "default")
+        limit = int(request.query_params.get("limit", "100"))
+
+        # Simple graph query - get Memory and Chunk nodes
+        try:
+            db_client = mcp_server._core_engine.db_client
+            cypher = """
+            MATCH (m:Memory)-[r:HAS_CHUNK]->(c:Chunk)
+            WHERE m.workspace_id = $workspace_id
+            RETURN m, r, c
+            LIMIT $limit
+            """
+            result = await db_client._execute_cypher(cypher, {"workspace_id": workspace_id, "limit": limit})
+
+            nodes = []
+            edges = []
+            seen_nodes = set()
+
+            for row in result.rows:
+                # Add Memory node
+                m_id = str(row.get("m", {}).get("id", "unknown"))
+                if m_id not in seen_nodes:
+                    nodes.append({
+                        "id": m_id,
+                        "label": f"Memory {m_id[:8]}",
+                        "type": "Memory"
+                    })
+                    seen_nodes.add(m_id)
+
+                # Add Chunk node
+                c_id = str(row.get("c", {}).get("id", "unknown"))
+                if c_id not in seen_nodes:
+                    nodes.append({
+                        "id": c_id,
+                        "label": f"Chunk {c_id[:8]}",
+                        "type": "Chunk"
+                    })
+                    seen_nodes.add(c_id)
+
+                # Add edge
+                edges.append({
+                    "id": f"{m_id}-{c_id}",
+                    "source": m_id,
+                    "target": c_id,
+                    "type": "HAS_CHUNK"
+                })
+
+            return Response(
+                json.dumps({"nodes": nodes, "edges": edges, "workspace": workspace_id}),
+                media_type="application/json"
+            )
+        except Exception as e:
+            bound_logger.error("graph_api_error", error=str(e))
+            return Response(
+                json.dumps({"nodes": [], "edges": [], "error": str(e)}),
+                media_type="application/json",
+                status_code=500
+            )
+
     # Define routes
     routes = [
+        Route("/", endpoint=handle_dashboard, methods=["GET"]),
+        Route("/api/graph", endpoint=handle_graph_api, methods=["GET"]),
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
         Route("/messages/{session_id}", endpoint=handle_messages, methods=["POST"]),
         Route("/health", endpoint=handle_health, methods=["GET"]),
