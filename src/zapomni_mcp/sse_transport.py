@@ -367,6 +367,7 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             - active_connections: Number of active SSE sessions
             - uptime_seconds: Server uptime in seconds
             - metrics: Connection metrics (total, peak, errors)
+            - database_pool: Connection pool statistics (if available)
         """
         try:
             metrics = session_manager.get_metrics()
@@ -386,6 +387,29 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
                     "total_errors": metrics.total_errors,
                 },
             }
+
+            # Add database pool statistics if available
+            try:
+                if hasattr(mcp_server, "_core_engine") and mcp_server._core_engine is not None:
+                    core_engine = mcp_server._core_engine
+                    if hasattr(core_engine, "db_client") and core_engine.db_client is not None:
+                        db_client = core_engine.db_client
+                        if hasattr(db_client, "get_pool_stats"):
+                            pool_stats = await db_client.get_pool_stats()
+                            health_data["database_pool"] = {
+                                "max_connections": pool_stats.get("max_connections", 0),
+                                "active_connections": pool_stats.get("active_connections", 0),
+                                "total_queries": pool_stats.get("total_queries", 0),
+                                "total_retries": pool_stats.get("total_retries", 0),
+                                "utilization_percent": pool_stats.get("utilization_percent", 0.0),
+                                "initialized": pool_stats.get("initialized", False),
+                                "closed": pool_stats.get("closed", False),
+                            }
+            except Exception as pool_error:
+                bound_logger.debug(
+                    "Could not get pool stats for health check",
+                    error=str(pool_error),
+                )
 
             bound_logger.debug(
                 "Health check",

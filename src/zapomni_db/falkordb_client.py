@@ -1,61 +1,75 @@
 """
-FalkorDBClient - Main database client for FalkorDB unified vector + graph database.
+FalkorDBClient - Async database client for FalkorDB with connection pooling.
+
+Implements native async FalkorDB client with BlockingConnectionPool for
+high-concurrency SSE transport support.
+
+Migration from sync to async client for concurrent connections.
 
 Author: Goncharenko Anton aka alienxs2
-TDD Implementation: Code written to pass tests from specifications.
+License: MIT
 """
 
-import uuid
-import json
-import time
-import math
 import asyncio
-import structlog
-from typing import List, Dict, Any, Optional, Callable
+import json
+import math
+import time
+import uuid
 from datetime import datetime, timezone
-from contextlib import asynccontextmanager
+from typing import Any, Dict, List, Optional
 
-from falkordb import FalkorDB
+import redis
+import structlog
+from falkordb import FalkorDB as SyncFalkorDB  # For schema init only
+from falkordb.asyncio import FalkorDB as AsyncFalkorDB
+from redis.asyncio import BlockingConnectionPool
 
-from zapomni_db.models import Memory, Chunk, SearchResult, QueryResult, Entity, Relationship
-from zapomni_db.exceptions import (
-    ValidationError,
-    DatabaseError,
-    ConnectionError,
-    QueryError,
-    TransactionError
-)
-from zapomni_db.schema_manager import SchemaManager
 from zapomni_db.cypher_query_builder import CypherQueryBuilder
-
+from zapomni_db.exceptions import (
+    ConnectionError,
+    DatabaseError,
+    QueryError,
+    TransactionError,
+    ValidationError,
+)
+from zapomni_db.models import Chunk, Entity, Memory, QueryResult, Relationship, SearchResult
+from zapomni_db.pool_config import PoolConfig, RetryConfig
+from zapomni_db.schema_manager import SchemaManager
 
 logger = structlog.get_logger(__name__)
 
 
 class FalkorDBClient:
     """
-    Main client for FalkorDB unified vector + graph database.
+    Async FalkorDB client with connection pooling.
 
+    Uses native async client for SSE concurrent connections.
     Provides high-level interface for storing and querying memories,
     performing vector similarity search, and executing graph queries.
+
+    BREAKING CHANGE: close() is now async. Use `await db_client.close()`.
     """
 
-    DEFAULT_POOL_SIZE = 20  # Increased for SSE concurrent connections
+    DEFAULT_POOL_SIZE = 20
     DEFAULT_VECTOR_DIMENSION = 768
     DEFAULT_MAX_RETRIES = 3
 
     def __init__(
         self,
         host: str = "localhost",
-        port: int = 6381,  # FalkorDB default port
+        port: int = 6381,
         db: int = 0,
         graph_name: str = "zapomni_memory",
         password: Optional[str] = None,
         pool_size: int = DEFAULT_POOL_SIZE,
-        max_retries: int = DEFAULT_MAX_RETRIES
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        pool_config: Optional[PoolConfig] = None,
+        retry_config: Optional[RetryConfig] = None,
     ):
         """
-        Initialize FalkorDB client with connection pool.
+        Initialize FalkorDB client configuration.
+
+        Note: Does NOT connect to database. Call init_async() to establish connection.
 
         Args:
             host: FalkorDB host address
@@ -63,8 +77,10 @@ class FalkorDBClient:
             db: Database index (0-15)
             graph_name: Name of graph to use
             password: Optional Redis password
-            pool_size: Connection pool size
-            max_retries: Maximum retry attempts
+            pool_size: Connection pool size (deprecated, use pool_config)
+            max_retries: Maximum retry attempts (deprecated, use retry_config)
+            pool_config: Connection pool configuration
+            retry_config: Retry configuration for transient errors
 
         Raises:
             ValidationError: If parameters are invalid
@@ -85,50 +101,152 @@ class FalkorDBClient:
         self.db = db
         self.graph_name = graph_name
         self.password = password
-        self.pool_size = pool_size
-        self.max_retries = max_retries
 
-        # Initialize state
-        self._pool = None
-        self.graph = None
-        self._schema_manager = None
+        # Use new config classes, with backwards compat for pool_size/max_retries
+        self.pool_config = pool_config or PoolConfig(max_size=pool_size)
+        self.retry_config = retry_config or RetryConfig(max_retries=max_retries)
+
+        # Legacy attributes for backwards compatibility
+        self.pool_size = self.pool_config.max_size
+        self.max_retries = self.retry_config.max_retries
+
+        # Initialize state - NOT connected yet
+        self._pool: Optional[BlockingConnectionPool] = None
+        self._db: Optional[AsyncFalkorDB] = None
+        self.graph: Any = None
+        self._schema_manager: Optional[SchemaManager] = None
         self._initialized = False
         self._schema_ready = False
         self._closed = False
+
+        # Structured logger with context
         self._logger = logger.bind(
             host=host,
             port=port,
-            graph=graph_name
+            graph=graph_name,
+            pool_max=self.pool_config.max_size,
         )
 
         # Pool monitoring state
         self._active_connections = 0
         self._total_queries = 0
+        self._total_retries = 0
         self._pool_wait_count = 0
-        self._pool_utilization_high_logged = False
+        self._utilization_warning_logged = False
 
-        # Lazy connection - will connect on first operation
-        try:
-            self._init_connection()
-        except Exception as e:
-            self._logger.warning("lazy_connection_deferred", error=str(e))
+        self._logger.info(
+            "client_configured",
+            pool_max_size=self.pool_config.max_size,
+            pool_timeout=self.pool_config.timeout,
+            max_retries=self.retry_config.max_retries,
+        )
 
-    def _init_connection(self):
-        """Initialize connection pool (lazy)."""
+    async def init_async(self) -> None:
+        """
+        Initialize async connection pool.
+
+        Must be called before any database operations.
+        Creates BlockingConnectionPool for high-concurrency SSE support.
+
+        Raises:
+            ConnectionError: If connection cannot be established
+        """
+        if self._initialized:
+            self._logger.debug("already_initialized")
+            return
+
+        if self._closed:
+            raise ConnectionError("Client has been closed. Create new instance.")
+
         try:
-            # Create FalkorDB connection
-            self._pool = FalkorDB(
+            # Create async connection pool
+            self._pool = BlockingConnectionPool(
                 host=self.host,
                 port=self.port,
-                password=self.password
+                password=self.password,
+                max_connections=self.pool_config.max_size,
+                timeout=int(self.pool_config.timeout),  # BlockingConnectionPool expects int
+                socket_timeout=self.pool_config.socket_timeout,
+                socket_connect_timeout=self.pool_config.socket_connect_timeout,
+                health_check_interval=self.pool_config.health_check_interval,
+                decode_responses=True,
+            )
+
+            # Create async FalkorDB client
+            self._db = AsyncFalkorDB(connection_pool=self._pool)
+            self.graph = self._db.select_graph(self.graph_name)
+
+            # Test connection
+            await self.graph.query("RETURN 1")
+
+            # Initialize schema (sync operation wrapped in thread)
+            await self._init_schema_async()
+
+            self._initialized = True
+            self._schema_ready = True
+
+            self._logger.info(
+                "connection_pool_initialized",
+                pool_max_size=self.pool_config.max_size,
+                pool_timeout=self.pool_config.timeout,
+                socket_timeout=self.pool_config.socket_timeout,
+            )
+
+        except Exception as e:
+            self._logger.error("init_failed", error=str(e))
+            # Cleanup partial init
+            if self._pool:
+                try:
+                    await self._pool.aclose()
+                except Exception:
+                    pass
+                self._pool = None
+            raise ConnectionError(f"Failed to initialize FalkorDB client: {e}")
+
+    async def _init_schema_async(self) -> None:
+        """Initialize schema using sync client (one-time operation)."""
+        # Use sync client for schema initialization
+        # Schema init is one-time, so asyncio.to_thread is acceptable here
+        sync_db = SyncFalkorDB(
+            host=self.host,
+            port=self.port,
+            password=self.password,
+        )
+        sync_graph = sync_db.select_graph(self.graph_name)
+
+        self._schema_manager = SchemaManager(
+            graph=sync_graph,
+            logger=self._logger,
+        )
+
+        # Run schema init in thread pool (one-time operation)
+        await asyncio.to_thread(self._schema_manager.init_schema)
+
+        self._logger.info("schema_initialized")
+
+    def _init_connection(self) -> None:
+        """
+        Legacy sync initialization method.
+
+        Deprecated: Use init_async() instead.
+        This method is kept for backwards compatibility but should not be used
+        for new code. It initializes a sync connection which doesn't support
+        the async connection pool.
+        """
+        try:
+            # Create sync FalkorDB connection (legacy)
+            sync_db = SyncFalkorDB(
+                host=self.host,
+                port=self.port,
+                password=self.password,
             )
 
             # Select graph
-            self.graph = self._pool.select_graph(self.graph_name)
+            self.graph = sync_db.select_graph(self.graph_name)
 
             self._initialized = True
 
-            # Initialize schema (vector indexes, constraints)
+            # Initialize schema
             self._init_schema()
 
             self._schema_ready = True
@@ -136,23 +254,232 @@ class FalkorDBClient:
             self._logger.error("connection_failed", error=str(e))
             raise ConnectionError(f"Failed to connect to FalkorDB: {e}")
 
-    def _init_schema(self):
-        """Initialize graph schema using SchemaManager."""
+    def _init_schema(self) -> None:
+        """Initialize graph schema using SchemaManager (legacy sync method)."""
         try:
-            # Create SchemaManager instance with the graph
             self._schema_manager = SchemaManager(
                 graph=self.graph,
-                logger=self._logger
+                logger=self._logger,
             )
-
-            # Initialize schema (idempotent - safe to run multiple times)
             self._schema_manager.init_schema()
-
             self._logger.info("schema_initialized_via_manager")
-
         except Exception as e:
             self._logger.error("schema_initialization_failed", error=str(e))
             raise
+
+    async def _check_pool_utilization(self) -> None:
+        """Log warning if pool utilization exceeds threshold."""
+        if self.pool_config.max_size > 0:
+            utilization = (self._active_connections / self.pool_config.max_size) * 100
+            if utilization > 80 and not self._utilization_warning_logged:
+                self._logger.warning(
+                    "high_pool_utilization",
+                    utilization_percent=round(utilization, 1),
+                    active=self._active_connections,
+                    max=self.pool_config.max_size,
+                )
+                self._utilization_warning_logged = True
+            elif utilization <= 60:
+                self._utilization_warning_logged = False
+
+    def _convert_result(self, result: Any) -> QueryResult:
+        """Convert FalkorDB result to QueryResult."""
+        rows = []
+        if result.result_set:
+            for record in result.result_set:
+                row_dict = {}
+                if result.header:
+                    for i, col_header in enumerate(result.header):
+                        col_name = col_header[1] if len(col_header) > 1 else f"col_{i}"
+                        row_dict[col_name] = record[i] if i < len(record) else None
+                rows.append(row_dict)
+
+        return QueryResult(
+            rows=rows,
+            row_count=len(rows),
+            execution_time_ms=int(result.run_time_ms) if hasattr(result, "run_time_ms") else 0,
+        )
+
+    async def _execute_with_retry(
+        self,
+        query: str,
+        parameters: Dict[str, Any],
+    ) -> QueryResult:
+        """
+        Execute query with exponential backoff retry.
+
+        Retries on:
+        - ConnectionError
+        - redis.BusyLoadingError
+        - OSError (network issues)
+
+        Does NOT retry on:
+        - QueryError (invalid Cypher syntax)
+        - Other exceptions
+
+        Args:
+            query: Cypher query string
+            parameters: Query parameters
+
+        Returns:
+            QueryResult with rows and metadata
+
+        Raises:
+            ConnectionError: After max retries exhausted
+            QueryError: For invalid query syntax
+        """
+        delay = self.retry_config.initial_delay
+
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                # Native async query execution
+                result = await self.graph.query(query, parameters)
+                return self._convert_result(result)
+
+            except (ConnectionError, redis.BusyLoadingError, OSError) as e:
+                # Retryable errors
+                if attempt < self.retry_config.max_retries:
+                    self._total_retries += 1
+                    self._logger.warning(
+                        "query_retry",
+                        attempt=attempt + 1,
+                        max_retries=self.retry_config.max_retries,
+                        delay=delay,
+                        error=str(e),
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(
+                        delay * self.retry_config.exponential_base,
+                        self.retry_config.max_delay,
+                    )
+                else:
+                    self._logger.error(
+                        "query_failed_after_retries",
+                        attempts=attempt + 1,
+                        error=str(e),
+                    )
+                    raise ConnectionError(f"Query failed after {attempt + 1} attempts: {e}")
+
+            except Exception as e:
+                # Non-retryable errors (query syntax, etc.)
+                self._logger.error("query_error", error=str(e), query=query[:100])
+                raise QueryError(f"Query failed: {e}")
+
+        # Should not reach here, but just in case
+        raise ConnectionError("Query failed: max retries exhausted")
+
+    async def _execute_cypher(
+        self,
+        query: str,
+        parameters: Dict[str, Any],
+    ) -> QueryResult:
+        """
+        Execute Cypher query with pool monitoring and retry logic.
+
+        Args:
+            query: Cypher query string
+            parameters: Query parameters
+
+        Returns:
+            QueryResult with rows and metadata
+
+        Raises:
+            ConnectionError: If not initialized or connection fails
+            QueryError: If query is invalid
+        """
+        if not self._initialized:
+            raise ConnectionError("Client not initialized. Call init_async() first.")
+
+        if self._closed:
+            raise ConnectionError("Client has been closed.")
+
+        # Check pool utilization
+        await self._check_pool_utilization()
+
+        # Track active connection
+        self._active_connections += 1
+        self._total_queries += 1
+
+        try:
+            return await self._execute_with_retry(query, parameters or {})
+        finally:
+            self._active_connections -= 1
+
+    async def get_pool_stats(self) -> Dict[str, Any]:
+        """
+        Get connection pool statistics for monitoring.
+
+        Returns:
+            Dict containing:
+                - max_connections: Pool max size
+                - active_connections: Currently in use
+                - total_queries: Total queries executed
+                - total_retries: Total retry attempts
+                - utilization_percent: active/max * 100
+                - initialized: Pool is ready
+                - closed: Pool is closed
+        """
+        utilization = 0.0
+        if self.pool_config.max_size > 0:
+            utilization = (self._active_connections / self.pool_config.max_size) * 100
+
+        return {
+            "max_connections": self.pool_config.max_size,
+            "active_connections": self._active_connections,
+            "total_queries": self._total_queries,
+            "total_retries": self._total_retries,
+            "utilization_percent": round(utilization, 1),
+            "initialized": self._initialized,
+            "closed": self._closed,
+        }
+
+    async def close(self) -> None:
+        """
+        Close connection pool and release resources.
+
+        BREAKING CHANGE: This method is now async.
+        Use `await db_client.close()` instead of `db_client.close()`.
+
+        Safe to call multiple times (idempotent).
+        Waits for pending queries to complete (up to 10 seconds).
+        """
+        if self._closed:
+            self._logger.debug("already_closed")
+            return
+
+        self._logger.info("closing_connection_pool")
+
+        try:
+            # Wait for pending queries (up to 10s)
+            if self._active_connections > 0:
+                self._logger.info(
+                    "waiting_for_pending_queries",
+                    active=self._active_connections,
+                )
+                # Wait up to 10 seconds for pending queries
+                for _ in range(100):  # 100 * 0.1s = 10s
+                    if self._active_connections == 0:
+                        break
+                    await asyncio.sleep(0.1)
+
+            # Close pool
+            if self._pool and hasattr(self._pool, "aclose"):
+                await self._pool.aclose()
+                self._logger.info("connection_pool_closed")
+
+        except Exception as e:
+            self._logger.warning("close_error", error=str(e))
+
+        finally:
+            self._closed = True
+            self._initialized = False
+            self._pool = None
+            self._db = None
+            self.graph = None
+
+    # ========================================
+    # MEMORY OPERATIONS
+    # ========================================
 
     async def add_memory(self, memory: Memory) -> str:
         """
@@ -177,7 +504,7 @@ class FalkorDBClient:
 
         if len(memory.text) > 1_000_000:
             raise ValidationError(
-                f"Validation failed for memory: text exceeds max length (1,000,000)"
+                "Validation failed for memory: text exceeds max length (1,000,000)"
             )
 
         # Validate chunks
@@ -185,9 +512,7 @@ class FalkorDBClient:
             raise ValidationError("Validation failed for memory: chunks list cannot be empty")
 
         if len(memory.chunks) > 100:
-            raise ValidationError(
-                f"Validation failed for memory: too many chunks (max 100)"
-            )
+            raise ValidationError("Validation failed for memory: too many chunks (max 100)")
 
         # Validate embeddings
         if not memory.embeddings:
@@ -224,11 +549,11 @@ class FalkorDBClient:
             for j, value in enumerate(embedding):
                 if not isinstance(value, (int, float)):
                     raise ValidationError(
-                        f"Validation failed for memory: embedding {i} contains non-numeric values"
+                        "Validation failed for memory: embedding {i} contains non-numeric values"
                     )
                 if not math.isfinite(value):
                     raise ValidationError(
-                        f"Validation failed for memory: embedding {i} contains NaN or Inf values"
+                        "Validation failed for memory: embedding {i} contains NaN or Inf values"
                     )
 
         # Validate metadata
@@ -249,31 +574,30 @@ class FalkorDBClient:
 
         # STEP 3: EXECUTE WITH RETRY
         retry_count = 0
-        while retry_count <= self.max_retries:
+        while retry_count <= self.retry_config.max_retries:
             try:
-                # Mock transaction execution (real implementation would use FalkorDB)
                 await self._execute_transaction(memory, memory_id, chunk_ids)
 
                 self._logger.info(
                     "memory_added",
                     memory_id=memory_id,
-                    num_chunks=len(memory.chunks)
+                    num_chunks=len(memory.chunks),
                 )
 
                 return memory_id
 
             except (ConnectionError, TimeoutError) as e:
                 retry_count += 1
-                if retry_count > self.max_retries:
+                if retry_count > self.retry_config.max_retries:
                     raise DatabaseError(
-                        f"Database error during add_memory: connection failed after {self.max_retries} retries: {e}"
+                        f"Database error during add_memory: connection failed after {self.retry_config.max_retries} retries: {e}"
                     )
 
                 backoff_seconds = 2 ** (retry_count - 1)
                 self._logger.warning(
-                    f"retry_attempt",
+                    "retry_attempt",
                     attempt=retry_count,
-                    delay=backoff_seconds
+                    delay=backoff_seconds,
                 )
                 await asyncio.sleep(backoff_seconds)
 
@@ -281,7 +605,15 @@ class FalkorDBClient:
                 self._logger.error("add_memory_error", error=str(e))
                 raise DatabaseError(f"Unexpected database error during add_memory: {e}")
 
-    async def _execute_transaction(self, memory: Memory, memory_id: str, chunk_ids: List[str]):
+        # Should not reach here
+        raise DatabaseError("add_memory failed: max retries exhausted")
+
+    async def _execute_transaction(
+        self,
+        memory: Memory,
+        memory_id: str,
+        chunk_ids: List[str],
+    ) -> str:
         """Execute transaction to store memory."""
         if not self._initialized:
             raise ConnectionError("Not initialized")
@@ -313,13 +645,12 @@ class FalkorDBClient:
         """
 
         # Prepare parameters
-        import json
         chunks_data = [
             {
                 "id": chunk_ids[i],
                 "text": chunk.text,
                 "index": chunk.index,
-                "embedding": embedding
+                "embedding": embedding,
             }
             for i, (chunk, embedding) in enumerate(zip(memory.chunks, memory.embeddings))
         ]
@@ -331,32 +662,29 @@ class FalkorDBClient:
             "source": memory.metadata.get("source", ""),
             "metadata": json.dumps(memory.metadata),
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "chunks_data": chunks_data
+            "chunks_data": chunks_data,
         }
 
-        # Execute query in thread pool (FalkorDB is sync)
-        result = await asyncio.to_thread(self.graph.query, cypher, parameters)
+        # Execute query with retry logic
+        result = await self._execute_cypher(cypher, parameters)
 
         # Debug logging
         self._logger.debug(
             "transaction_result",
-            result_set_len=len(result.result_set) if result else 0,
-            nodes_created=result.nodes_created if result else 0,
-            rels_created=result.relationships_created if result else 0
+            row_count=result.row_count,
         )
 
-        # Verify result (result_set should contain at least one row with memory_id)
-        if result and len(result.result_set) > 0:
-            # Success - memory and chunks created
+        # Verify result
+        if result.row_count > 0:
             return memory_id
         else:
-            raise DatabaseError(f"Memory creation failed: no records returned (result={result}, result_set={result.result_set if result else None})")
+            raise DatabaseError("Memory creation failed: no records returned")
 
     async def vector_search(
         self,
         embedding: List[float],
         limit: int = 10,
-        filters: Optional[Dict[str, Any]] = None
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[SearchResult]:
         """
         Perform HNSW vector similarity search on chunk embeddings.
@@ -384,9 +712,7 @@ class FalkorDBClient:
 
         # Validate embedding values
         if not all(math.isfinite(x) for x in embedding):
-            raise ValidationError(
-                "Validation failed: embedding contains NaN or Inf values"
-            )
+            raise ValidationError("Validation failed: embedding contains NaN or Inf values")
 
         # Validate limit
         if not isinstance(limit, int):
@@ -395,14 +721,10 @@ class FalkorDBClient:
             )
 
         if limit < 1:
-            raise ValidationError(
-                f"Validation failed: limit must be >= 1, got {limit}"
-            )
+            raise ValidationError(f"Validation failed: limit must be >= 1, got {limit}")
 
         if limit > 1000:
-            raise ValidationError(
-                f"Validation failed: limit cannot exceed 1000, got {limit}"
-            )
+            raise ValidationError(f"Validation failed: limit cannot exceed 1000, got {limit}")
 
         # Validate filters
         if filters is not None:
@@ -413,9 +735,7 @@ class FalkorDBClient:
             if "tags" in filters:
                 tags = filters["tags"]
                 if not isinstance(tags, list) or len(tags) == 0:
-                    raise ValidationError(
-                        "Validation failed: filters['tags'] cannot be empty list"
-                    )
+                    raise ValidationError("Validation failed: filters['tags'] cannot be empty list")
 
             # Validate source
             if "source" in filters:
@@ -428,7 +748,7 @@ class FalkorDBClient:
             # Validate date formats
             if "date_from" in filters:
                 try:
-                    datetime.fromisoformat(filters["date_from"].replace('Z', '+00:00'))
+                    datetime.fromisoformat(filters["date_from"].replace("Z", "+00:00"))
                 except ValueError as e:
                     raise ValidationError(
                         f"Validation failed: filters['date_from'] invalid ISO 8601 format: {e}"
@@ -436,7 +756,7 @@ class FalkorDBClient:
 
             if "date_to" in filters:
                 try:
-                    datetime.fromisoformat(filters["date_to"].replace('Z', '+00:00'))
+                    datetime.fromisoformat(filters["date_to"].replace("Z", "+00:00"))
                 except ValueError as e:
                     raise ValidationError(
                         f"Validation failed: filters['date_to'] invalid ISO 8601 format: {e}"
@@ -461,29 +781,16 @@ class FalkorDBClient:
             embedding=embedding,
             limit=limit,
             filters=filters,
-            min_similarity=min_similarity
+            min_similarity=min_similarity,
         )
 
-        # STEP 3: EXECUTE SEARCH WITH RETRY
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            try:
-                result = await self._execute_cypher(cypher, params)
-                return self._parse_search_results(result)
-
-            except (ConnectionError, TimeoutError) as e:
-                retry_count += 1
-                if retry_count > self.max_retries:
-                    raise DatabaseError(
-                        f"Database operation failed after {self.max_retries} retries: {e}"
-                    )
-
-                backoff_seconds = 2 ** (retry_count - 1)
-                await asyncio.sleep(backoff_seconds)
-
-            except Exception as e:
-                self._logger.error("vector_search_error", error=str(e))
-                raise DatabaseError(f"Unexpected database error: {e}")
+        # STEP 3: EXECUTE SEARCH
+        try:
+            result = await self._execute_cypher(cypher, params)
+            return self._parse_search_results(result)
+        except Exception as e:
+            self._logger.error("vector_search_error", error=str(e))
+            raise DatabaseError(f"Vector search failed: {e}")
 
     def _parse_search_results(self, query_result: QueryResult) -> List[SearchResult]:
         """Parse database results into SearchResult objects."""
@@ -492,12 +799,11 @@ class FalkorDBClient:
         for row in query_result.rows:
             try:
                 timestamp_str = row.get("timestamp", datetime.now(timezone.utc).isoformat())
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
 
                 # Parse tags from JSON string if needed
                 tags = row.get("tags", [])
                 if isinstance(tags, str):
-                    import json
                     tags = json.loads(tags)
 
                 search_result = SearchResult(
@@ -510,14 +816,14 @@ class FalkorDBClient:
                     tags=tags,
                     source=row.get("source", ""),
                     timestamp=timestamp,
-                    chunk_index=int(row.get("chunk_index", 0))
+                    chunk_index=int(row.get("chunk_index", 0)),
                 )
                 results.append(search_result)
             except (KeyError, ValueError, TypeError) as e:
                 self._logger.warning("malformed_search_row", row=row, error=str(e))
                 continue
 
-        results.sort(key=lambda r: r.similarity_score, reverse=True)
+        results.sort(key=lambda r: r.similarity_score or 0.0, reverse=True)
         return results
 
     async def get_stats(self) -> Dict[str, Any]:
@@ -526,25 +832,27 @@ class FalkorDBClient:
 
         Returns:
             Dict containing node counts, relationship counts, storage metrics,
-            index statistics, and health indicators.
+            index statistics, health indicators, and pool statistics.
 
         Raises:
             DatabaseError: If database queries fail
             ConnectionError: If database connection is lost
         """
-        stats = {
+        stats: Dict[str, Any] = {
             "nodes": {},
             "relationships": {},
             "storage": {},
             "indexes": {},
-            "health": {}
+            "health": {},
         }
 
         start_time = time.time()
 
         try:
             # Count nodes by type
-            node_results = await self._execute_cypher("MATCH (n) RETURN labels(n)[0] AS node_type, count(n) AS count", {})
+            node_results = await self._execute_cypher(
+                "MATCH (n) RETURN labels(n)[0] AS node_type, count(n) AS count", {}
+            )
 
             stats["nodes"]["total"] = 0
             stats["nodes"]["memory"] = 0
@@ -559,7 +867,9 @@ class FalkorDBClient:
                 stats["nodes"]["total"] += count
 
             # Count relationships by type
-            rel_results = await self._execute_cypher("MATCH ()-[r]->() RETURN type(r) AS rel_type, count(r) AS count", {})
+            rel_results = await self._execute_cypher(
+                "MATCH ()-[r]->() RETURN type(r) AS rel_type, count(r) AS count", {}
+            )
 
             stats["relationships"]["total"] = 0
             stats["relationships"]["has_chunk"] = 0
@@ -567,7 +877,9 @@ class FalkorDBClient:
             stats["relationships"]["related_to"] = 0
 
             for row in rel_results.rows:
-                rel_type = row["rel_type"].lower().replace("_", "_") if row.get("rel_type") else "unknown"
+                rel_type = (
+                    row["rel_type"].lower().replace("_", "_") if row.get("rel_type") else "unknown"
+                )
                 count = row["count"]
                 stats["relationships"][rel_type] = count
                 stats["relationships"]["total"] += count
@@ -588,7 +900,7 @@ class FalkorDBClient:
             try:
                 index_results = await self._execute_cypher(
                     "CALL db.indexes() YIELD name, type WHERE name = 'chunk_embedding_idx' RETURN name, type",
-                    {}
+                    {},
                 )
 
                 if index_results.rows:
@@ -619,13 +931,15 @@ class FalkorDBClient:
             stats["avg_query_latency_ms"] = stats["health"]["query_latency_ms"]
 
             # Add pool monitoring stats
+            pool_stats = await self.get_pool_stats()
             stats["pool"] = {
-                "size": self.pool_size,
-                "active_connections": self._active_connections,
-                "total_queries": self._total_queries,
-                "utilization_percent": round(
-                    (self._active_connections / self.pool_size) * 100, 1
-                ) if self.pool_size > 0 else 0.0,
+                "size": self.pool_config.max_size,
+                "active_connections": pool_stats["active_connections"],
+                "total_queries": pool_stats["total_queries"],
+                "total_retries": pool_stats["total_retries"],
+                "utilization_percent": pool_stats["utilization_percent"],
+                "initialized": pool_stats["initialized"],
+                "closed": pool_stats["closed"],
             }
 
             self._logger.info(
@@ -639,6 +953,10 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("stats_error", error=str(e))
             raise DatabaseError(f"Failed to retrieve graph statistics: {e}")
+
+    # ========================================
+    # ENTITY OPERATIONS
+    # ========================================
 
     async def add_entity(self, entity: Entity) -> str:
         """
@@ -654,7 +972,6 @@ class FalkorDBClient:
             ValidationError: If entity validation fails
             DatabaseError: If database write fails after retries
         """
-        # Validation happens via Pydantic model
         entity_id = str(uuid.uuid4())
 
         cypher = """
@@ -673,39 +990,28 @@ class FalkorDBClient:
             "type": entity.type,
             "description": entity.description or "",
             "confidence": entity.confidence,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            try:
-                result = await self._execute_cypher(cypher, parameters)
+        try:
+            result = await self._execute_cypher(cypher, parameters)
 
-                if result.row_count > 0:
-                    self._logger.info("entity_added", entity_id=entity_id, name=entity.name)
-                    return entity_id
-                else:
-                    raise DatabaseError(f"Entity creation failed: no records returned")
+            if result.row_count > 0:
+                self._logger.info("entity_added", entity_id=entity_id, name=entity.name)
+                return entity_id
+            else:
+                raise DatabaseError("Entity creation failed: no records returned")
 
-            except (ConnectionError, TimeoutError) as e:
-                retry_count += 1
-                if retry_count > self.max_retries:
-                    raise DatabaseError(
-                        f"Database error during add_entity: connection failed after {self.max_retries} retries: {e}"
-                    )
-                backoff_seconds = 2 ** (retry_count - 1)
-                await asyncio.sleep(backoff_seconds)
-
-            except Exception as e:
-                self._logger.error("add_entity_error", error=str(e))
-                raise DatabaseError(f"Unexpected database error during add_entity: {e}")
+        except Exception as e:
+            self._logger.error("add_entity_error", error=str(e))
+            raise DatabaseError(f"Failed to add entity: {e}")
 
     async def add_relationship(
         self,
         from_entity_id: str,
         to_entity_id: str,
         relationship_type: str,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Add a relationship edge between two entities.
@@ -746,9 +1052,6 @@ class FalkorDBClient:
 
         relationship_id = str(uuid.uuid4())
 
-        # Note: Cypher doesn't support parameterized relationship types in this way
-        # We need to use string interpolation for the relationship type
-        # Also: FalkorDB doesn't support datetime() function - use ISO format string instead
         cypher = f"""
         MATCH (from:Entity {{id: $from_id}})
         MATCH (to:Entity {{id: $to_id}})
@@ -769,45 +1072,34 @@ class FalkorDBClient:
             "strength": strength,
             "confidence": confidence,
             "context": context,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            try:
-                result = await self._execute_cypher(cypher, parameters)
+        try:
+            result = await self._execute_cypher(cypher, parameters)
 
-                if result.row_count > 0:
-                    self._logger.info(
-                        "relationship_added",
-                        relationship_id=relationship_id,
-                        type=relationship_type
-                    )
-                    return relationship_id
-                else:
-                    raise DatabaseError(
-                        f"Relationship creation failed: entities not found "
-                        f"(from: {from_entity_id}, to: {to_entity_id})"
-                    )
+            if result.row_count > 0:
+                self._logger.info(
+                    "relationship_added",
+                    relationship_id=relationship_id,
+                    type=relationship_type,
+                )
+                return relationship_id
+            else:
+                raise DatabaseError(
+                    f"Relationship creation failed: entities not found "
+                    f"(from: {from_entity_id}, to: {to_entity_id})"
+                )
 
-            except (ConnectionError, TimeoutError) as e:
-                retry_count += 1
-                if retry_count > self.max_retries:
-                    raise DatabaseError(
-                        f"Database error during add_relationship: connection failed after {self.max_retries} retries: {e}"
-                    )
-                backoff_seconds = 2 ** (retry_count - 1)
-                await asyncio.sleep(backoff_seconds)
-
-            except Exception as e:
-                self._logger.error("add_relationship_error", error=str(e))
-                raise DatabaseError(f"Unexpected database error during add_relationship: {e}")
+        except Exception as e:
+            self._logger.error("add_relationship_error", error=str(e))
+            raise DatabaseError(f"Failed to add relationship: {e}")
 
     async def get_related_entities(
         self,
         entity_id: str,
         depth: int = 1,
-        limit: int = 20
+        limit: int = 20,
     ) -> List[Entity]:
         """
         Get entities related to a given entity via graph traversal.
@@ -867,14 +1159,14 @@ class FalkorDBClient:
                     name=row["name"],
                     type=row["type"],
                     description=row.get("description", ""),
-                    confidence=float(row.get("confidence", 1.0))
+                    confidence=float(row.get("confidence", 1.0)),
                 )
                 entities.append(entity)
 
             self._logger.info(
                 "related_entities_retrieved",
                 entity_id=entity_id,
-                count=len(entities)
+                count=len(entities),
             )
 
             return entities
@@ -886,7 +1178,7 @@ class FalkorDBClient:
     async def graph_query(
         self,
         cypher: str,
-        parameters: Optional[Dict[str, Any]] = None
+        parameters: Optional[Dict[str, Any]] = None,
     ) -> QueryResult:
         """
         Execute a Cypher query on the graph.
@@ -907,7 +1199,7 @@ class FalkorDBClient:
             raise ValidationError("cypher query cannot be empty")
 
         if len(cypher) > 100_000:
-            raise ValidationError(f"cypher query exceeds max length (100,000 chars)")
+            raise ValidationError("cypher query exceeds max length (100,000 chars)")
 
         # Validate parameters are JSON-serializable
         if parameters:
@@ -916,32 +1208,20 @@ class FalkorDBClient:
             except (TypeError, ValueError) as e:
                 raise ValidationError(f"parameters must be JSON-serializable: {e}")
 
-        # Execute query with retry
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            try:
-                result = await self._execute_cypher(cypher, parameters or {})
+        try:
+            result = await self._execute_cypher(cypher, parameters or {})
 
-                self._logger.info(
-                    "graph_query_executed",
-                    row_count=result.row_count,
-                    execution_time_ms=result.execution_time_ms
-                )
+            self._logger.info(
+                "graph_query_executed",
+                row_count=result.row_count,
+                execution_time_ms=result.execution_time_ms,
+            )
 
-                return result
+            return result
 
-            except (ConnectionError, TimeoutError) as e:
-                retry_count += 1
-                if retry_count > self.max_retries:
-                    raise DatabaseError(
-                        f"Database error during graph_query: connection failed after {self.max_retries} retries: {e}"
-                    )
-                backoff_seconds = 2 ** (retry_count - 1)
-                await asyncio.sleep(backoff_seconds)
-
-            except Exception as e:
-                self._logger.error("graph_query_error", error=str(e))
-                raise DatabaseError(f"Unexpected database error during graph_query: {e}")
+        except Exception as e:
+            self._logger.error("graph_query_error", error=str(e))
+            raise DatabaseError(f"Graph query failed: {e}")
 
     async def delete_memory(self, memory_id: str) -> bool:
         """
@@ -1004,71 +1284,3 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("clear_all_error", error=str(e))
             raise DatabaseError(f"Failed to clear graph: {e}")
-
-    async def _execute_cypher(self, query: str, parameters: Dict[str, Any]) -> QueryResult:
-        """Execute Cypher query using FalkorDB with pool monitoring."""
-        if not self._initialized:
-            raise ConnectionError("Not initialized")
-
-        # Pool monitoring: track active connections
-        self._active_connections += 1
-        self._total_queries += 1
-
-        # Log warning if pool utilization exceeds 80%
-        utilization = self._active_connections / self.pool_size
-        if utilization > 0.8 and not self._pool_utilization_high_logged:
-            self._logger.warning(
-                "pool_utilization_high",
-                active_connections=self._active_connections,
-                pool_size=self.pool_size,
-                utilization_percent=round(utilization * 100, 1),
-            )
-            self._pool_utilization_high_logged = True
-        elif utilization <= 0.5:
-            # Reset the flag when utilization drops
-            self._pool_utilization_high_logged = False
-
-        try:
-            # Execute query in thread pool (FalkorDB is sync)
-            result = await asyncio.to_thread(self.graph.query, query, parameters)
-
-            # Convert FalkorDB result to our QueryResult format
-            rows = []
-            for record in result.result_set:
-                # Convert result record to dict
-                row_dict = {}
-                for i, col_header in enumerate(result.header):
-                    # col_header is [type_id, column_name]
-                    col_name = col_header[1]
-                    row_dict[col_name] = record[i]
-                rows.append(row_dict)
-
-            return QueryResult(
-                rows=rows,
-                row_count=len(rows),
-                execution_time_ms=int(result.run_time_ms) if hasattr(result, 'run_time_ms') else 0
-            )
-        finally:
-            # Pool monitoring: release connection
-            self._active_connections -= 1
-
-    def close(self) -> None:
-        """
-        Close database connection and release resources.
-
-        Idempotent - can be called multiple times safely.
-        """
-        if self._closed:
-            return
-
-        try:
-            if self._pool:
-                # FalkorDB doesn't have close() method, it uses Redis connection
-                # Just mark as closed
-                self._logger.info("connection_closed")
-
-            self._closed = True
-            self._initialized = False
-
-        except Exception as e:
-            self._logger.warning("close_error", error=str(e))

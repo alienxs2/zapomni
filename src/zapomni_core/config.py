@@ -8,11 +8,12 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator, SecretStr
-from typing import Optional, Dict, Any
-from pathlib import Path
 import warnings
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings
 
 
 class ZapomniSettings(BaseSettings):
@@ -57,39 +58,77 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     falkordb_host: str = Field(
-        default="localhost",
-        description="FalkorDB server hostname or IP address"
+        default="localhost", description="FalkorDB server hostname or IP address"
     )
 
     falkordb_port: int = Field(
-        default=6379,
-        ge=1,
-        le=65535,
-        description="FalkorDB server port (standard Redis port: 6379)"
+        default=6379, ge=1, le=65535, description="FalkorDB server port (standard Redis port: 6379)"
     )
 
     falkordb_password: Optional[SecretStr] = Field(
-        default=None,
-        description="FalkorDB authentication password (if required)"
+        default=None, description="FalkorDB authentication password (if required)"
     )
 
     graph_name: str = Field(
-        default="zapomni_memory",
-        description="Name of the FalkorDB graph database"
+        default="zapomni_memory", description="Name of the FalkorDB graph database"
     )
 
     falkordb_connection_timeout: int = Field(
-        default=30,
-        ge=1,
-        le=300,
-        description="FalkorDB connection timeout in seconds"
+        default=30, ge=1, le=300, description="FalkorDB connection timeout in seconds"
     )
 
     falkordb_pool_size: int = Field(
         default=20,
         ge=1,
         le=200,
-        description="FalkorDB connection pool size (increased for SSE concurrency)"
+        description="FalkorDB connection pool size (increased for SSE concurrency). "
+        "Deprecated: Use falkordb_pool_max_size instead.",
+    )
+
+    # ========================================
+    # DATABASE POOL CONFIGURATION
+    # ========================================
+
+    falkordb_pool_min_size: int = Field(
+        default=5, ge=1, le=50, description="Minimum database connections to maintain in pool"
+    )
+
+    falkordb_pool_max_size: int = Field(
+        default=20, ge=1, le=200, description="Maximum database connections allowed in pool"
+    )
+
+    falkordb_pool_timeout: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=60.0,
+        description="Seconds to wait for available connection from pool",
+    )
+
+    falkordb_socket_timeout: float = Field(
+        default=30.0, ge=5.0, le=120.0, description="Socket timeout for query execution in seconds"
+    )
+
+    falkordb_health_check_interval: int = Field(
+        default=30,
+        ge=10,
+        le=300,
+        description="Health check interval for pool connections in seconds",
+    )
+
+    # ========================================
+    # RETRY CONFIGURATION
+    # ========================================
+
+    falkordb_max_retries: int = Field(
+        default=3, ge=0, le=10, description="Maximum retry attempts for transient database errors"
+    )
+
+    falkordb_retry_initial_delay: float = Field(
+        default=0.1, ge=0.01, le=1.0, description="Initial delay for retry backoff in seconds"
+    )
+
+    falkordb_retry_max_delay: float = Field(
+        default=2.0, ge=0.1, le=30.0, description="Maximum delay for retry backoff in seconds"
     )
 
     # ========================================
@@ -97,32 +136,23 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     ollama_base_url: str = Field(
-        default="http://localhost:11434",
-        description="Ollama server base URL (including protocol)"
+        default="http://localhost:11434", description="Ollama server base URL (including protocol)"
     )
 
     ollama_embedding_model: str = Field(
-        default="nomic-embed-text",
-        description="Ollama model for embedding generation (768 dim)"
+        default="nomic-embed-text", description="Ollama model for embedding generation (768 dim)"
     )
 
     ollama_llm_model: str = Field(
-        default="llama3.1:8b",
-        description="Ollama model for LLM inference (entity extraction)"
+        default="llama3.1:8b", description="Ollama model for LLM inference (entity extraction)"
     )
 
     ollama_embedding_timeout: int = Field(
-        default=60,
-        ge=5,
-        le=300,
-        description="Timeout for embedding requests in seconds"
+        default=60, ge=5, le=300, description="Timeout for embedding requests in seconds"
     )
 
     ollama_llm_timeout: int = Field(
-        default=120,
-        ge=10,
-        le=600,
-        description="Timeout for LLM inference requests in seconds"
+        default=120, ge=10, le=600, description="Timeout for LLM inference requests in seconds"
     )
 
     # ========================================
@@ -130,34 +160,27 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     redis_enabled: bool = Field(
-        default=False,
-        description="Enable Redis semantic cache (Phase 2 feature)"
+        default=False, description="Enable Redis semantic cache (Phase 2 feature)"
     )
 
-    redis_host: str = Field(
-        default="localhost",
-        description="Redis server hostname"
-    )
+    redis_host: str = Field(default="localhost", description="Redis server hostname")
 
     redis_port: int = Field(
         default=6380,
         ge=1,
         le=65535,
-        description="Redis server port (6380 to avoid conflict with FalkorDB)"
+        description="Redis server port (6380 to avoid conflict with FalkorDB)",
     )
 
     redis_ttl_seconds: int = Field(
         default=86400,  # 24 hours
         ge=60,
         le=604800,  # 7 days max
-        description="Redis cache entry TTL in seconds"
+        description="Redis cache entry TTL in seconds",
     )
 
     redis_max_memory_mb: int = Field(
-        default=1024,
-        ge=100,
-        le=10240,
-        description="Redis maximum memory usage in MB"
+        default=1024, ge=100, le=10240, description="Redis maximum memory usage in MB"
     )
 
     # ========================================
@@ -165,64 +188,42 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     max_chunk_size: int = Field(
-        default=512,
-        ge=100,
-        le=2000,
-        description="Maximum chunk size in tokens"
+        default=512, ge=100, le=2000, description="Maximum chunk size in tokens"
     )
 
     chunk_overlap: int = Field(
         default=50,
         ge=0,
         le=500,
-        description="Chunk overlap in tokens (10-20% of chunk_size recommended)"
+        description="Chunk overlap in tokens (10-20% of chunk_size recommended)",
     )
 
     vector_dimensions: int = Field(
-        default=768,
-        description="Embedding vector dimensions (must match model)"
+        default=768, description="Embedding vector dimensions (must match model)"
     )
 
     hnsw_m: int = Field(
-        default=16,
-        ge=4,
-        le=64,
-        description="HNSW index M parameter (connections per layer)"
+        default=16, ge=4, le=64, description="HNSW index M parameter (connections per layer)"
     )
 
     hnsw_ef_construction: int = Field(
-        default=200,
-        ge=50,
-        le=1000,
-        description="HNSW build-time accuracy parameter"
+        default=200, ge=50, le=1000, description="HNSW build-time accuracy parameter"
     )
 
     hnsw_ef_search: int = Field(
-        default=100,
-        ge=10,
-        le=500,
-        description="HNSW query-time accuracy parameter"
+        default=100, ge=10, le=500, description="HNSW query-time accuracy parameter"
     )
 
     max_concurrent_tasks: int = Field(
-        default=4,
-        ge=1,
-        le=32,
-        description="Maximum concurrent background tasks"
+        default=4, ge=1, le=32, description="Maximum concurrent background tasks"
     )
 
     search_limit_default: int = Field(
-        default=10,
-        ge=1,
-        le=100,
-        description="Default number of search results"
+        default=10, ge=1, le=100, description="Default number of search results"
     )
 
     min_similarity_threshold: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Minimum cosine similarity for search results"
+        default=0.5, ge=0.0, le=1.0, description="Minimum cosine similarity for search results"
     )
 
     # ========================================
@@ -230,42 +231,31 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     log_level: str = Field(
-        default="INFO",
-        description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+        default="INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
-    log_format: str = Field(
-        default="json",
-        description="Log format (json, text)"
-    )
+    log_format: str = Field(default="json", description="Log format (json, text)")
 
-    log_file: Optional[Path] = Field(
-        default=None,
-        description="Log file path (None = stderr only)"
-    )
+    log_file: Optional[Path] = Field(default=None, description="Log file path (None = stderr only)")
 
     # ========================================
     # FEATURE FLAGS
     # ========================================
 
     enable_hybrid_search: bool = Field(
-        default=False,
-        description="Enable BM25 + vector hybrid search (Phase 2)"
+        default=False, description="Enable BM25 + vector hybrid search (Phase 2)"
     )
 
     enable_knowledge_graph: bool = Field(
-        default=False,
-        description="Enable entity extraction and knowledge graph (Phase 2)"
+        default=False, description="Enable entity extraction and knowledge graph (Phase 2)"
     )
 
     enable_code_indexing: bool = Field(
-        default=False,
-        description="Enable AST-based code indexing (Phase 3)"
+        default=False, description="Enable AST-based code indexing (Phase 3)"
     )
 
     enable_semantic_cache: bool = Field(
-        default=False,
-        description="Enable semantic embedding cache (Phase 2)"
+        default=False, description="Enable semantic embedding cache (Phase 2)"
     )
 
     # ========================================
@@ -273,34 +263,21 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     sse_host: str = Field(
-        default="127.0.0.1",
-        description="SSE server bind address (127.0.0.1 for local only)"
+        default="127.0.0.1", description="SSE server bind address (127.0.0.1 for local only)"
     )
 
-    sse_port: int = Field(
-        default=8000,
-        ge=1,
-        le=65535,
-        description="SSE server port"
-    )
+    sse_port: int = Field(default=8000, ge=1, le=65535, description="SSE server port")
 
     sse_cors_origins: str = Field(
-        default="*",
-        description="Comma-separated CORS origins (* for all)"
+        default="*", description="Comma-separated CORS origins (* for all)"
     )
 
     sse_heartbeat_interval: int = Field(
-        default=30,
-        ge=5,
-        le=300,
-        description="SSE heartbeat interval in seconds"
+        default=30, ge=5, le=300, description="SSE heartbeat interval in seconds"
     )
 
     sse_max_connection_lifetime: int = Field(
-        default=3600,
-        ge=60,
-        le=86400,
-        description="Maximum SSE connection lifetime in seconds"
+        default=3600, ge=60, le=86400, description="Maximum SSE connection lifetime in seconds"
     )
 
     # ========================================
@@ -308,31 +285,22 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     entity_extractor_workers: int = Field(
-        default=5,
-        ge=1,
-        le=20,
-        description="Thread pool workers for entity extraction"
+        default=5, ge=1, le=20, description="Thread pool workers for entity extraction"
     )
 
     # ========================================
     # SYSTEM CONFIGURATION
     # ========================================
 
-    data_dir: Path = Field(
-        default=Path("./data"),
-        description="Data storage directory"
-    )
+    data_dir: Path = Field(default=Path("./data"), description="Data storage directory")
 
-    temp_dir: Path = Field(
-        default=Path("/tmp/zapomni"),
-        description="Temporary files directory"
-    )
+    temp_dir: Path = Field(default=Path("/tmp/zapomni"), description="Temporary files directory")
 
     max_text_length: int = Field(
         default=10_000_000,  # 10MB
         ge=1000,
         le=100_000_000,
-        description="Maximum allowed text length in characters"
+        description="Maximum allowed text length in characters",
     )
 
     # ========================================
@@ -357,9 +325,7 @@ class ZapomniSettings(BaseSettings):
         allowed = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         v_upper = v.upper()
         if v_upper not in allowed:
-            raise ValueError(
-                f"log_level must be one of {allowed}, got '{v}'"
-            )
+            raise ValueError(f"log_level must be one of {allowed}, got '{v}'")
         return v_upper
 
     @field_validator("log_format")
@@ -380,9 +346,7 @@ class ZapomniSettings(BaseSettings):
         allowed = ["json", "text"]
         v_lower = v.lower()
         if v_lower not in allowed:
-            raise ValueError(
-                f"log_format must be one of {allowed}, got '{v}'"
-            )
+            raise ValueError(f"log_format must be one of {allowed}, got '{v}'")
         return v_lower
 
     @field_validator("ollama_base_url")
@@ -401,9 +365,7 @@ class ZapomniSettings(BaseSettings):
             ValueError: If URL doesn't start with http:// or https://
         """
         if not v.startswith(("http://", "https://")):
-            raise ValueError(
-                f"ollama_base_url must start with http:// or https://, got '{v}'"
-            )
+            raise ValueError(f"ollama_base_url must start with http:// or https://, got '{v}'")
         return v.rstrip("/")  # Remove trailing slash
 
     @field_validator("chunk_overlap")
@@ -455,10 +417,7 @@ class ZapomniSettings(BaseSettings):
         """
         allowed = [384, 768, 1024, 1536, 3072]
         if v not in allowed:
-            warnings.warn(
-                f"vector_dimensions ({v}) is non-standard. "
-                f"Common values: {allowed}"
-            )
+            warnings.warn(f"vector_dimensions ({v}) is non-standard. " f"Common values: {allowed}")
         return v
 
     @field_validator("data_dir", "temp_dir")
@@ -543,6 +502,7 @@ class ZapomniSettings(BaseSettings):
 # HELPER FUNCTIONS
 # ============================================================
 
+
 def get_config_summary(settings: ZapomniSettings) -> Dict[str, Any]:
     """
     Get configuration summary for logging/debugging with sensitive values masked.
@@ -559,6 +519,12 @@ def get_config_summary(settings: ZapomniSettings) -> Dict[str, Any]:
             "falkordb_port": settings.falkordb_port,
             "graph_name": settings.graph_name,
             "pool_size": settings.falkordb_pool_size,
+            "pool_min_size": settings.falkordb_pool_min_size,
+            "pool_max_size": settings.falkordb_pool_max_size,
+            "pool_timeout": settings.falkordb_pool_timeout,
+            "socket_timeout": settings.falkordb_socket_timeout,
+            "health_check_interval": settings.falkordb_health_check_interval,
+            "max_retries": settings.falkordb_max_retries,
         },
         "ollama": {
             "base_url": settings.ollama_base_url,

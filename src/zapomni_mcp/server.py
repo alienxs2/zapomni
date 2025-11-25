@@ -25,13 +25,12 @@ from zapomni_core.exceptions import ValidationError
 from zapomni_mcp.config import Settings, SSEConfig
 from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
 from zapomni_mcp.tools.build_graph import BuildGraphTool
+from zapomni_mcp.tools.clear_all import ClearAllTool
+from zapomni_mcp.tools.delete_memory import DeleteMemoryTool
+from zapomni_mcp.tools.export_graph import ExportGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
 from zapomni_mcp.tools.graph_status import GraphStatusTool
-from zapomni_mcp.tools.export_graph import ExportGraphTool
 from zapomni_mcp.tools.index_codebase import IndexCodebaseTool
-from zapomni_mcp.tools.delete_memory import DeleteMemoryTool
-from zapomni_mcp.tools.clear_all import ClearAllTool
-
 
 # Custom Exceptions
 
@@ -383,6 +382,7 @@ class MCPServer:
             OSError: If port is already in use
         """
         import uvicorn
+
         from zapomni_mcp.sse_transport import create_sse_app
 
         # Check if already running
@@ -512,14 +512,15 @@ class MCPServer:
         This method performs cleanup in the correct order:
         1. Close all active SSE sessions
         2. Cleanup EntityExtractor thread pool
-        3. Call standard shutdown
+        3. Close database connection pool
+        4. Call standard shutdown
 
         This is called automatically when the SSE server exits.
         """
         self._logger.info("Starting graceful SSE shutdown...")
 
         # Step 1: Close all active sessions
-        if hasattr(self, '_session_manager') and self._session_manager is not None:
+        if hasattr(self, "_session_manager") and self._session_manager is not None:
             try:
                 closed_count = await self._session_manager.close_all_sessions()
                 self._logger.info(
@@ -535,7 +536,10 @@ class MCPServer:
         # Step 2: Cleanup EntityExtractor thread pool
         await self._cleanup_entity_extractor()
 
-        # Step 3: Standard shutdown
+        # Step 3: Close database connection pool (BREAKING CHANGE: close() is now async)
+        await self._close_database_pool()
+
+        # Step 4: Standard shutdown
         self.shutdown()
 
     async def _cleanup_entity_extractor(self) -> None:
@@ -547,17 +551,17 @@ class MCPServer:
         """
         try:
             # Check if we have a memory processor with entity extractor
-            if hasattr(self._core_engine, '_entity_extractor'):
+            if hasattr(self._core_engine, "_entity_extractor"):
                 extractor = self._core_engine._entity_extractor
-                if extractor is not None and hasattr(extractor, 'shutdown'):
+                if extractor is not None and hasattr(extractor, "shutdown"):
                     self._logger.info("Shutting down EntityExtractor...")
                     extractor.shutdown()
                     self._logger.info("EntityExtractor shutdown complete")
 
             # Also check memory_processor.extractor pattern
-            if hasattr(self._core_engine, 'extractor'):
+            if hasattr(self._core_engine, "extractor"):
                 extractor = self._core_engine.extractor
-                if extractor is not None and hasattr(extractor, 'shutdown'):
+                if extractor is not None and hasattr(extractor, "shutdown"):
                     self._logger.info("Shutting down EntityExtractor (via extractor)...")
                     extractor.shutdown()
                     self._logger.info("EntityExtractor shutdown complete")
@@ -565,6 +569,41 @@ class MCPServer:
         except Exception as e:
             self._logger.warning(
                 "Error during EntityExtractor cleanup",
+                error=str(e),
+            )
+
+    async def _close_database_pool(self) -> None:
+        """
+        Close database connection pool during shutdown.
+
+        Handles async close() method of FalkorDBClient.
+        Waits for pending queries to complete before closing.
+        """
+        try:
+            # Check if we have a memory processor with db_client
+            if hasattr(self._core_engine, "db_client"):
+                db_client = self._core_engine.db_client
+                if db_client is not None and hasattr(db_client, "close"):
+                    # Get pool stats before closing
+                    if hasattr(db_client, "get_pool_stats"):
+                        try:
+                            stats = await db_client.get_pool_stats()
+                            self._logger.info(
+                                "Closing database pool",
+                                total_queries=stats.get("total_queries", 0),
+                                total_retries=stats.get("total_retries", 0),
+                            )
+                        except Exception:
+                            pass
+
+                    # close() is now async
+                    self._logger.info("Closing FalkorDB connection pool...")
+                    await db_client.close()
+                    self._logger.info("FalkorDB connection pool closed")
+
+        except Exception as e:
+            self._logger.warning(
+                "Error during database pool cleanup",
                 error=str(e),
             )
 

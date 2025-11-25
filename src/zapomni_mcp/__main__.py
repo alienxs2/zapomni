@@ -45,15 +45,18 @@ LoggingService.configure_logging(level="INFO", format="json")
 # Get logger after logging is configured
 logger = LoggingService.get_logger(__name__)
 
+from zapomni_core.chunking import SemanticChunker
+
 # Now safe to import other zapomni modules (after logging is configured)
 from zapomni_core.config import ZapomniSettings
-from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
+
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
-from zapomni_mcp.server import MCPServer
+from zapomni_db.pool_config import PoolConfig, RetryConfig
 from zapomni_mcp.config import Settings, SSEConfig
+from zapomni_mcp.server import MCPServer
 
 
 def parse_args() -> argparse.Namespace:
@@ -154,9 +157,7 @@ async def main(args: argparse.Namespace) -> None:
             falkordb_host=os.getenv("FALKORDB_HOST", "localhost"),
             falkordb_port=int(os.getenv("FALKORDB_PORT", "6379")),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-            ollama_embedding_model=os.getenv(
-                "OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"
-            ),
+            ollama_embedding_model=os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"),
         )
         logger.info(
             "Configuration loaded",
@@ -166,19 +167,47 @@ async def main(args: argparse.Namespace) -> None:
             ollama_embedding_model=settings.ollama_embedding_model,
         )
 
-        # STAGE 2: Initialize database client
-        logger.info("Initializing FalkorDB client")
+        # STAGE 2: Initialize database client with async connection pool
+        logger.info("Initializing FalkorDB client with connection pooling")
+
+        # Create pool configuration from settings
+        pool_config = PoolConfig(
+            min_size=settings.falkordb_pool_min_size,
+            max_size=settings.falkordb_pool_max_size,
+            timeout=settings.falkordb_pool_timeout,
+            socket_timeout=settings.falkordb_socket_timeout,
+            health_check_interval=settings.falkordb_health_check_interval,
+        )
+
+        # Create retry configuration from settings
+        retry_config = RetryConfig(
+            max_retries=settings.falkordb_max_retries,
+            initial_delay=settings.falkordb_retry_initial_delay,
+            max_delay=settings.falkordb_retry_max_delay,
+        )
+
         db_client = FalkorDBClient(
             host=settings.falkordb_host,
             port=settings.falkordb_port,
             graph_name=settings.graph_name,
-            password=settings.falkordb_password.get_secret_value() if settings.falkordb_password else None,
-            pool_size=settings.falkordb_pool_size,
+            password=(
+                settings.falkordb_password.get_secret_value()
+                if settings.falkordb_password
+                else None
+            ),
+            pool_config=pool_config,
+            retry_config=retry_config,
         )
+
+        # Initialize async connection pool
+        await db_client.init_async()
+
         logger.info(
-            "FalkorDB client initialized",
+            "FalkorDB connection pool initialized",
             host=settings.falkordb_host,
             port=settings.falkordb_port,
+            pool_max_size=pool_config.max_size,
+            pool_timeout=pool_config.timeout,
         )
 
         # STAGE 3: Initialize text chunker
