@@ -183,8 +183,8 @@ class TestBuildVectorSearchQuery:
         assert "CALL db.idx.vector.queryNodes" in cypher
         assert "'Chunk'" in cypher
         assert "'embedding'" in cypher
-        assert "WHERE score >= $min_similarity" in cypher
-        assert "ORDER BY score DESC" in cypher
+        assert "WHERE score <= (1.0 - $min_similarity)" in cypher
+        assert "ORDER BY score ASC" in cypher
 
         # Verify parameters
         assert params["query_embedding"] == embedding

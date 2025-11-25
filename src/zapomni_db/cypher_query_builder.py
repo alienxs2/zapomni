@@ -228,6 +228,8 @@ class CypherQueryBuilder:
 
         # STEP 4: Build Cypher query
         # FalkorDB queryNodes signature: (label, attribute, k, query_vector)
+        # Note: FalkorDB returns cosine DISTANCE (0=identical, 2=opposite)
+        # Convert min_similarity to max_distance: max_distance = 1 - min_similarity
         cypher = f"""
         CALL db.idx.vector.queryNodes(
             'Chunk',
@@ -236,15 +238,15 @@ class CypherQueryBuilder:
             vecf32($query_embedding)
         ) YIELD node AS c, score
         MATCH (m:Memory)-[:HAS_CHUNK]->(c)
-        WHERE score >= $min_similarity
+        WHERE score <= (1.0 - $min_similarity)
         {filter_clause}
         RETURN m.id AS memory_id,
                c.text AS text,
-               score AS similarity_score,
+               (1.0 - score) AS similarity_score,
                m.tags AS tags,
                m.source AS source,
                m.created_at AS timestamp
-        ORDER BY score DESC
+        ORDER BY score ASC
         """
 
         return (cypher, parameters)
