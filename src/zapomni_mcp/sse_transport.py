@@ -501,33 +501,40 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             seen_nodes = set()
 
             for row in result.rows:
-                # Add Memory node
-                m_id = str(row.get("m", {}).get("id", "unknown"))
-                if m_id not in seen_nodes:
-                    nodes.append({
-                        "id": m_id,
-                        "label": f"Memory {m_id[:8]}",
-                        "type": "Memory"
-                    })
-                    seen_nodes.add(m_id)
+                # Extract Memory node
+                m_node = row.get("m")
+                if m_node and hasattr(m_node, 'properties'):
+                    m_props = m_node.properties
+                    m_id = str(m_props.get("id", "unknown"))
+                    if m_id not in seen_nodes:
+                        nodes.append({
+                            "id": m_id,
+                            "label": f"Memory {m_id[:8]}",
+                            "type": "Memory"
+                        })
+                        seen_nodes.add(m_id)
 
-                # Add Chunk node
-                c_id = str(row.get("c", {}).get("id", "unknown"))
-                if c_id not in seen_nodes:
-                    nodes.append({
-                        "id": c_id,
-                        "label": f"Chunk {c_id[:8]}",
-                        "type": "Chunk"
-                    })
-                    seen_nodes.add(c_id)
+                # Extract Chunk node
+                c_node = row.get("c")
+                if c_node and hasattr(c_node, 'properties'):
+                    c_props = c_node.properties
+                    c_id = str(c_props.get("id", "unknown"))
+                    if c_id not in seen_nodes:
+                        nodes.append({
+                            "id": c_id,
+                            "label": f"Chunk {c_id[:8]}",
+                            "type": "Chunk"
+                        })
+                        seen_nodes.add(c_id)
 
-                # Add edge
-                edges.append({
-                    "id": f"{m_id}-{c_id}",
-                    "source": m_id,
-                    "target": c_id,
-                    "type": "HAS_CHUNK"
-                })
+                # Add edge if both nodes exist
+                if m_node and c_node:
+                    edges.append({
+                        "id": f"{m_id}-{c_id}",
+                        "source": m_id,
+                        "target": c_id,
+                        "type": "HAS_CHUNK"
+                    })
 
             return Response(
                 json.dumps({"nodes": nodes, "edges": edges, "workspace": workspace_id}),

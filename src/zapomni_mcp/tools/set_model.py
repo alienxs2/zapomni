@@ -8,7 +8,8 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import mcp.types as types
+from typing import Any, Dict
+
 import structlog
 
 from zapomni_core.runtime_config import RuntimeConfig
@@ -28,42 +29,32 @@ class SetModelTool:
         Result: LLM model switched from qwen2.5:latest to llama3:latest
     """
 
-    NAME = "set_model"
-    DESCRIPTION = (
+    name = "set_model"
+    description = (
         "Hot-reload Ollama LLM model without restarting the MCP server. "
         "Changes take effect immediately for entity refinement and relationship extraction. "
         "Model must be available via 'ollama pull <model_name>' before use."
     )
-
-    @staticmethod
-    def get_schema() -> types.Tool:
-        """
-        Get MCP tool schema for set_model.
-
-        Returns:
-            MCP Tool schema with input parameters
-        """
-        return types.Tool(
-            name=SetModelTool.NAME,
-            description=SetModelTool.DESCRIPTION,
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "model_name": {
-                        "type": "string",
-                        "description": (
-                            "Ollama model name to use for LLM operations. "
-                            "Examples: 'qwen2.5:latest', 'llama3:latest', 'mistral:latest'. "
-                            "Model must be pulled via 'ollama pull <model_name>' before use."
-                        ),
-                    },
-                },
-                "required": ["model_name"],
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "model_name": {
+                "type": "string",
+                "description": (
+                    "Ollama model name to use for LLM operations. "
+                    "Examples: 'qwen2.5:latest', 'llama3:latest', 'mistral:latest'. "
+                    "Model must be pulled via 'ollama pull <model_name>' before use."
+                ),
             },
-        )
+        },
+        "required": ["model_name"],
+    }
 
-    @staticmethod
-    async def run(arguments: dict) -> list[types.TextContent]:
+    def __init__(self) -> None:
+        """Initialize SetModelTool."""
+        logger.info("set_model_tool_initialized", tool=self.name)
+
+    async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute set_model tool to change Ollama LLM model at runtime.
 
@@ -71,23 +62,21 @@ class SetModelTool:
             arguments: Tool arguments with 'model_name' field
 
         Returns:
-            List with single TextContent containing confirmation message
+            Result dict with confirmation message
 
         Example:
-            >>> result = await SetModelTool.run({"model_name": "llama3:latest"})
-            >>> print(result[0].text)
+            >>> result = await tool.execute({"model_name": "llama3:latest"})
+            >>> print(result["result"])
             "LLM model changed from qwen2.5:latest to llama3:latest"
         """
         model_name = arguments.get("model_name", "").strip()
 
         if not model_name:
             logger.warning("set_model_empty_name")
-            return [
-                types.TextContent(
-                    type="text",
-                    text="Error: model_name cannot be empty",
-                )
-            ]
+            return {
+                "success": False,
+                "result": "Error: model_name cannot be empty",
+            }
 
         # Get RuntimeConfig singleton
         config = RuntimeConfig.get_instance()
@@ -104,13 +93,17 @@ class SetModelTool:
             new_model=model_name,
         )
 
-        return [
-            types.TextContent(
-                type="text",
-                text=f"LLM model changed from {old_model} to {model_name}\n\n"
-                f"The new model will be used for:\n"
-                f"- Entity refinement (enhancing SpaCy NER results)\n"
-                f"- Relationship extraction (detecting entity connections)\n\n"
-                f"Note: Ensure model is available via 'ollama pull {model_name}' before use.",
-            )
-        ]
+        result_text = (
+            f"LLM model changed from {old_model} to {model_name}\n\n"
+            f"The new model will be used for:\n"
+            f"- Entity refinement (enhancing SpaCy NER results)\n"
+            f"- Relationship extraction (detecting entity connections)\n\n"
+            f"Note: Ensure model is available via 'ollama pull {model_name}' before use."
+        )
+
+        return {
+            "success": True,
+            "result": result_text,
+            "old_model": old_model,
+            "new_model": model_name,
+        }
