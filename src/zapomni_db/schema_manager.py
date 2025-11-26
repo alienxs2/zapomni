@@ -35,7 +35,7 @@ class SchemaManager:
         ```python
         from falkordb import FalkorDB
 
-        db = FalkorDB(host="localhost", port=6379)
+        db = FalkorDB(host="localhost", port=6381)
         graph = db.select_graph("zapomni_memory")
 
         schema_manager = SchemaManager(graph=graph)

@@ -45,7 +45,7 @@ class ZapomniSettings(BaseSettings):
 
         # Use computed properties
         conn_str = settings.falkordb_connection_string
-        # 'redis://localhost:6379'
+        # 'redis://localhost:6381'
 
         # Check environment
         if settings.is_development:
@@ -62,7 +62,7 @@ class ZapomniSettings(BaseSettings):
     )
 
     falkordb_port: int = Field(
-        default=6379, ge=1, le=65535, description="FalkorDB server port (standard Redis port: 6379)"
+        default=6381, ge=1, le=65535, description="FalkorDB server port (6381 to avoid conflict with Redis)"
     )
 
     falkordb_password: Optional[SecretStr] = Field(

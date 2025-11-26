@@ -78,7 +78,7 @@ Examples:
 
 Environment Variables:
   FALKORDB_HOST              FalkorDB host (default: localhost)
-  FALKORDB_PORT              FalkorDB port (default: 6379)
+  FALKORDB_PORT              FalkorDB port (default: 6381)
   OLLAMA_BASE_URL            Ollama base URL (default: http://localhost:11434)
   OLLAMA_EMBEDDING_MODEL     Embedding model (default: nomic-embed-text)
   ZAPOMNI_SSE_HOST           SSE server host (default: 127.0.0.1)
@@ -135,7 +135,7 @@ async def main(args: argparse.Namespace) -> None:
 
     Environment Variables:
         FALKORDB_HOST: FalkorDB host (default: "localhost")
-        FALKORDB_PORT: FalkorDB port (default: "6379")
+        FALKORDB_PORT: FalkorDB port (default: "6381")
         OLLAMA_BASE_URL: Ollama base URL (default: "http://localhost:11434")
         OLLAMA_EMBEDDING_MODEL: Embedding model name (default: "nomic-embed-text")
 
@@ -155,7 +155,7 @@ async def main(args: argparse.Namespace) -> None:
         logger.info("Loading configuration from environment")
         settings = ZapomniSettings(
             falkordb_host=os.getenv("FALKORDB_HOST", "localhost"),
-            falkordb_port=int(os.getenv("FALKORDB_PORT", "6379")),
+            falkordb_port=int(os.getenv("FALKORDB_PORT", "6381")),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             ollama_embedding_model=os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"),
         )
