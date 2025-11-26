@@ -9,14 +9,15 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, Optional
 import uuid
+from typing import Any, Dict, Optional
+
 import structlog
-from pydantic import ValidationError, BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
+from zapomni_core.exceptions import DatabaseError
+from zapomni_core.exceptions import ValidationError as CoreValidationError
 from zapomni_core.memory_processor import MemoryProcessor
-from zapomni_core.exceptions import DatabaseError, ValidationError as CoreValidationError
-
 
 logger = structlog.get_logger(__name__)
 

@@ -43,7 +43,6 @@ from typing import Any, Optional
 from locust import HttpUser, between, events, tag, task
 from locust.env import Environment
 
-
 # Performance thresholds (from specification)
 P95_RESPONSE_TIME_MS = 500  # milliseconds
 MAX_CONCURRENT_CONNECTIONS = 50
@@ -95,9 +94,7 @@ class HealthCheckUser(HttpUser):
         Verifies the health response contains all expected fields
         for proper monitoring integration.
         """
-        with self.client.get(
-            "/health", catch_response=True, name="/health (metrics)"
-        ) as response:
+        with self.client.get("/health", catch_response=True, name="/health (metrics)") as response:
             if response.status_code != 200:
                 response.failure(f"Status code: {response.status_code}")
                 return

@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import pytest
 
+from zapomni_core.exceptions import ValidationError
 from zapomni_core.processors.markdown_processor import (
     extract_code_blocks,
     extract_links,
     extract_sections,
     process_markdown,
 )
-from zapomni_core.exceptions import ValidationError
 
 
 class TestProcessMarkdown:

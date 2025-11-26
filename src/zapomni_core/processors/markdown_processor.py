@@ -22,9 +22,7 @@ CODE_BLOCK_PATTERN = re.compile(
     r"(?P<code>.*?)(?:\n\s*(?P=fence)[ \t]*$)",
     re.DOTALL | re.MULTILINE,
 )
-HEADER_PATTERN = re.compile(
-    r"(?m)^\s*(?P<hashes>#{1,6})\s*(?P<header>.+?)(?:\s+#*\s*)?$"
-)
+HEADER_PATTERN = re.compile(r"(?m)^\s*(?P<hashes>#{1,6})\s*(?P<header>.+?)(?:\s+#*\s*)?$")
 IMAGE_LINK_PATTERN = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 AUTOLINK_PATTERN = re.compile(r"<(https?://[^>\s]+)>")

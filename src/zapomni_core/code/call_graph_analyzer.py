@@ -30,6 +30,7 @@ logger = structlog.get_logger()
 # Optional NetworkX support for advanced graph operations
 try:
     import networkx as nx
+
     HAS_NETWORKX = True
 except ImportError:
     HAS_NETWORKX = False
@@ -39,6 +40,7 @@ except ImportError:
 # ============================================================================
 # Data Models
 # ============================================================================
+
 
 @dataclass
 class FunctionDef:
@@ -53,6 +55,7 @@ class FunctionDef:
         decorators: List of decorator names
         docstring: Function docstring (first statement if available)
     """
+
     name: str
     lineno: int
     col_offset: int
@@ -73,6 +76,7 @@ class FunctionCall:
         is_method: Whether this is a method call (has object prefix)
         is_imported: Whether the callee is from an imported module
     """
+
     caller: str
     callee: str
     lineno: int
@@ -91,6 +95,7 @@ class ImportMapping:
         is_from_import: Whether this is a 'from X import Y' statement
         imported_names: Names imported from module (for 'from X import' statements)
     """
+
     module_name: str
     alias: str
     is_from_import: bool = False
@@ -100,6 +105,7 @@ class ImportMapping:
 # ============================================================================
 # CallGraphAnalyzer Class
 # ============================================================================
+
 
 class CallGraphAnalyzer:
     """
@@ -146,7 +152,9 @@ class CallGraphAnalyzer:
 
         logger.info("call_graph_analyzer_initialized")
 
-    def analyze_file(self, file_path: str | Path, ast_tree: Optional[ast.Module] = None) -> Dict[str, List[str]]:
+    def analyze_file(
+        self, file_path: str | Path, ast_tree: Optional[ast.Module] = None
+    ) -> Dict[str, List[str]]:
         """
         Analyze a Python file and build its call graph.
 
@@ -297,7 +305,7 @@ class CallGraphAnalyzer:
     def build_dependency_graph(
         self,
         functions: Optional[Dict[str, FunctionDef]] = None,
-        calls: Optional[List[FunctionCall]] = None
+        calls: Optional[List[FunctionCall]] = None,
     ) -> Dict[str, List[str]]:
         """
         Build a dependency graph from functions and calls (public wrapper).
@@ -353,9 +361,7 @@ class CallGraphAnalyzer:
             RuntimeError: If NetworkX is not installed
         """
         if not HAS_NETWORKX:
-            raise RuntimeError(
-                "NetworkX is not installed. Install with: pip install networkx"
-            )
+            raise RuntimeError("NetworkX is not installed. Install with: pip install networkx")
 
         return self.networkx_graph
 
@@ -423,15 +429,16 @@ class CallGraphAnalyzer:
 
                 # Extract decorators
                 decorators = [
-                    dec.id if isinstance(dec, ast.Name) else str(dec)
-                    for dec in node.decorator_list
+                    dec.id if isinstance(dec, ast.Name) else str(dec) for dec in node.decorator_list
                 ]
 
                 # Extract docstring
                 docstring = None
-                if (node.body and
-                    isinstance(node.body[0], ast.Expr) and
-                    isinstance(node.body[0].value, ast.Constant)):
+                if (
+                    node.body
+                    and isinstance(node.body[0], ast.Expr)
+                    and isinstance(node.body[0].value, ast.Constant)
+                ):
                     docstring = node.body[0].value.value
 
                 func_def = FunctionDef(
@@ -575,7 +582,7 @@ class CallGraphAnalyzer:
     def _build_dependency_graph(
         self,
         functions: Optional[Dict[str, FunctionDef]] = None,
-        calls: Optional[List[FunctionCall]] = None
+        calls: Optional[List[FunctionCall]] = None,
     ) -> Dict[str, List[str]]:
         """
         Build dependency graph from function calls.

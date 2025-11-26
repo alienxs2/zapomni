@@ -49,9 +49,11 @@ def basic_extractor(spacy_model):
 def mock_ollama_client():
     """Create mock Ollama client for LLM tests."""
     client = MagicMock()
-    client.generate = MagicMock(return_value={
-        "response": "Python: TECHNOLOGY, Programming language\nGuido van Rossum: PERSON, Creator of Python"
-    })
+    client.generate = MagicMock(
+        return_value={
+            "response": "Python: TECHNOLOGY, Programming language\nGuido van Rossum: PERSON, Creator of Python"
+        }
+    )
     return client
 
 
@@ -127,9 +129,7 @@ class TestEntityExtractorInitialization:
 
         assert "ollama_client" in str(exc_info.value).lower()
 
-    def test_init_with_llm_refinement_and_client(
-        self, spacy_model, mock_ollama_client
-    ) -> None:
+    def test_init_with_llm_refinement_and_client(self, spacy_model, mock_ollama_client) -> None:
         """Should initialize successfully with LLM refinement enabled."""
         extractor = EntityExtractor(
             spacy_model=spacy_model,
@@ -154,9 +154,7 @@ class TestEntityExtraction:
         assert len(entities) > 0
         assert all(isinstance(e, Entity) for e in entities)
 
-    def test_extract_entities_returns_entity_with_required_fields(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_entities_returns_entity_with_required_fields(self, basic_extractor) -> None:
         """Should return Entity objects with all required fields."""
         text = "OpenAI developed GPT-4."
 
@@ -186,9 +184,7 @@ class TestEntityExtraction:
         for entity in entities:
             assert entity.confidence >= 0.9
 
-    def test_extract_entities_sorts_by_confidence_descending(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_entities_sorts_by_confidence_descending(self, basic_extractor) -> None:
         """Should return entities sorted by confidence (highest first)."""
         text = "Python was created by Guido van Rossum at Google in Amsterdam."
 
@@ -210,9 +206,7 @@ class TestEntityExtraction:
             # Should have one entity with mentions > 1
             assert any(e.mentions > 1 for e in python_entities)
 
-    def test_extract_entities_raises_validation_error_for_empty_text(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_entities_raises_validation_error_for_empty_text(self, basic_extractor) -> None:
         """Should raise ValidationError for empty text."""
         with pytest.raises(ValidationError) as exc_info:
             basic_extractor.extract_entities("")
@@ -291,9 +285,7 @@ class TestEntityNormalization:
 
         assert normalized == "Python"
 
-    def test_normalize_entity_standardizes_common_variants(
-        self, basic_extractor
-    ) -> None:
+    def test_normalize_entity_standardizes_common_variants(self, basic_extractor) -> None:
         """Should normalize common entity name variants."""
         # Test common normalizations
         test_cases = [
@@ -321,9 +313,7 @@ class TestEntityNormalization:
 
         assert normalized == "NASA"  # Should preserve uppercase
 
-    def test_normalize_entity_raises_validation_error_for_empty_name(
-        self, basic_extractor
-    ) -> None:
+    def test_normalize_entity_raises_validation_error_for_empty_name(self, basic_extractor) -> None:
         """Should raise ValidationError for empty entity name."""
         with pytest.raises(ValidationError):
             basic_extractor.normalize_entity("", "TECHNOLOGY")
@@ -386,9 +376,7 @@ class TestRelationshipDataclass:
 class TestExtractRelationships:
     """Test suite for relationship extraction (Phase 2 - stub tests for now)."""
 
-    def test_extract_relationships_not_implemented_without_llm(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_relationships_not_implemented_without_llm(self, basic_extractor) -> None:
         """Should return empty list or raise NotImplementedError without LLM."""
         text = "Python was created by Guido van Rossum."
         entities = [
@@ -404,9 +392,7 @@ class TestExtractRelationships:
         except NotImplementedError:
             pass  # Also acceptable for Phase 1
 
-    def test_extract_relationships_with_llm_enabled(
-        self, spacy_model, mock_ollama_client
-    ) -> None:
+    def test_extract_relationships_with_llm_enabled(self, spacy_model, mock_ollama_client) -> None:
         """Should extract relationships when LLM refinement is enabled (Phase 2)."""
         extractor = EntityExtractor(
             spacy_model=spacy_model,
@@ -433,9 +419,7 @@ class TestExtractRelationships:
 class TestPerformance:
     """Test suite for performance requirements."""
 
-    def test_extract_entities_completes_within_time_limit(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_entities_completes_within_time_limit(self, basic_extractor) -> None:
         """Should complete extraction within 10ms for small documents (SpaCy only)."""
         import time
 
@@ -452,10 +436,7 @@ class TestPerformance:
         """Should handle documents up to max length."""
         # Create document near max length (100,000 chars)
         large_text = " ".join(
-            [
-                "Python is a programming language created by Guido van Rossum."
-            ]
-            * 1000
+            ["Python is a programming language created by Guido van Rossum."] * 1000
         )
 
         entities = basic_extractor.extract_entities(large_text)
@@ -467,9 +448,7 @@ class TestPerformance:
 class TestEdgeCases:
     """Test suite for edge cases and error handling."""
 
-    def test_extract_entities_from_text_with_no_entities(
-        self, basic_extractor
-    ) -> None:
+    def test_extract_entities_from_text_with_no_entities(self, basic_extractor) -> None:
         """Should return empty list for text with no recognizable entities."""
         text = "This is a simple sentence with no names or places."
 

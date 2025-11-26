@@ -145,13 +145,9 @@ class TaskManager:
             ValueError: If max_concurrent < 1 or task_ttl < 0
         """
         if max_concurrent < 1:
-            raise ValueError(
-                f"max_concurrent must be >= 1, got {max_concurrent}"
-            )
+            raise ValueError(f"max_concurrent must be >= 1, got {max_concurrent}")
         if task_ttl < 0:
-            raise ValueError(
-                f"task_ttl must be >= 0, got {task_ttl}"
-            )
+            raise ValueError(f"task_ttl must be >= 0, got {task_ttl}")
 
         self._max_concurrent = max_concurrent
         self._task_ttl = task_ttl
@@ -159,9 +155,7 @@ class TaskManager:
         self._running_tasks: Set[str] = set()
         self._asyncio_tasks: Dict[str, asyncio.Task] = {}
         # Queue can hold up to max_concurrent pending tasks
-        self._queue: asyncio.Queue[tuple[str, Coroutine]] = asyncio.Queue(
-            maxsize=max_concurrent
-        )
+        self._queue: asyncio.Queue[tuple[str, Coroutine]] = asyncio.Queue(maxsize=max_concurrent)
         self._cleanup_task: Optional[asyncio.Task] = None
         self._worker_tasks: Set[asyncio.Task] = set()
 

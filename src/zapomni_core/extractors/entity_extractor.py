@@ -19,7 +19,7 @@ import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Set
 
 import structlog
 from spacy.language import Language
@@ -36,6 +36,7 @@ logger = structlog.get_logger()
 # Data Models
 # ============================================================================
 
+
 @dataclass
 class Entity:
     """
@@ -49,6 +50,7 @@ class Entity:
         mentions: Number of times entity appears in text (default: 1)
         source_span: Original text span where entity was found (optional)
     """
+
     name: str
     type: str
     description: str
@@ -69,6 +71,7 @@ class Relationship:
         confidence: Detection confidence (0.0-1.0)
         evidence: Text snippet supporting this relationship
     """
+
     source_entity: str
     target_entity: str
     relationship_type: str
@@ -79,6 +82,7 @@ class Relationship:
 # ============================================================================
 # EntityExtractor Class
 # ============================================================================
+
 
 class EntityExtractor:
     """
@@ -107,14 +111,14 @@ class EntityExtractor:
 
     # Supported entity types
     DEFAULT_ENTITY_TYPES: Set[str] = {
-        "PERSON",       # People (Guido van Rossum)
-        "ORG",          # Organizations (OpenAI, Google)
-        "GPE",          # Geopolitical entities (USA, San Francisco)
-        "TECHNOLOGY",   # Technologies (Python, Docker)
-        "CONCEPT",      # Abstract concepts (machine learning)
-        "PRODUCT",      # Products (Claude, GPT-4)
-        "EVENT",        # Events (PyCon 2024)
-        "DATE",         # Dates and times
+        "PERSON",  # People (Guido van Rossum)
+        "ORG",  # Organizations (OpenAI, Google)
+        "GPE",  # Geopolitical entities (USA, San Francisco)
+        "TECHNOLOGY",  # Technologies (Python, Docker)
+        "CONCEPT",  # Abstract concepts (machine learning)
+        "PRODUCT",  # Products (Claude, GPT-4)
+        "EVENT",  # Events (PyCon 2024)
+        "DATE",  # Dates and times
     }
 
     # SpaCy label to our entity type mapping
@@ -132,7 +136,7 @@ class EntityExtractor:
     def __init__(
         self,
         spacy_model: Language,
-        ollama_client: Optional['OllamaLLMClient'] = None,
+        ollama_client: Optional["OllamaLLMClient"] = None,
         enable_llm_refinement: bool = False,
         confidence_threshold: float = 0.7,
         entity_types: Optional[Set[str]] = None,
@@ -170,15 +174,11 @@ class EntityExtractor:
 
         # Validate LLM configuration
         if enable_llm_refinement and ollama_client is None:
-            raise ValueError(
-                "enable_llm_refinement=True requires ollama_client to be provided"
-            )
+            raise ValueError("enable_llm_refinement=True requires ollama_client to be provided")
 
         # Validate executor workers
         if executor_workers < 1:
-            raise ValueError(
-                f"executor_workers must be >= 1, got {executor_workers}"
-            )
+            raise ValueError(f"executor_workers must be >= 1, got {executor_workers}")
 
         self.spacy_nlp = spacy_model
         self.ollama_client = ollama_client
@@ -284,11 +284,7 @@ class EntityExtractor:
                 original_exception=e,
             )
 
-    def extract_relationships(
-        self,
-        text: str,
-        entities: List[Entity]
-    ) -> List[Relationship]:
+    def extract_relationships(self, text: str, entities: List[Entity]) -> List[Relationship]:
         """
         Extract relationships between entities using LLM.
 
@@ -337,10 +333,7 @@ class EntityExtractor:
             return []
 
         # Convert entities to dict format for LLM
-        entities_dict = [
-            {"name": e.name, "type": e.type}
-            for e in entities
-        ]
+        entities_dict = [{"name": e.name, "type": e.type} for e in entities]
 
         # Run async LLM extraction
         rel_dicts = self._run_async_relationships(text, entities_dict)
@@ -401,23 +394,23 @@ class EntityExtractor:
             )
 
         # Normalize multiple spaces
-        normalized = re.sub(r'\s+', ' ', normalized)
+        normalized = re.sub(r"\s+", " ", normalized)
 
         # Remove articles for TECHNOLOGY and CONCEPT types
         if entity_type in ("TECHNOLOGY", "CONCEPT"):
-            normalized = re.sub(r'^(the|a|an)\s+', '', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r"^(the|a|an)\s+", "", normalized, flags=re.IGNORECASE)
 
         # Remove common suffixes
         suffixes = [
-            r'\s+(programming\s+)?language$',
-            r'\s+company$',
-            r'\s+framework$',
-            r'\s+library$',
-            r'\s+tool$',
-            r'\s+lang$',
+            r"\s+(programming\s+)?language$",
+            r"\s+company$",
+            r"\s+framework$",
+            r"\s+library$",
+            r"\s+tool$",
+            r"\s+lang$",
         ]
         for suffix in suffixes:
-            normalized = re.sub(suffix, '', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(suffix, "", normalized, flags=re.IGNORECASE)
 
         # Strip whitespace again after removals
         normalized = normalized.strip()
@@ -531,10 +524,7 @@ class EntityExtractor:
             return entities
 
         # Convert entities to dict format for LLM
-        entities_dict = [
-            {"name": e.name, "type": e.type}
-            for e in entities
-        ]
+        entities_dict = [{"name": e.name, "type": e.type} for e in entities]
 
         # Run async LLM refinement
         refined_dicts = self._run_async_refine(text, entities_dict)
@@ -552,7 +542,10 @@ class EntityExtractor:
             )
             # Find original source_span if name matches
             for orig in entities:
-                if orig.name.lower() == entity.name.lower() or orig.name.lower() in entity.name.lower():
+                if (
+                    orig.name.lower() == entity.name.lower()
+                    or orig.name.lower() in entity.name.lower()
+                ):
                     entity.source_span = orig.source_span
                     entity.mentions = orig.mentions
                     break
@@ -575,8 +568,10 @@ class EntityExtractor:
         import concurrent.futures
 
         # Store client config for recreation in thread
+        from zapomni_core.runtime_config import RuntimeConfig
+
         base_url = self.ollama_client.base_url
-        model_name = self.ollama_client.model_name
+        model_name = RuntimeConfig.get_instance().llm_model
         timeout = self.ollama_client.timeout
         temperature = self.ollama_client.temperature
 
@@ -624,8 +619,10 @@ class EntityExtractor:
         import concurrent.futures
 
         # Store client config for recreation in thread
+        from zapomni_core.runtime_config import RuntimeConfig
+
         base_url = self.ollama_client.base_url
-        model_name = self.ollama_client.model_name
+        model_name = RuntimeConfig.get_instance().llm_model
         timeout = self.ollama_client.timeout
         temperature = self.ollama_client.temperature
 
@@ -746,7 +743,7 @@ class EntityExtractor:
             extractor.shutdown()
             ```
         """
-        if hasattr(self, '_executor') and self._executor is not None:
+        if hasattr(self, "_executor") and self._executor is not None:
             logger.info(
                 "entity_extractor_shutting_down",
                 executor_workers=self._executor_workers,

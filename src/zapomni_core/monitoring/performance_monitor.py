@@ -7,11 +7,12 @@ Author: Implementation based on specification
 License: MIT
 """
 
+import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 from statistics import mean, quantiles
-import time
+from typing import Dict, List, Optional
+
 import psutil
 
 
@@ -25,6 +26,7 @@ class OperationMetric:
         duration_ms: Execution time in milliseconds
         timestamp: Unix timestamp when operation completed
     """
+
     operation_name: str
     duration_ms: float
     timestamp: float
@@ -40,6 +42,7 @@ class ResourceSnapshot:
         memory_mb: Memory usage in megabytes
         cpu_percent: CPU usage percentage (0-100)
     """
+
     timestamp: float
     memory_mb: float
     cpu_percent: float
@@ -61,6 +64,7 @@ class PerformanceMetrics:
         p99_ms: 99th percentile
         throughput_ops_per_sec: Operations per second (calculated over measurement window)
     """
+
     operation_name: str
     count: int
     min_ms: float
@@ -84,6 +88,7 @@ class SystemStats:
         avg_cpu_percent: Average CPU usage
         operation_metrics: Dict mapping operation names to their PerformanceMetrics
     """
+
     uptime_seconds: float
     total_operations: int
     avg_memory_mb: float
@@ -163,11 +168,7 @@ class PerformanceMonitor:
         self._start_time = time.time()
         self._process = psutil.Process()
 
-    def record_operation(
-        self,
-        operation_name: str,
-        duration_ms: float
-    ) -> None:
+    def record_operation(self, operation_name: str, duration_ms: float) -> None:
         """
         Record latency for a completed operation.
 
@@ -211,9 +212,7 @@ class PerformanceMonitor:
             raise ValueError(f"duration_ms must be >= 0, got {duration_ms}")
 
         metric = OperationMetric(
-            operation_name=operation_name,
-            duration_ms=duration_ms,
-            timestamp=time.time()
+            operation_name=operation_name, duration_ms=duration_ms, timestamp=time.time()
         )
         self._operations.append(metric)
 
@@ -265,10 +264,7 @@ class PerformanceMonitor:
             raise ValueError("operation_name cannot be empty")
 
         # Filter operations for matching operation_name
-        matching_ops = [
-            op for op in self._operations
-            if op.operation_name == operation_name
-        ]
+        matching_ops = [op for op in self._operations if op.operation_name == operation_name]
 
         if not matching_ops:
             return None
@@ -305,7 +301,7 @@ class PerformanceMonitor:
             p50_ms=percentiles["p50"],
             p95_ms=percentiles["p95"],
             p99_ms=percentiles["p99"],
-            throughput_ops_per_sec=throughput_ops_per_sec
+            throughput_ops_per_sec=throughput_ops_per_sec,
         )
 
     def record_resource_usage(self) -> None:
@@ -423,7 +419,7 @@ class PerformanceMonitor:
             total_operations=total_operations,
             avg_memory_mb=avg_memory_mb,
             avg_cpu_percent=avg_cpu_percent,
-            operation_metrics=operation_metrics
+            operation_metrics=operation_metrics,
         )
 
     def reset_metrics(self) -> None:
@@ -472,10 +468,7 @@ class PerformanceMonitor:
         self._resource_samples.clear()
         self._start_time = time.time()
 
-    def _calculate_percentiles(
-        self,
-        durations: List[float]
-    ) -> Dict[str, float]:
+    def _calculate_percentiles(self, durations: List[float]) -> Dict[str, float]:
         """
         Calculate P50/P95/P99 percentiles from duration list.
 
@@ -510,11 +503,7 @@ class PerformanceMonitor:
         if len(durations) < 2:
             # For single value, all percentiles are that value
             duration = durations[0] if durations else 0.0
-            return {
-                "p50": duration,
-                "p95": duration,
-                "p99": duration
-            }
+            return {"p50": duration, "p95": duration, "p99": duration}
 
         # Use quantiles to calculate percentiles
         # quantiles() returns n-1 cut points dividing sorted data into n equal groups
@@ -523,9 +512,9 @@ class PerformanceMonitor:
         percentile_values = quantiles(sorted_durations, n=100)
 
         return {
-            "p50": percentile_values[49],   # 50th percentile (index 49)
-            "p95": percentile_values[94],   # 95th percentile (index 94)
-            "p99": percentile_values[98]    # 99th percentile (index 98)
+            "p50": percentile_values[49],  # 50th percentile (index 49)
+            "p95": percentile_values[94],  # 95th percentile (index 94)
+            "p99": percentile_values[98],  # 99th percentile (index 98)
         }
 
     def _get_current_resources(self) -> ResourceSnapshot:
@@ -560,9 +549,7 @@ class PerformanceMonitor:
             cpu_percent = self._process.cpu_percent(interval=0.1)
 
             return ResourceSnapshot(
-                timestamp=time.time(),
-                memory_mb=memory_mb,
-                cpu_percent=cpu_percent
+                timestamp=time.time(), memory_mb=memory_mb, cpu_percent=cpu_percent
             )
         except (psutil.Error, Exception) as e:
             raise RuntimeError(f"Failed to get resource information: {e}")

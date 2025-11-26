@@ -13,12 +13,12 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+from typing import Any, Dict, List, Optional
+
 import structlog
-from typing import List, Dict, Any, Optional
 from rank_bm25 import BM25Okapi
 
-from zapomni_core.exceptions import ValidationError, SearchError
-
+from zapomni_core.exceptions import SearchError, ValidationError
 
 logger = structlog.get_logger(__name__)
 
@@ -87,7 +87,7 @@ class BM25Search:
             raise ValidationError(
                 message="db_client cannot be None",
                 error_code="VAL_001",
-                details={"parameter": "db_client"}
+                details={"parameter": "db_client"},
             )
 
         self.db_client = db_client
@@ -95,10 +95,7 @@ class BM25Search:
         self._bm25: Optional[BM25Okapi] = None
         self._documents: Optional[List[str]] = None
 
-        logger.info(
-            "bm25_search_initialized",
-            db_client_type=type(db_client).__name__
-        )
+        logger.info("bm25_search_initialized", db_client_type=type(db_client).__name__)
 
     def _tokenize(self, text: str) -> List[str]:
         """
@@ -125,8 +122,9 @@ class BM25Search:
         # Convert to lowercase and split
         # Remove punctuation by keeping only alphanumeric and spaces
         import re
+
         # Replace punctuation with spaces, then split
-        text = re.sub(r'[^\w\s]', ' ', text.lower())
+        text = re.sub(r"[^\w\s]", " ", text.lower())
         tokens = text.split()
 
         return [t for t in tokens if t]
@@ -160,27 +158,24 @@ class BM25Search:
             raise ValidationError(
                 message="Documents must be a list",
                 error_code="VAL_001",
-                details={"documents": documents}
+                details={"documents": documents},
             )
 
         if not isinstance(documents, list):
             raise ValidationError(
                 message="Documents must be a list",
                 error_code="VAL_002",
-                details={"type": type(documents).__name__}
+                details={"type": type(documents).__name__},
             )
 
         if len(documents) == 0:
             raise ValidationError(
                 message="Documents list cannot be empty",
                 error_code="VAL_001",
-                details={"documents": documents}
+                details={"documents": documents},
             )
 
-        logger.debug(
-            "indexing_documents",
-            document_count=len(documents)
-        )
+        logger.debug("indexing_documents", document_count=len(documents))
 
         # Tokenize all documents
         self._documents = documents
@@ -192,14 +187,10 @@ class BM25Search:
         logger.info(
             "documents_indexed",
             document_count=len(documents),
-            total_tokens=sum(len(tokens) for tokens in self._corpus)
+            total_tokens=sum(len(tokens) for tokens in self._corpus),
         )
 
-    def search(
-        self,
-        query: str,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Perform BM25 keyword search.
 
@@ -254,9 +245,7 @@ class BM25Search:
 
         if not query:
             raise ValidationError(
-                message="Query cannot be empty",
-                error_code="VAL_001",
-                details={"query": query}
+                message="Query cannot be empty", error_code="VAL_001", details={"query": query}
             )
 
         # STEP 2: VALIDATE LIMIT
@@ -265,21 +254,21 @@ class BM25Search:
             raise ValidationError(
                 message=f"Limit must be int, got {type(limit).__name__}",
                 error_code="VAL_002",
-                details={"limit": limit, "type": type(limit).__name__}
+                details={"limit": limit, "type": type(limit).__name__},
             )
 
         if limit < 1:
             raise ValidationError(
                 message=f"Limit must be >= 1, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit}
+                details={"limit": limit},
             )
 
         if limit > 1000:
             raise ValidationError(
                 message=f"Limit cannot exceed 1000, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit, "max": 1000}
+                details={"limit": limit, "max": 1000},
             )
 
         # STEP 3: CHECK INDEX EXISTS
@@ -288,16 +277,12 @@ class BM25Search:
             raise SearchError(
                 message="No documents indexed. Call index_documents() first.",
                 error_code="SEARCH_002",
-                details={"query": query[:100]}
+                details={"query": query[:100]},
             )
 
         # STEP 4: TOKENIZE QUERY
 
-        logger.debug(
-            "executing_bm25_search",
-            query=query[:100],
-            limit=limit
-        )
+        logger.debug("executing_bm25_search", query=query[:100], limit=limit)
 
         query_tokens = self._tokenize(query)
 
@@ -326,11 +311,7 @@ class BM25Search:
         # STEP 7: CREATE RESULTS WITH SCORES AND INDICES
 
         results = [
-            {
-                "text": self._documents[i],
-                "score": normalized_scores[i],
-                "index": i
-            }
+            {"text": self._documents[i], "score": normalized_scores[i], "index": i}
             for i in range(len(self._documents))
         ]
 
@@ -343,10 +324,7 @@ class BM25Search:
         results = results[:limit]
 
         logger.info(
-            "bm25_search_completed",
-            query=query[:100],
-            result_count=len(results),
-            limit=limit
+            "bm25_search_completed", query=query[:100], result_count=len(results), limit=limit
         )
 
         return results

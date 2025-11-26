@@ -12,18 +12,19 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from pydantic import ValidationError
 
-from zapomni_mcp.tools.add_memory import AddMemoryTool, AddMemoryRequest
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
     ProcessingError,
 )
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_mcp.tools.add_memory import AddMemoryRequest, AddMemoryTool
 
 
 class TestAddMemoryToolInit:
@@ -166,9 +167,7 @@ class TestAddMemoryToolExecute:
         """Test execution when processor raises EmbeddingError."""
         # Setup
         mock_processor.add_memory = AsyncMock(
-            side_effect=EmbeddingError(
-                message="Embedding failed", error_code="EMB_001"
-            )
+            side_effect=EmbeddingError(message="Embedding failed", error_code="EMB_001")
         )
         arguments = {"text": "Test memory"}
 
@@ -185,9 +184,7 @@ class TestAddMemoryToolExecute:
         """Test execution when processor raises DatabaseError."""
         # Setup
         mock_processor.add_memory = AsyncMock(
-            side_effect=DatabaseError(
-                message="DB connection lost", error_code="DB_001"
-            )
+            side_effect=DatabaseError(message="DB connection lost", error_code="DB_001")
         )
         arguments = {"text": "Test memory"}
 

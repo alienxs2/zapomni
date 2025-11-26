@@ -16,7 +16,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_db.models import Chunk
@@ -106,9 +106,7 @@ class ASTCodeChunker:
         self.min_chunk_lines = min_chunk_lines
         logger.debug(f"Initialized ASTCodeChunker for {self.language.value}")
 
-    def chunk_file(
-        self, file_path: Union[str, Path], content: Optional[str] = None
-    ) -> List[Chunk]:
+    def chunk_file(self, file_path: Union[str, Path], content: Optional[str] = None) -> List[Chunk]:
         """
         Parse and chunk a code file.
 
@@ -168,9 +166,7 @@ class ASTCodeChunker:
             return self._chunk_python(content, file_path)
         else:
             # Fallback: line-based chunking for unsupported languages
-            logger.info(
-                f"Falling back to line-based chunking for {self.language.value}"
-            )
+            logger.info(f"Falling back to line-based chunking for {self.language.value}")
             return self._chunk_lines(content, file_path)
 
     def _chunk_python(self, content: str, file_path: Path) -> List[Chunk]:

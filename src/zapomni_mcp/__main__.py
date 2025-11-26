@@ -52,7 +52,7 @@ from zapomni_core.config import ZapomniSettings
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
-from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
 from zapomni_db import FalkorDBClient
 from zapomni_db.pool_config import PoolConfig, RetryConfig
 from zapomni_mcp.config import Settings, SSEConfig
@@ -244,7 +244,7 @@ async def main(args: argparse.Namespace) -> None:
             chunker=chunker,
             embedder=embedder,
             extractor=None,  # Lazy loading - SpaCy loads on first build_graph call
-            config=None,
+            config=ProcessorConfig(enable_llm_refinement=True),
         )
         logger.info("MemoryProcessor initialized")
 

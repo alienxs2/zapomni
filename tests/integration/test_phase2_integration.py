@@ -20,33 +20,33 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
+import pytest
+
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
+from zapomni_core.exceptions import (
+    DatabaseError,
+    EmbeddingError,
+    ExtractionError,
+    ValidationError,
+)
 from zapomni_core.extractors.entity_extractor import EntityExtractor
 from zapomni_core.graph.graph_builder import GraphBuilder
-from zapomni_core.exceptions import (
-    ValidationError,
-    EmbeddingError,
-    DatabaseError,
-    ExtractionError,
-)
+from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
 from zapomni_db.falkordb_client import FalkorDBClient
 from zapomni_mcp.tools import (
     AddMemoryTool,
-    SearchMemoryTool,
     GetStatsTool,
+    SearchMemoryTool,
 )
 from zapomni_mcp.tools.build_graph import BuildGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
 from zapomni_mcp.tools.graph_status import GraphStatusTool
-
 
 # ============================================================================
 # Module-level fixtures (session scope)

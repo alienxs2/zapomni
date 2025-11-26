@@ -21,7 +21,6 @@ from zapomni_core.code.ast_chunker import ASTCodeChunker, CodeMetadata, Supporte
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_db.models import Chunk
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================
@@ -107,9 +106,9 @@ def static_method():
 @pytest.fixture
 def python_with_syntax_error() -> str:
     """Python code with syntax error."""
-    return '''def broken(:
+    return """def broken(:
     pass
-'''
+"""
 
 
 @pytest.fixture
@@ -276,9 +275,7 @@ class TestASTCodeChunkerChunkFile:
 
         assert "empty" in str(exc_info.value.message).lower()
 
-    def test_chunk_file_syntax_error_raises(
-        self, python_with_syntax_error: str
-    ) -> None:
+    def test_chunk_file_syntax_error_raises(self, python_with_syntax_error: str) -> None:
         """Syntax error in code should raise ProcessingError."""
         chunker = ASTCodeChunker(language="python")
 
@@ -326,9 +323,7 @@ class TestASTCodeChunkerPythonAST:
         )
 
         # Should have hello, add, and Calculator class
-        function_chunks = [
-            c for c in chunks if c.metadata.get("chunk_type") == "function"
-        ]
+        function_chunks = [c for c in chunks if c.metadata.get("chunk_type") == "function"]
         assert len(function_chunks) >= 2
 
         # Check function names are in metadata
@@ -344,9 +339,7 @@ class TestASTCodeChunkerPythonAST:
             content=simple_python_code,
         )
 
-        class_chunks = [
-            c for c in chunks if c.metadata.get("chunk_type") == "class"
-        ]
+        class_chunks = [c for c in chunks if c.metadata.get("chunk_type") == "class"]
         assert len(class_chunks) >= 1
         assert class_chunks[0].metadata.get("name") == "Calculator"
 
@@ -358,9 +351,7 @@ class TestASTCodeChunkerPythonAST:
             content=simple_python_code,
         )
 
-        class_chunks = [
-            c for c in chunks if c.metadata.get("chunk_type") == "class"
-        ]
+        class_chunks = [c for c in chunks if c.metadata.get("chunk_type") == "class"]
         assert class_chunks[0].metadata.get("methods_count") >= 1
 
     def test_chunk_async_functions(self, python_with_async: str) -> None:
@@ -371,14 +362,10 @@ class TestASTCodeChunkerPythonAST:
             content=python_with_async,
         )
 
-        async_chunks = [
-            c for c in chunks if c.metadata.get("node_type") == "async_function"
-        ]
+        async_chunks = [c for c in chunks if c.metadata.get("node_type") == "async_function"]
         assert len(async_chunks) >= 1
 
-        sync_chunks = [
-            c for c in chunks if c.metadata.get("node_type") == "function"
-        ]
+        sync_chunks = [c for c in chunks if c.metadata.get("node_type") == "function"]
         assert len(sync_chunks) >= 1
 
     def test_chunk_with_imports(self, python_with_imports: str) -> None:
@@ -389,9 +376,7 @@ class TestASTCodeChunkerPythonAST:
             content=python_with_imports,
         )
 
-        import_chunks = [
-            c for c in chunks if c.metadata.get("chunk_type") == "import"
-        ]
+        import_chunks = [c for c in chunks if c.metadata.get("chunk_type") == "import"]
         assert len(import_chunks) >= 1
 
     def test_chunk_with_decorators(self, python_with_decorators: str) -> None:
@@ -403,9 +388,9 @@ class TestASTCodeChunkerPythonAST:
         )
 
         decorated_chunks = [
-            c for c in chunks
-            if c.metadata.get("name") == "fibonacci"
-            and c.metadata.get("chunk_type") == "function"
+            c
+            for c in chunks
+            if c.metadata.get("name") == "fibonacci" and c.metadata.get("chunk_type") == "function"
         ]
         assert len(decorated_chunks) >= 1
         assert len(decorated_chunks[0].metadata.get("decorators", [])) > 0
@@ -419,9 +404,9 @@ class TestASTCodeChunkerPythonAST:
         )
 
         private_chunks = [
-            c for c in chunks
-            if c.metadata.get("is_private") is True
-            and c.metadata.get("chunk_type") == "function"
+            c
+            for c in chunks
+            if c.metadata.get("is_private") is True and c.metadata.get("chunk_type") == "function"
         ]
         assert len(private_chunks) >= 1
         assert private_chunks[0].metadata.get("name") == "_private_function"
@@ -489,9 +474,7 @@ class TestExtractFunctions:
         assert "hello" in names
         assert "add" in names
 
-    def test_extract_functions_includes_class_methods(
-        self, simple_python_code: str
-    ) -> None:
+    def test_extract_functions_includes_class_methods(self, simple_python_code: str) -> None:
         """extract_functions should include class methods."""
         tree = ast.parse(simple_python_code)
         chunker = ASTCodeChunker(language="python")
@@ -543,9 +526,7 @@ class TestExtractClasses:
         names = [c.name for c in classes]
         assert "Calculator" in names
 
-    def test_extract_classes_nested(
-        self, python_with_nested_classes: str
-    ) -> None:
+    def test_extract_classes_nested(self, python_with_nested_classes: str) -> None:
         """extract_classes should include nested classes."""
         tree = ast.parse(python_with_nested_classes)
         chunker = ASTCodeChunker(language="python")
@@ -582,8 +563,7 @@ class TestGetChunkMetadata:
 
         # Get first function node
         func_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.FunctionDef) and n.name == "hello"
+            n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "hello"
         )
 
         metadata = chunker.get_chunk_metadata(func_node)
@@ -600,10 +580,7 @@ class TestGetChunkMetadata:
         chunker = ASTCodeChunker(language="python")
 
         # Get async function node
-        func_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.AsyncFunctionDef)
-        )
+        func_node = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef))
 
         metadata = chunker.get_chunk_metadata(func_node)
 
@@ -616,10 +593,7 @@ class TestGetChunkMetadata:
         chunker = ASTCodeChunker(language="python")
 
         # Get class node
-        class_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.ClassDef)
-        )
+        class_node = next(n for n in tree.body if isinstance(n, ast.ClassDef))
 
         metadata = chunker.get_chunk_metadata(class_node)
 
@@ -634,8 +608,7 @@ class TestGetChunkMetadata:
 
         # Get private function
         private_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.FunctionDef) and n.name == "_private_function"
+            n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_private_function"
         )
 
         metadata = chunker.get_chunk_metadata(private_node)
@@ -648,8 +621,7 @@ class TestGetChunkMetadata:
         chunker = ASTCodeChunker(language="python")
 
         func_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.FunctionDef) and n.name == "hello"
+            n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "hello"
         )
 
         metadata = chunker.get_chunk_metadata(func_node)
@@ -761,9 +733,11 @@ class TestEdgeCases:
 
     def test_very_large_function(self) -> None:
         """Very large functions should be chunked."""
-        large_func = "def large_func():\n    " + "\n    ".join(
-            [f"x = {i}" for i in range(100)]
-        ) + "\n    return x"
+        large_func = (
+            "def large_func():\n    "
+            + "\n    ".join([f"x = {i}" for i in range(100)])
+            + "\n    return x"
+        )
 
         chunker = ASTCodeChunker(language="python")
         chunks = chunker.chunk_file(
@@ -845,9 +819,7 @@ class TestIntegration:
         for i, chunk in enumerate(chunks):
             assert chunk.index == i
 
-    def test_extract_and_chunk_consistency(
-        self, simple_python_code: str
-    ) -> None:
+    def test_extract_and_chunk_consistency(self, simple_python_code: str) -> None:
         """extract_functions/classes should match top-level chunked results."""
         tree = ast.parse(simple_python_code)
         chunker = ASTCodeChunker(language="python")
@@ -868,17 +840,14 @@ class TestIntegration:
         for cls in top_level_classes:
             assert cls.name in chunked_names
 
-    def test_metadata_consistency_across_methods(
-        self, simple_python_code: str
-    ) -> None:
+    def test_metadata_consistency_across_methods(self, simple_python_code: str) -> None:
         """Metadata from get_chunk_metadata should match chunk metadata."""
         tree = ast.parse(simple_python_code)
         chunker = ASTCodeChunker(language="python")
 
         # Get first function
         func_node = next(
-            n for n in tree.body
-            if isinstance(n, ast.FunctionDef) and n.name == "hello"
+            n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "hello"
         )
 
         metadata = chunker.get_chunk_metadata(func_node)

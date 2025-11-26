@@ -8,8 +8,8 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from .task_manager import TaskManager, TaskState, TaskInfo
 from .exceptions import TaskError, TaskNotFoundError, TaskQueueFullError
+from .task_manager import TaskInfo, TaskManager, TaskState
 
 __all__ = [
     "TaskManager",

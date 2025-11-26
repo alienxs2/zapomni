@@ -22,7 +22,6 @@ import pytest
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.exceptions import EmbeddingError, TimeoutError, ValidationError
 
-
 # === Fixtures ===
 
 
@@ -252,14 +251,10 @@ async def test_embed_text_retry_on_timeout(mock_ollama_response, mock_httpx_clie
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_embed_text_fallback_on_failure(
-    mock_httpx_client, mock_sentence_transformer
-):
+async def test_embed_text_fallback_on_failure(mock_httpx_client, mock_sentence_transformer):
     """Test fallback to sentence-transformers when Ollama fails."""
     # Ollama always fails
-    mock_httpx_client.post = AsyncMock(
-        side_effect=httpx.ConnectError("Connection refused")
-    )
+    mock_httpx_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
         with patch(
@@ -280,9 +275,7 @@ async def test_embed_text_fallback_on_failure(
 async def test_embed_text_fails_if_no_fallback(mock_httpx_client):
     """Test raises EmbeddingError when Ollama fails and fallback disabled."""
     # Ollama fails
-    mock_httpx_client.post = AsyncMock(
-        side_effect=httpx.ConnectError("Connection refused")
-    )
+    mock_httpx_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
         with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -342,9 +335,7 @@ async def test_health_check_success(mock_ollama_response, mock_httpx_client):
 @pytest.mark.asyncio
 async def test_health_check_failure(mock_httpx_client):
     """Test health_check returns False when Ollama is unavailable."""
-    mock_httpx_client.post = AsyncMock(
-        side_effect=httpx.ConnectError("Connection refused")
-    )
+    mock_httpx_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
         embedder = OllamaEmbedder()
@@ -391,9 +382,7 @@ async def test_embed_batch_single_text(mock_ollama_response, mock_httpx_client):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_embed_batch_size_larger_than_texts(
-    mock_ollama_response, mock_httpx_client
-):
+async def test_embed_batch_size_larger_than_texts(mock_ollama_response, mock_httpx_client):
     """Test embed_batch when batch_size > number of texts."""
     mock_response = AsyncMock()
     mock_response.status_code = 200

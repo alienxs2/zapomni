@@ -26,7 +26,6 @@ from zapomni_mcp.session_manager import (
     generate_session_id,
 )
 
-
 # Fixtures
 
 
@@ -465,6 +464,7 @@ class TestHeartbeatManagement:
     @pytest.mark.asyncio
     async def test_set_heartbeat_sender_nonexistent_session(self, session_manager):
         """Should return False when setting sender for non-existent session."""
+
         async def mock_sender():
             pass
 
@@ -679,6 +679,7 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_session_creation(self, session_manager):
         """Should handle concurrent session creation safely."""
+
         async def create_session(i):
             await session_manager.create_session(
                 session_id=f"concurrent-session-{i}",
@@ -715,6 +716,7 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_mixed_operations(self, session_manager):
         """Should handle mixed concurrent operations safely."""
+
         async def create_and_remove(i):
             sid = f"mixed-session-{i}"
             await session_manager.create_session(

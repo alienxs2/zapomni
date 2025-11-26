@@ -21,7 +21,6 @@ from starlette.testclient import TestClient
 from zapomni_mcp.config import SSEConfig
 from zapomni_mcp.session_manager import SessionManager
 
-
 # Fixtures
 
 
@@ -152,9 +151,7 @@ class TestCreateSseApp:
         # Starlette stores user-added middleware in user_middleware attribute
         assert len(app.user_middleware) > 0, "Should have user middleware configured"
         # Verify CORS middleware is in the list
-        cors_configured = any(
-            m.cls == CORSMiddleware for m in app.user_middleware
-        )
+        cors_configured = any(m.cls == CORSMiddleware for m in app.user_middleware)
         assert cors_configured, "CORS middleware should be configured"
 
 
@@ -392,9 +389,7 @@ class TestErrorHandling:
 
         # Create session with failing transport
         mock_transport = MagicMock()
-        mock_transport.handle_post_message = AsyncMock(
-            side_effect=Exception("Transport error")
-        )
+        mock_transport.handle_post_message = AsyncMock(side_effect=Exception("Transport error"))
 
         await session_manager.create_session(
             session_id="error-session",
@@ -412,9 +407,7 @@ class TestErrorHandling:
             assert "error" in data
 
     @pytest.mark.asyncio
-    async def test_messages_increments_error_count_on_error(
-        self, mock_mcp_server, sse_config
-    ):
+    async def test_messages_increments_error_count_on_error(self, mock_mcp_server, sse_config):
         """Should increment error count on transport error."""
         from zapomni_mcp.sse_transport import create_sse_app
 
@@ -423,9 +416,7 @@ class TestErrorHandling:
 
         # Create session with failing transport
         mock_transport = MagicMock()
-        mock_transport.handle_post_message = AsyncMock(
-            side_effect=Exception("Transport error")
-        )
+        mock_transport.handle_post_message = AsyncMock(side_effect=Exception("Transport error"))
 
         await session_manager.create_session(
             session_id="error-count-session",
@@ -689,7 +680,9 @@ class TestDNSRebindingProtection:
         dns_middleware_configured = any(
             m.cls == DNSRebindingProtectionMiddleware for m in app.user_middleware
         )
-        assert not dns_middleware_configured, "DNS rebinding middleware should not be configured when disabled"
+        assert (
+            not dns_middleware_configured
+        ), "DNS rebinding middleware should not be configured when disabled"
 
 
 class TestSSEConfigAllowedHosts:

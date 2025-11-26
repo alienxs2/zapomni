@@ -19,24 +19,24 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
+import pytest
+
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.exceptions import (
-    ValidationError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
     SearchError,
+    ValidationError,
 )
+from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_mcp.tools import AddMemoryTool, SearchMemoryTool, GetStatsTool
-
+from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, SearchMemoryTool
 
 # ============================================================================
 # Module-level fixtures (session scope)
@@ -174,7 +174,9 @@ class TestFullMemoryPipeline:
         - Similarity score is meaningful
         """
         # Add memory
-        test_text = "Python is a high-level programming language created by Guido van Rossum in 1991."
+        test_text = (
+            "Python is a high-level programming language created by Guido van Rossum in 1991."
+        )
         memory_id = await memory_processor.add_memory(text=test_text)
 
         assert memory_id is not None
@@ -457,10 +459,7 @@ class TestDatabaseIntegration:
         ]
 
         # Run multiple adds concurrently
-        tasks = [
-            memory_processor.add_memory(text=text)
-            for text in texts
-        ]
+        tasks = [memory_processor.add_memory(text=text) for text in texts]
         memory_ids = await asyncio.gather(*tasks)
 
         # All should succeed and be unique
@@ -656,9 +655,7 @@ class TestMCPToolsIntegration:
         assert stats["total_memories"] >= 1
 
     @pytest.mark.asyncio
-    async def test_search_memory_tool_integration(
-        self, search_memory_tool, memory_processor
-    ):
+    async def test_search_memory_tool_integration(self, search_memory_tool, memory_processor):
         """
         Test: SearchMemoryTool works with real MemoryProcessor
 
@@ -668,9 +665,7 @@ class TestMCPToolsIntegration:
         - Searches stored data correctly
         """
         # Add test data
-        await memory_processor.add_memory(
-            text="Test data for search tool integration"
-        )
+        await memory_processor.add_memory(text="Test data for search tool integration")
 
         arguments = {
             "query": "search tool integration",
@@ -765,9 +760,7 @@ class TestErrorHandlingIntegration:
             pass  # Expected
 
         # System should recover and work normally
-        memory_id = await memory_processor.add_memory(
-            text="Recovery test memory"
-        )
+        memory_id = await memory_processor.add_memory(text="Recovery test memory")
         assert memory_id is not None
 
         # Search should work
@@ -920,6 +913,4 @@ class TestEndToEndScenarios:
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
+    config.addinivalue_line("markers", "integration: mark test as an integration test")

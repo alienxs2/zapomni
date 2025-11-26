@@ -20,10 +20,10 @@ import hashlib
 import json
 import math
 import time
-from typing import List, Optional, Dict, Any, Tuple
-from redis.asyncio import Redis
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
+from redis.asyncio import Redis
 
 from zapomni_core.exceptions import ValidationError
 from zapomni_core.utils.logger_factory import get_logger
@@ -144,7 +144,9 @@ class EmbeddingCache:
 
         # Dual-backend support
         self.use_redis = redis_client is not None
-        self.in_memory_cache: Dict[str, Tuple[List[float], float]] = {}  # key -> (embedding, expiry_time)
+        self.in_memory_cache: Dict[str, Tuple[List[float], float]] = (
+            {}
+        )  # key -> (embedding, expiry_time)
         self.in_memory_ttl: Dict[str, float] = {}  # key -> expiration timestamp
 
         # Initialize statistics
@@ -485,9 +487,7 @@ class EmbeddingCache:
         Private method, not exposed in public API.
         """
         if self.stats["total_requests"] > 0:
-            self.stats["hit_rate"] = (
-                self.stats["hits"] / self.stats["total_requests"]
-            )
+            self.stats["hit_rate"] = self.stats["hits"] / self.stats["total_requests"]
         else:
             self.stats["hit_rate"] = 0.0
 

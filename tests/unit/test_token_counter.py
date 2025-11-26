@@ -150,11 +150,7 @@ class TestTokenCounterEstimateTokens:
     def test_estimate_tokens_multiple_texts(self) -> None:
         """Estimating multiple texts should return list matching length."""
         counter = TokenCounter()
-        texts = [
-            "First text",
-            "Second text is longer than first",
-            "Third"
-        ]
+        texts = ["First text", "Second text is longer than first", "Third"]
         estimates = counter.estimate_tokens(texts)
 
         assert len(estimates) == 3
@@ -164,11 +160,7 @@ class TestTokenCounterEstimateTokens:
     def test_estimate_tokens_mixed_lengths(self) -> None:
         """Mixed-length texts should maintain relative ordering."""
         counter = TokenCounter()
-        texts = [
-            "a",
-            "This is a longer text with more content",
-            "mid-length text here"
-        ]
+        texts = ["a", "This is a longer text with more content", "mid-length text here"]
         estimates = counter.estimate_tokens(texts)
 
         assert len(estimates) == 3
@@ -213,12 +205,7 @@ class TestTokenCounterEstimateTokens:
     def test_estimate_tokens_unicode_batch(self) -> None:
         """Batch with unicode should work correctly."""
         counter = TokenCounter()
-        texts = [
-            "Hello world",
-            "Hello 世界",
-            "Hello مرحبا",
-            "Hello мир"
-        ]
+        texts = ["Hello world", "Hello 世界", "Hello مرحبا", "Hello мир"]
         estimates = counter.estimate_tokens(texts)
 
         assert len(estimates) == 4
@@ -349,11 +336,7 @@ class TestTokenCounterIntegration:
     def test_count_and_estimate_consistency(self) -> None:
         """count_tokens and estimate_tokens should be consistent."""
         counter = TokenCounter()
-        texts = [
-            "The quick brown fox",
-            "Python is great",
-            "Machine learning is powerful"
-        ]
+        texts = ["The quick brown fox", "Python is great", "Machine learning is powerful"]
 
         # Using estimate_tokens
         estimates = counter.estimate_tokens(texts)
@@ -371,7 +354,7 @@ class TestTokenCounterIntegration:
         chunks = [
             "First chunk of text",
             "Second chunk with more content and longer text",
-            "Third short chunk"
+            "Third short chunk",
         ]
 
         estimates = counter.estimate_tokens(chunks)

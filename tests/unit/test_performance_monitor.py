@@ -10,15 +10,17 @@ Tests cover:
 - Edge cases and error handling
 """
 
-import pytest
 import time
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+
 from zapomni_core.monitoring.performance_monitor import (
-    PerformanceMonitor,
     OperationMetric,
-    ResourceSnapshot,
     PerformanceMetrics,
-    SystemStats
+    PerformanceMonitor,
+    ResourceSnapshot,
+    SystemStats,
 )
 
 
@@ -200,7 +202,7 @@ class TestGetMetrics:
         # Record operations with controlled timestamps
         start_time = time.time()
 
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             mock_time.return_value = start_time
             monitor.record_operation("test_op", 10.0)
 
@@ -253,7 +255,7 @@ class TestGetMetrics:
 class TestRecordResourceUsage:
     """Tests for record_resource_usage method."""
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_record_resource_usage_success(self, mock_process_class):
         """Test successful resource usage recording."""
         mock_process = MagicMock()
@@ -270,7 +272,7 @@ class TestRecordResourceUsage:
         assert snapshot.cpu_percent == 15.5
         assert snapshot.timestamp > 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_record_resource_usage_buffer_overflow(self, mock_process_class):
         """Test that resource buffer evicts oldest sample when full."""
         mock_process = MagicMock()
@@ -287,7 +289,7 @@ class TestRecordResourceUsage:
         # Only 1000 most recent samples should be kept
         assert len(monitor._resource_samples) == 1000
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_record_resource_usage_psutil_failure(self, mock_process_class):
         """Test that psutil error raises RuntimeError."""
         mock_process = MagicMock()
@@ -299,7 +301,7 @@ class TestRecordResourceUsage:
         with pytest.raises(RuntimeError, match="Failed to access process information"):
             monitor.record_resource_usage()
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_record_resource_usage_multiple_samples(self, mock_process_class):
         """Test recording multiple resource samples."""
         mock_process = MagicMock()
@@ -318,7 +320,7 @@ class TestRecordResourceUsage:
 class TestGetStatsSummary:
     """Tests for get_stats_summary method."""
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_stats_summary_empty(self, mock_process_class):
         """Test stats summary when no data recorded."""
         mock_process = MagicMock()
@@ -333,7 +335,7 @@ class TestGetStatsSummary:
         assert len(stats.operation_metrics) == 0
         assert stats.uptime_seconds >= 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_stats_summary_with_data(self, mock_process_class):
         """Test stats summary with recorded operations and resources."""
         mock_process = MagicMock()
@@ -360,7 +362,7 @@ class TestGetStatsSummary:
         assert stats.avg_cpu_percent == 15.0
         assert stats.uptime_seconds > 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_stats_summary_uptime_calculation(self, mock_process_class):
         """Test that uptime is calculated correctly."""
         mock_process = MagicMock()
@@ -368,7 +370,7 @@ class TestGetStatsSummary:
 
         monitor = PerformanceMonitor()
 
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             start_time = 1000.0
             mock_time.return_value = start_time
 
@@ -379,7 +381,7 @@ class TestGetStatsSummary:
             stats = monitor.get_stats_summary()
             assert 5.4 < stats.uptime_seconds < 5.6
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_stats_summary_multiple_operations(self, mock_process_class):
         """Test stats summary with multiple operation types."""
         mock_process = MagicMock()
@@ -421,7 +423,7 @@ class TestResetMetrics:
         assert len(monitor._operations) == 0
         assert monitor.get_metrics("test_op") is None
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_reset_metrics_clears_resources(self, mock_process_class):
         """Test that reset clears all resource samples."""
         mock_process = MagicMock()
@@ -460,7 +462,7 @@ class TestResetMetrics:
 
         assert len(monitor._operations) == 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_reset_metrics_stats_after_reset(self, mock_process_class):
         """Test that stats are empty after reset."""
         mock_process = MagicMock()
@@ -535,7 +537,7 @@ class TestCalculatePercentiles:
 class TestGetCurrentResources:
     """Tests for _get_current_resources private method."""
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_current_resources_success(self, mock_process_class):
         """Test getting resource snapshot."""
         mock_process = MagicMock()
@@ -551,7 +553,7 @@ class TestGetCurrentResources:
         assert snapshot.cpu_percent == 25.5
         assert snapshot.timestamp > 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_current_resources_zero_memory(self, mock_process_class):
         """Test getting resource snapshot with zero memory."""
         mock_process = MagicMock()
@@ -565,7 +567,7 @@ class TestGetCurrentResources:
         assert snapshot.memory_mb == 0.0
         assert snapshot.cpu_percent == 0.0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_get_current_resources_psutil_error(self, mock_process_class):
         """Test that psutil error raises RuntimeError."""
         mock_process = MagicMock()
@@ -583,11 +585,7 @@ class TestDataclasses:
 
     def test_operation_metric_dataclass(self):
         """Test OperationMetric dataclass."""
-        metric = OperationMetric(
-            operation_name="test_op",
-            duration_ms=100.5,
-            timestamp=1000.0
-        )
+        metric = OperationMetric(operation_name="test_op", duration_ms=100.5, timestamp=1000.0)
 
         assert metric.operation_name == "test_op"
         assert metric.duration_ms == 100.5
@@ -595,11 +593,7 @@ class TestDataclasses:
 
     def test_resource_snapshot_dataclass(self):
         """Test ResourceSnapshot dataclass."""
-        snapshot = ResourceSnapshot(
-            timestamp=1000.0,
-            memory_mb=256.0,
-            cpu_percent=15.5
-        )
+        snapshot = ResourceSnapshot(timestamp=1000.0, memory_mb=256.0, cpu_percent=15.5)
 
         assert snapshot.timestamp == 1000.0
         assert snapshot.memory_mb == 256.0
@@ -616,7 +610,7 @@ class TestDataclasses:
             p50_ms=100.0,
             p95_ms=400.0,
             p99_ms=480.0,
-            throughput_ops_per_sec=10.0
+            throughput_ops_per_sec=10.0,
         )
 
         assert metrics.operation_name == "test_op"
@@ -624,7 +618,7 @@ class TestDataclasses:
         assert metrics.min_ms == 10.0
         assert metrics.p99_ms == 480.0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_system_stats_dataclass(self, mock_process_class):
         """Test SystemStats dataclass."""
         mock_process = MagicMock()
@@ -639,7 +633,7 @@ class TestDataclasses:
             p50_ms=100.0,
             p95_ms=400.0,
             p99_ms=480.0,
-            throughput_ops_per_sec=10.0
+            throughput_ops_per_sec=10.0,
         )
 
         stats = SystemStats(
@@ -647,7 +641,7 @@ class TestDataclasses:
             total_operations=100,
             avg_memory_mb=256.0,
             avg_cpu_percent=15.0,
-            operation_metrics={"test_op": perf_metrics}
+            operation_metrics={"test_op": perf_metrics},
         )
 
         assert stats.uptime_seconds == 60.0
@@ -658,7 +652,7 @@ class TestDataclasses:
 class TestIntegration:
     """Integration tests combining multiple features."""
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_full_monitoring_workflow(self, mock_process_class):
         """Test complete monitoring workflow."""
         mock_process = MagicMock()
@@ -698,7 +692,7 @@ class TestIntegration:
         stats_after = monitor.get_stats_summary()
         assert stats_after.total_operations == 0
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_monitoring_with_errors(self, mock_process_class):
         """Test monitoring with various error conditions."""
         mock_process = MagicMock()

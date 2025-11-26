@@ -10,22 +10,22 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from zapomni_core.tasks import (
+    TaskInfo,
     TaskManager,
     TaskState,
-    TaskInfo,
 )
 from zapomni_core.tasks.exceptions import (
     TaskError,
     TaskNotFoundError,
     TaskQueueFullError,
 )
-
 
 # ============================================================================
 # Test Fixtures
@@ -113,6 +113,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_success(self, task_manager):
         """Test successful task submission."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -129,6 +130,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_with_metadata(self, task_manager):
         """Test task submission with metadata."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -151,6 +153,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_empty_id(self, task_manager):
         """Test ValueError for empty task_id."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -161,6 +164,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_long_id(self, task_manager):
         """Test ValueError for task_id > 256 chars."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -172,6 +176,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_duplicate_id(self, task_manager):
         """Test ValueError for duplicate task_id."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -185,6 +190,7 @@ class TestTaskSubmission:
     @pytest.mark.asyncio
     async def test_submit_task_returns_id(self, task_manager):
         """Test that submit_task returns the task_id."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -204,6 +210,7 @@ class TestStatusQueries:
     @pytest.mark.asyncio
     async def test_get_task_status_success(self, task_manager):
         """Test getting status of existing task."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -231,6 +238,7 @@ class TestStatusQueries:
     @pytest.mark.asyncio
     async def test_get_all_tasks_multiple(self, task_manager):
         """Test get_all_tasks returns all tasks."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -248,6 +256,7 @@ class TestStatusQueries:
     @pytest.mark.asyncio
     async def test_get_all_tasks_filtered_by_state(self, task_manager):
         """Test get_all_tasks filters by state correctly."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -270,6 +279,7 @@ class TestStatusQueries:
     @pytest.mark.asyncio
     async def test_get_all_tasks_sorted_by_created_at(self, task_manager):
         """Test get_all_tasks sorts by created_at descending."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -299,6 +309,7 @@ class TestTaskExecution:
     @pytest.mark.asyncio
     async def test_execute_task_success(self, task_manager):
         """Test task executes successfully and completes."""
+
         async def simple_task():
             await asyncio.sleep(0.05)
             return {"status": "success", "data": 42}
@@ -323,6 +334,7 @@ class TestTaskExecution:
     @pytest.mark.asyncio
     async def test_execute_task_failure(self, task_manager):
         """Test task that fails with exception."""
+
         async def failing_task():
             await asyncio.sleep(0.01)
             raise ValueError("Test error message")
@@ -345,6 +357,7 @@ class TestTaskExecution:
     @pytest.mark.asyncio
     async def test_execute_task_running_state(self, task_manager):
         """Test task transitions through RUNNING state."""
+
         async def slow_task():
             await asyncio.sleep(0.2)
             return "done"
@@ -393,6 +406,7 @@ class TestTaskCancellation:
     @pytest.mark.asyncio
     async def test_cancel_running_task(self, task_manager):
         """Test cancelling a RUNNING task."""
+
         async def cancellable_task():
             try:
                 for i in range(100):
@@ -426,6 +440,7 @@ class TestTaskCancellation:
     @pytest.mark.asyncio
     async def test_cancel_completed_task(self, task_manager):
         """Test cancelling completed task returns False."""
+
         async def simple_task():
             await asyncio.sleep(0.01)
             return "done"
@@ -450,6 +465,7 @@ class TestTaskCancellation:
     @pytest.mark.asyncio
     async def test_cancel_failed_task(self, task_manager):
         """Test cancelling failed task returns False."""
+
         async def failing_task():
             await asyncio.sleep(0.01)
             raise ValueError("Test error")
@@ -506,7 +522,8 @@ class TestConcurrency:
         # Wait for all to complete
         for _ in range(50):
             all_done = all(
-                manager.tasks[tid].state in [
+                manager.tasks[tid].state
+                in [
                     TaskState.COMPLETED,
                     TaskState.FAILED,
                 ]
@@ -569,6 +586,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_task_with_timeout(self, task_manager):
         """Test task that times out."""
+
         async def timeout_task():
             try:
                 await asyncio.sleep(10)
@@ -594,6 +612,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_task_with_no_return_value(self, task_manager):
         """Test task that returns None."""
+
         async def no_return_task():
             await asyncio.sleep(0.01)
 
@@ -613,6 +632,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_task_with_complex_return(self, task_manager):
         """Test task with complex return value."""
+
         async def complex_task():
             await asyncio.sleep(0.01)
             return {
@@ -804,6 +824,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_full_task_lifecycle(self, task_manager):
         """Test complete task lifecycle: submit → running → complete."""
+
         async def lifecycle_task():
             await asyncio.sleep(0.05)
             return {"status": "lifecycle_complete"}
@@ -833,6 +854,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_mixed_task_states(self, task_manager):
         """Test TaskManager with mix of task states."""
+
         async def success_task():
             await asyncio.sleep(0.05)
             return "success"

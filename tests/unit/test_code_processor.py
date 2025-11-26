@@ -4,7 +4,7 @@ Unit tests for the CodeProcessor AST utilities.
 Exercises function/class/import extraction, syntax validation, and edge cases.
 """
 
-from typing import List, Dict
+from typing import Dict, List
 
 import pytest
 
@@ -81,11 +81,11 @@ class Alpha(Base, mixin):
 
 def test_extract_imports_and_parse_python_agree():
     """Import extraction should preserve statement order and parse_python bundles results."""
-    code = '''
+    code = """
 import os
 from typing import List as L, Dict
 from .sub import helper
-'''
+"""
 
     imports = extract_imports(code)
     assert imports == [

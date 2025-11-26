@@ -10,12 +10,12 @@ TDD Implementation: Code written to pass tests from specifications.
 
 import json
 import time
-import structlog
-from typing import Optional, Dict, Any, List
 from abc import ABC
+from typing import Any, Dict, List, Optional
 
 import redis
-from redis import Redis, ConnectionPool
+import structlog
+from redis import ConnectionPool, Redis
 
 logger = structlog.get_logger(__name__)
 
@@ -279,10 +279,14 @@ class RedisClient:
                 last_error = e
                 if retry_count > self.MAX_RETRIES:
                     self._logger.error("get_failed_after_retries", key=key, retries=retry_count)
-                    raise CacheError(f"Redis GET operation failed after {self.MAX_RETRIES} retries: {e}")
+                    raise CacheError(
+                        f"Redis GET operation failed after {self.MAX_RETRIES} retries: {e}"
+                    )
 
                 backoff_seconds = 2 ** (retry_count - 1)
-                self._logger.warning("get_retry", key=key, attempt=retry_count, delay=backoff_seconds)
+                self._logger.warning(
+                    "get_retry", key=key, attempt=retry_count, delay=backoff_seconds
+                )
                 time.sleep(backoff_seconds)
 
             except redis.RedisError as e:
@@ -364,10 +368,14 @@ class RedisClient:
                 retry_count += 1
                 if retry_count > self.MAX_RETRIES:
                     self._logger.error("set_failed_after_retries", key=key, retries=retry_count)
-                    raise CacheError(f"Redis SET operation failed after {self.MAX_RETRIES} retries: {e}")
+                    raise CacheError(
+                        f"Redis SET operation failed after {self.MAX_RETRIES} retries: {e}"
+                    )
 
                 backoff_seconds = 2 ** (retry_count - 1)
-                self._logger.warning("set_retry", key=key, attempt=retry_count, delay=backoff_seconds)
+                self._logger.warning(
+                    "set_retry", key=key, attempt=retry_count, delay=backoff_seconds
+                )
                 time.sleep(backoff_seconds)
 
             except redis.RedisError as e:
@@ -427,10 +435,14 @@ class RedisClient:
                 retry_count += 1
                 if retry_count > self.MAX_RETRIES:
                     self._logger.error("delete_failed_after_retries", key=key, retries=retry_count)
-                    raise CacheError(f"Redis DELETE operation failed after {self.MAX_RETRIES} retries: {e}")
+                    raise CacheError(
+                        f"Redis DELETE operation failed after {self.MAX_RETRIES} retries: {e}"
+                    )
 
                 backoff_seconds = 2 ** (retry_count - 1)
-                self._logger.warning("delete_retry", key=key, attempt=retry_count, delay=backoff_seconds)
+                self._logger.warning(
+                    "delete_retry", key=key, attempt=retry_count, delay=backoff_seconds
+                )
                 time.sleep(backoff_seconds)
 
             except redis.RedisError as e:

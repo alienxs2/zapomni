@@ -1,84 +1,55 @@
-```
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   ███████╗ █████╗ ██████╗  ██████╗ ███╗   ███╗███╗   ██╗██╗ ║
-║   ╚══███╔╝██╔══██╗██╔══██╗██╔═══██╗████╗ ████║████╗  ██║██║ ║
-║     ███╔╝ ███████║██████╔╝██║   ██║██╔████╔██║██╔██╗ ██║██║ ║
-║    ███╔╝  ██╔══██║██╔═══╝ ██║   ██║██║╚██╔╝██║██║╚██╗██║██║ ║
-║   ███████╗██║  ██║██║     ╚██████╔╝██║ ╚═╝ ██║██║ ╚████║██║ ║
-║   ╚══════╝╚═╝  ╚═╝╚═╝      ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝ ║
-║                                                              ║
-║           Local-First MCP Memory for AI Agents              ║
-╚══════════════════════════════════════════════════════════════╝
-```
+# Zapomni
 
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://github.com/alienxs2/zapomni/workflows/Tests/badge.svg)](https://github.com/alienxs2/zapomni/actions)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-
-**Version:** 0.1.0 | **Author:** Goncharenko Anton (alienxs2) | **Status:** Alpha
-
-[Quick Start](#quick-start) • [Features](#key-features) • [Documentation](docs/) • [Contributing](CONTRIBUTING.md)
-
-</div>
-
----
-
-> ⚠️ **ВНИМАНИЕ / WARNING**
->
-> Проект находится в активной стадии разработки и **пока не работает полностью**.
-> Используйте на свой страх и риск. Стабильный релиз планируется позже.
->
-> This project is under active development and **is not fully functional yet**.
-> Use at your own risk. Stable release coming later.
-
----
+Local-first MCP memory server for AI agents.
 
 ## Overview
 
-Zapomni is a **local-first MCP (Model Context Protocol) memory server** that provides AI agents with intelligent, contextual, and private long-term memory. Built on a unified vector + graph database architecture (FalkorDB) and powered by local LLM runtime (Ollama), Zapomni delivers enterprise-grade RAG capabilities with zero external dependencies and guaranteed data privacy.
+Zapomni is a local-first MCP (Model Context Protocol) memory server that provides AI agents with intelligent, contextual, and private long-term memory. Built on a unified vector and graph database architecture using FalkorDB and powered by local LLM runtime via Ollama, Zapomni delivers enterprise-grade RAG capabilities with zero cloud dependencies.
 
-### Key Features
+**Key Features:**
 
-- **Local-First Architecture**: All data and processing stays on your machine - no cloud dependencies
-- **Unified Database**: FalkorDB combines vector embeddings and knowledge graph in single system
-- **Hybrid Search**: Vector similarity + BM25 keyword search + graph traversal for optimal results
-- **Zero Configuration**: Works out-of-the-box with sensible defaults
-- **MCP Native**: Seamless integration with Claude, Cursor, Cline, and other MCP clients
-- **Privacy Guaranteed**: Your data never leaves your machine
+- Local-first architecture - all data and processing stays on your machine
+- Unified database - FalkorDB combines vector embeddings and knowledge graph in a single system
+- Hybrid search - vector similarity, BM25 keyword search, and graph traversal for optimal results
+- Zero configuration - works out-of-the-box with sensible defaults
+- MCP native - seamless integration with Claude, Cursor, Cline, and other MCP clients
+- Privacy guaranteed - your data never leaves your machine
 
----
+## Requirements
+
+- **FalkorDB** - localhost:6381 (or configured port)
+- **Redis** - localhost:6380 (optional, for semantic caching)
+- **Ollama** - localhost:11434 with models:
+  - `nomic-embed-text` (embeddings)
+  - `llama3.1:8b` or `qwen2.5:latest` (LLM for entity extraction)
+- **Python** 3.10+
 
 ## Quick Start
 
-### Prerequisites
-
-- **Python 3.10+**
-- **Docker Desktop** (for FalkorDB and Redis)
-- **Ollama** (for embeddings and LLM)
-
-### Installation
-
-#### 1. Install Ollama
+### 1. Install Ollama and pull models
 
 ```bash
-# Linux / macOS
+# Install Ollama (Linux/macOS)
 curl -fsSL https://ollama.com/install.sh | sh
 
 # Windows: Download from https://ollama.com/download
-```
 
-Pull required models:
-```bash
+# Pull required models
 ollama pull nomic-embed-text
 ollama pull llama3.1:8b
 ```
 
-#### 2. Install Zapomni
+### 2. Start services with Docker
+
+```bash
+# Start FalkorDB and Redis
+docker-compose up -d
+
+# Verify services are running
+docker-compose ps
+```
+
+### 3. Install Zapomni
 
 ```bash
 # Clone repository
@@ -89,29 +60,16 @@ cd zapomni
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 # OR
-.venv\Scripts\activate  # Windows
+.venv\Scripts\activate     # Windows
 
-# Install with dev dependencies
+# Install package
+pip install -e .
+
+# Install with development dependencies (optional)
 pip install -e ".[dev]"
-
-# Install pre-commit hooks
-pre-commit install
 ```
 
-#### 3. Start Services
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Start FalkorDB and Redis
-docker-compose up -d
-
-# Verify services are running
-docker-compose ps
-```
-
-#### 4. Configure MCP Client
+### 4. Configure MCP client
 
 Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
 
@@ -123,6 +81,7 @@ Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
       "args": ["-m", "zapomni_mcp"],
       "env": {
         "FALKORDB_HOST": "localhost",
+        "FALKORDB_PORT": "6381",
         "OLLAMA_BASE_URL": "http://localhost:11434"
       }
     }
@@ -130,87 +89,161 @@ Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
 }
 ```
 
----
-
-## Usage
-
-### Basic Memory Operations
+### 5. Start using
 
 ```
 User: Remember that Python was created by Guido van Rossum in 1991
-Claude: [Calls add_memory tool]
-  ✓ Memory stored with ID: 550e8400-e29b-41d4-a716-446655440000
+Claude: [Calls add_memory tool] Memory stored successfully.
 
 User: Who created Python?
-Claude: [Calls search_memory tool]
-  Based on stored memory, Python was created by Guido van Rossum in 1991.
-
-User: What do you remember about programming languages?
-Claude: [Calls search_memory tool]
-  I found information about Python: It was created by Guido van Rossum in 1991...
+Claude: [Calls search_memory tool] Based on stored memory, Python was created by Guido van Rossum in 1991.
 ```
 
-### Available MCP Tools
+## MCP Tools (18)
 
-**Phase 1 (MVP) - ✅ Complete:**
-- `add_memory` - Store text with automatic chunking and embedding
-- `search_memory` - Semantic search across stored memories
-- `get_stats` - View memory statistics (total memories, chunks, size)
+### Memory Operations (4)
 
-**Phase 2 (Enhanced Search) - ✅ 100% Complete (2025-11-25):**
-- `build_graph` - Extract entities and build knowledge graph
-  - SpaCy NER + LLM entity extraction
-  - Graph construction with relationships
-  - Entity confidence scoring
-- `get_related` - Find related entities via graph traversal
-  - 1-5 hop depth traversal
-  - Relationship type filtering
-  - Score-based ranking
-- `graph_status` - View enhanced knowledge graph statistics
-  - Node and edge counts
-  - Entity type breakdown
-  - Graph health indicators
+| Tool | Description |
+|------|-------------|
+| `add_memory` | Store text with automatic chunking and embedding |
+| `search_memory` | Semantic search across stored memories with hybrid ranking |
+| `delete_memory` | Delete specific memory by ID (requires confirmation) |
+| `clear_all` | Clear all memories (requires exact phrase "DELETE ALL MEMORIES") |
 
-**Phase 3 (Code Intelligence) - ✅ 100% Complete (2025-11-25):**
-- `export_graph` - Export knowledge graph in 4 formats
-  - GraphML (XML) for Gephi, yEd
-  - Cytoscape JSON for web visualization
-  - Neo4j Cypher for database import
-  - Simple JSON for backup
-- `index_codebase` - Index code repository with AST analysis
-  - 14+ programming languages
-  - Function and class extraction
-  - Call graph analysis
-- `delete_memory` - Delete specific memory by ID
-  - UUID validation
-  - Safety confirmation required
-  - Audit logging
-- `clear_all` - Clear all memories with strict confirmation
-  - Requires EXACT phrase: "DELETE ALL MEMORIES"
-  - Case-sensitive validation
-  - Comprehensive logging
+### Graph Operations (4)
 
-**Total: 10 MCP Tools** (3 Phase 1 + 3 Phase 2 + 4 Phase 3)
+| Tool | Description |
+|------|-------------|
+| `build_graph` | Extract entities and build knowledge graph from text |
+| `get_related` | Find related entities through graph traversal (1-5 hop depth) |
+| `graph_status` | View knowledge graph statistics (nodes, edges, entity types) |
+| `export_graph` | Export graph in 4 formats (GraphML, Cytoscape JSON, Neo4j Cypher, JSON) |
 
-**Legend:** ✅ Complete | 🔨 In Development | ⏳ Planned
+### Code Intelligence (1)
 
----
+| Tool | Description |
+|------|-------------|
+| `index_codebase` | Index code repository with AST analysis (14+ languages, call graphs, class hierarchies) |
+
+### System Management (3)
+
+| Tool | Description |
+|------|-------------|
+| `get_stats` | Query memory statistics (total memories, chunks, database size) |
+| `prune_memory` | Garbage collection for stale and orphaned nodes (dry-run mode available) |
+| `set_model` | Hot-reload Ollama LLM model without server restart |
+
+### Workspace Management (6)
+
+| Tool | Description |
+|------|-------------|
+| `create_workspace` | Create a new workspace for data isolation |
+| `list_workspaces` | List all available workspaces |
+| `set_current_workspace` | Set the current workspace for the session |
+| `get_current_workspace` | Get the current workspace for the session |
+| `delete_workspace` | Delete a workspace and all its data (requires confirmation) |
+
+## Configuration
+
+Configuration is managed via environment variables. Copy `.env.example` to `.env` and customize as needed.
+
+### Essential Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FALKORDB_HOST` | localhost | FalkorDB host address |
+| `FALKORDB_PORT` | 6381 | FalkorDB port |
+| `OLLAMA_BASE_URL` | http://localhost:11434 | Ollama API endpoint |
+| `OLLAMA_EMBEDDING_MODEL` | nomic-embed-text | Model for generating embeddings |
+| `OLLAMA_LLM_MODEL` | llama3.1:8b | Model for entity extraction and refinement |
+| `MAX_CHUNK_SIZE` | 512 | Maximum tokens per chunk |
+| `CHUNK_OVERLAP` | 50 | Token overlap between chunks |
+| `VECTOR_DIMENSIONS` | 768 | Vector embedding dimensions |
+| `LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
+
+### Performance Tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FALKORDB_POOL_SIZE` | 20 | Connection pool size for concurrent requests |
+| `MAX_CONCURRENT_TASKS` | 4 | Maximum parallel processing tasks |
+| `HNSW_M` | 16 | HNSW index parameter (connections per layer) |
+| `HNSW_EF_CONSTRUCTION` | 200 | HNSW build-time accuracy parameter |
+| `HNSW_EF_SEARCH` | 100 | HNSW search-time accuracy parameter |
+| `MIN_SIMILARITY_THRESHOLD` | 0.5 | Minimum similarity score for search results |
+
+### Optional Features
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_ENABLED` | false | Enable semantic caching with Redis |
+| `ENABLE_HYBRID_SEARCH` | false | Enable BM25 + vector hybrid search |
+| `ENABLE_KNOWLEDGE_GRAPH` | false | Enable automatic knowledge graph construction |
+| `ENABLE_CODE_INDEXING` | false | Enable code repository indexing |
+
+See `.env.example` for complete configuration options.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     MCP Client Layer                        │
+│              (Claude, Cursor, Cline, etc.)                  │
+└────────────────────────┬────────────────────────────────────┘
+                         │ MCP Protocol (stdio/SSE)
+┌────────────────────────▼────────────────────────────────────┐
+│                   zapomni_mcp (MCP Layer)                   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ MCPServer: Protocol handling, tool registration     │   │
+│  │ Tools: 18 MCP tool implementations                  │   │
+│  │ Transport: stdio (default) or SSE (concurrent)      │   │
+│  └──────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                zapomni_core (Business Logic)                │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ MemoryProcessor: Orchestrates all operations        │   │
+│  │ Processors: Text, PDF, DOCX, HTML, Markdown, Code   │   │
+│  │ Chunking: Semantic text chunking                    │   │
+│  │ Embeddings: Ollama integration + caching            │   │
+│  │ Search: Vector, BM25, Hybrid, Graph traversal       │   │
+│  │ Extractors: Entity & relationship extraction        │   │
+│  │ Graph: Knowledge graph builder & exporter           │   │
+│  │ Code: AST analysis, call graphs, indexing           │   │
+│  └──────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                  zapomni_db (Data Layer)                    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ FalkorDB Client: Graph queries, vector search       │   │
+│  │ Redis Cache: Semantic caching (optional)            │   │
+│  │ Models: Data structures and validation              │   │
+│  └──────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                   External Services                         │
+│    FalkorDB (6381)  │  Redis (6380)  │  Ollama (11434)      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Development
 
 ### Running Tests
 
 ```bash
-# All tests
+# Run all tests
 pytest
 
-# Unit tests only (fast)
+# Unit tests only (fast, no external dependencies)
 pytest tests/unit
 
-# Integration tests (requires services)
+# Integration tests (requires services running)
 pytest tests/integration
 
-# With coverage
+# With coverage report
 pytest --cov=src --cov-report=html
 open htmlcov/index.html
 ```
@@ -228,215 +261,22 @@ mypy src/
 # Linting
 flake8 src/ tests/
 
-# Run all checks
+# Run all pre-commit checks
 pre-commit run --all-files
 ```
 
-### Development Workflow
+### Build Package
 
 ```bash
-# Start services
-docker-compose up -d
+# Build distribution packages
+python -m build
 
-# Run in development mode
-python -m zapomni_mcp
-
-# Monitor logs
-docker-compose logs -f
+# Install locally for testing
+pip install -e .
 ```
-
----
-
-## Architecture
-
-### Tech Stack
-
-- **Language:** Python 3.10+
-- **Database:** FalkorDB (unified vector + graph)
-- **Cache:** Redis (semantic caching)
-- **LLM Runtime:** Ollama (local embeddings + inference)
-- **MCP SDK:** Official Anthropic Python SDK
-- **Vector Search:** HNSW index (FalkorDB native)
-- **Keyword Search:** BM25 (rank-bm25 library)
-- **Entity Extraction:** SpaCy NER + Ollama LLM (hybrid)
-
-### Package Structure
-
-```
-zapomni/
-├── src/
-│   ├── zapomni_mcp/        # MCP server layer
-│   │   ├── server.py       # Main entry point
-│   │   ├── tools/          # MCP tool implementations
-│   │   ├── schemas/        # Request/response validation
-│   │   └── config.py       # Configuration management
-│   │
-│   ├── zapomni_core/       # Core business logic
-│   │   ├── processors/     # Document processing
-│   │   ├── embeddings/     # Embedding generation
-│   │   ├── search/         # Search algorithms
-│   │   ├── extractors/     # Entity/relationship extraction
-│   │   └── chunking/       # Text chunking
-│   │
-│   └── zapomni_db/         # Database layer
-│       ├── falkordb/       # FalkorDB client
-│       ├── redis_cache/    # Redis cache client
-│       └── models.py       # Data models
-│
-├── tests/                  # Test suite
-│   ├── unit/              # Unit tests (70%)
-│   ├── integration/       # Integration tests (25%)
-│   └── e2e/               # End-to-end tests (5%)
-│
-├── docs/                  # Documentation
-└── docker/                # Docker configurations
-```
-
----
-
-## Configuration
-
-All configuration via environment variables (`.env` file or system environment).
-
-### Essential Settings
-
-```bash
-# Database
-FALKORDB_HOST=localhost
-FALKORDB_PORT=6379
-
-# Ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-
-# Performance
-MAX_CHUNK_SIZE=512
-CHUNK_OVERLAP=50
-```
-
-See `.env.example` for complete configuration options.
-
----
-
-## Performance
-
-### Targets (MVP)
-
-- **Search Latency:** < 500ms (P95)
-- **Embedding Cache Hit Rate:** 60-68%
-- **Chunk Size:** 256-512 tokens
-- **Vector Dimensions:** 768 (nomic-embed-text)
-- **Concurrent Tasks:** 4 (configurable)
-
-### Benchmarks
-
-Coming soon - will include comparisons with other RAG systems.
-
----
-
-## Roadmap
-
-### Phase 1: MVP ✅ Complete (v0.1.0)
-- [x] Project infrastructure setup
-- [x] Basic MCP server (stdio transport)
-- [x] Document chunking and embedding
-- [x] Vector similarity search
-- [x] Memory storage in FalkorDB
-- [x] Core MCP tools (add_memory, search_memory, get_stats)
-- [x] Comprehensive test suite (80%+ coverage)
-- [x] Production-ready code quality
-- [x] Full documentation
-
-### Phase 2: Enhanced Search ✅ 100% Complete (2025-11-25, v0.2.0)
-- [x] Entity extraction (SpaCy NER + normalization)
-- [x] Knowledge graph construction (GraphBuilder)
-- [x] Semantic caching infrastructure (Redis)
-- [x] Graph traversal queries (get_related_entities)
-- [x] Hybrid search preparation (BM25 + RRF)
-- [x] `build_graph` tool - Extract entities and build knowledge graph
-- [x] `get_related` tool - Find related entities via graph traversal
-- [x] `graph_status` tool - Enhanced knowledge graph statistics
-- [x] 115 tests passing
-- [x] Full integration test suite
-- [x] **COMPLETE - All Phase 2 features production-ready**
-
-### Phase 3: Code Intelligence ✅ 100% Complete (2025-11-25, v0.2.0)
-- [x] Code repository indexing (RepositoryIndexer - 14+ languages)
-- [x] AST-based code chunking with syntax awareness
-- [x] Function/class entity extraction from AST
-- [x] Call graph analysis and dependencies
-- [x] Memory deletion operations (delete_memory, clear_all)
-- [x] Graph export (GraphML, Cytoscape JSON, Neo4j, JSON)
-- [x] `export_graph` tool - Export knowledge graph in 4 formats
-- [x] `index_codebase` tool - Index code repository with AST analysis
-- [x] `delete_memory` tool - Delete specific memory by ID
-- [x] `clear_all` tool - Clear all memories with strict confirmation
-- [x] 155 tests passing
-- [x] Safety mechanisms for destructive operations
-- [x] **COMPLETE - All Phase 3 features production-ready**
-
-### Phase 4+: Advanced Features ⏳ Planned (Q3+ 2025)
-- [ ] Multi-language embeddings support
-- [ ] Additional document formats (video transcripts, audio)
-- [ ] Performance optimization (query caching, index tuning)
-- [ ] HTTP/SSE transport alternatives
-- [ ] Configuration profiles (dev/staging/prod)
-- [ ] Secrets management integration (Vault, AWS Secrets Manager)
-- [ ] Real-time collaboration features
-- [ ] Advanced analytics dashboard
-
----
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-
-```bash
-# Fork and clone
-git clone https://github.com/YOUR_USERNAME/zapomni.git
-cd zapomni
-
-# Setup development environment
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-pre-commit install
-
-# Start services
-docker-compose up -d
-
-# Run tests
-pytest
-```
-
----
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - Copyright (c) 2025 Goncharenko Anton aka alienxs2
 
-**Copyright (c) 2025 Goncharenko Anton aka alienxs2**
-
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/alienxs2/zapomni/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/alienxs2/zapomni/discussions)
-- **Documentation:** [docs/README.md](docs/README.md)
-
----
-
-## Acknowledgments
-
-- **Anthropic** for the MCP protocol and SDK
-- **FalkorDB** for unified vector + graph database
-- **Ollama** for local LLM runtime
-- **Cognee** for inspiration on async task management
-- Open-source community for excellent libraries
-
----
-
-**Built with ❤️ for the local-first AI community**
+See [LICENSE](LICENSE) file for details.

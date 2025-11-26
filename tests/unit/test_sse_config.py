@@ -19,7 +19,6 @@ import pytest
 from zapomni_core.exceptions import ValidationError
 from zapomni_mcp.config import SSEConfig
 
-
 # Default Values Tests
 
 
@@ -208,9 +207,7 @@ class TestSSEConfigFromEnv:
 
     def test_from_env_single_cors_origin(self):
         """Should handle single CORS origin."""
-        with patch.dict(
-            os.environ, {"ZAPOMNI_SSE_CORS_ORIGINS": "http://example.com"}
-        ):
+        with patch.dict(os.environ, {"ZAPOMNI_SSE_CORS_ORIGINS": "http://example.com"}):
             config = SSEConfig.from_env()
             assert config.cors_origins == ["http://example.com"]
 

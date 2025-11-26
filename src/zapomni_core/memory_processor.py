@@ -1006,9 +1006,13 @@ class MemoryProcessor:
                 limit=limit,
             )
 
-            # Phase 2: Return empty list for now
-            log.debug("get_related_entities_phase2_stub")
-            return []
+            results = await self.db_client.get_related_entities(
+                entity_id=entity_id,
+                depth=depth,
+                limit=limit,
+            )
+            log.info("get_related_entities_completed", count=len(results))
+            return results
 
         except Exception as e:
             log.error("unexpected_error", error=str(e), error_type=type(e).__name__)

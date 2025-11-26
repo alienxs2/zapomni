@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+from zipfile import BadZipFile
 
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
-from zipfile import BadZipFile
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.utils import get_logger
-
 
 Metadata = Dict[str, Any]
 

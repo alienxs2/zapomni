@@ -10,18 +10,19 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Dict, Any, List, Optional
-import structlog
-from html.parser import HTMLParser
-from urllib.parse import urljoin
 import re
+from html.parser import HTMLParser
+from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin
+
+import structlog
 
 try:
     import trafilatura
 except ImportError:
     trafilatura = None  # type: ignore
 
-from zapomni_core.exceptions import ValidationError, ProcessingError
+from zapomni_core.exceptions import ProcessingError, ValidationError
 
 
 class _HTMLTextExtractor(HTMLParser):
@@ -162,7 +163,7 @@ class HTMLProcessor:
         self.logger.info(
             "html_processor_initialized",
             trafilatura_available=trafilatura is not None,
-            config_keys=list(self.trafilatura_config.keys()) if self.trafilatura_config else []
+            config_keys=list(self.trafilatura_config.keys()) if self.trafilatura_config else [],
         )
 
     def extract_from_html(self, html: str) -> str:
@@ -199,34 +200,30 @@ class HTMLProcessor:
             raise ValidationError(
                 message=f"html must be a string, got {type(html).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "str", "actual_type": type(html).__name__}
+                details={"expected_type": "str", "actual_type": type(html).__name__},
             )
 
         if not html or not html.strip():
             raise ValidationError(
                 message="html cannot be empty or whitespace-only",
                 error_code="VAL_001",
-                details={"html_length": len(html)}
+                details={"html_length": len(html)},
             )
 
         self.logger.debug(
             "extract_from_html_started",
             html_length=len(html),
-            has_trafilatura=trafilatura is not None
+            has_trafilatura=trafilatura is not None,
         )
 
         # TRY TRAFILATURA EXTRACTION
         if trafilatura:
             try:
-                extracted = trafilatura.extract(
-                    html,
-                    **self.trafilatura_config
-                )
+                extracted = trafilatura.extract(html, **self.trafilatura_config)
 
                 if extracted:
                     self.logger.info(
-                        "trafilatura_extraction_success",
-                        content_length=len(extracted)
+                        "trafilatura_extraction_success", content_length=len(extracted)
                     )
                     return extracted
 
@@ -234,9 +231,7 @@ class HTMLProcessor:
 
             except Exception as e:
                 self.logger.warning(
-                    "trafilatura_extraction_failed",
-                    error=str(e),
-                    error_type=type(e).__name__
+                    "trafilatura_extraction_failed", error=str(e), error_type=type(e).__name__
                 )
 
         # FALLBACK: BASIC HTML PARSING
@@ -248,16 +243,13 @@ class HTMLProcessor:
             text = extractor.get_text()
 
             if text:
-                self.logger.info(
-                    "fallback_extraction_success",
-                    content_length=len(text)
-                )
+                self.logger.info("fallback_extraction_success", content_length=len(text))
                 return text
 
             raise ProcessingError(
                 message="Could not extract any text from HTML using fallback parser",
                 error_code="PROC_002",
-                details={"html_length": len(html)}
+                details={"html_length": len(html)},
             )
 
         except ProcessingError:
@@ -266,7 +258,7 @@ class HTMLProcessor:
             raise ProcessingError(
                 message=f"Fallback HTML parsing failed: {e}",
                 error_code="PROC_002",
-                original_exception=e
+                original_exception=e,
             )
 
     def extract_with_metadata(self, html: str) -> Dict[str, Any]:
@@ -302,14 +294,14 @@ class HTMLProcessor:
             raise ValidationError(
                 message=f"html must be a string, got {type(html).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "str", "actual_type": type(html).__name__}
+                details={"expected_type": "str", "actual_type": type(html).__name__},
             )
 
         if not html or not html.strip():
             raise ValidationError(
                 message="html cannot be empty or whitespace-only",
                 error_code="VAL_001",
-                details={"html_length": len(html)}
+                details={"html_length": len(html)},
             )
 
         self.logger.debug("extract_with_metadata_started")
@@ -332,28 +324,20 @@ class HTMLProcessor:
                     # Remove None values
                     metadata = {k: v for k, v in metadata.items() if v is not None}
 
-                    self.logger.debug(
-                        "metadata_extracted",
-                        metadata_keys=list(metadata.keys())
-                    )
+                    self.logger.debug("metadata_extracted", metadata_keys=list(metadata.keys()))
 
             except Exception as e:
                 self.logger.warning(
-                    "metadata_extraction_failed",
-                    error=str(e),
-                    error_type=type(e).__name__
+                    "metadata_extraction_failed", error=str(e), error_type=type(e).__name__
                 )
 
         self.logger.info(
             "extract_with_metadata_complete",
             content_length=len(content),
-            metadata_keys=list(metadata.keys())
+            metadata_keys=list(metadata.keys()),
         )
 
-        return {
-            "content": content,
-            "metadata": metadata
-        }
+        return {"content": content, "metadata": metadata}
 
     def extract_links(self, html: str) -> List[str]:
         """
@@ -382,7 +366,7 @@ class HTMLProcessor:
             raise ValidationError(
                 message=f"html must be a string, got {type(html).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "str", "actual_type": type(html).__name__}
+                details={"expected_type": "str", "actual_type": type(html).__name__},
             )
 
         self.logger.debug("extract_links_started")
@@ -392,23 +376,16 @@ class HTMLProcessor:
             extractor.feed(html)
             links = extractor.get_links()
 
-            self.logger.info(
-                "links_extracted",
-                num_links=len(links)
-            )
+            self.logger.info("links_extracted", num_links=len(links))
 
             return links
 
         except Exception as e:
-            self.logger.error(
-                "link_extraction_failed",
-                error=str(e),
-                error_type=type(e).__name__
-            )
+            self.logger.error("link_extraction_failed", error=str(e), error_type=type(e).__name__)
             raise ProcessingError(
                 message=f"Failed to extract links from HTML: {e}",
                 error_code="PROC_003",
-                original_exception=e
+                original_exception=e,
             )
 
     def detect_language(self, html: str) -> str:
@@ -437,14 +414,14 @@ class HTMLProcessor:
             raise ValidationError(
                 message=f"html must be a string, got {type(html).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "str", "actual_type": type(html).__name__}
+                details={"expected_type": "str", "actual_type": type(html).__name__},
             )
 
         if not html or not html.strip():
             raise ValidationError(
                 message="html cannot be empty or whitespace-only",
                 error_code="VAL_001",
-                details={"html_length": len(html)}
+                details={"html_length": len(html)},
             )
 
         self.logger.debug("detect_language_started")
@@ -459,26 +436,16 @@ class HTMLProcessor:
                     meta = trafilatura.extract_metadata(html)
                     if meta and meta.get("language"):
                         lang = meta["language"]
-                        self.logger.info(
-                            "language_detected",
-                            language=lang
-                        )
+                        self.logger.info("language_detected", language=lang)
                         return lang
                 except Exception as e:
-                    self.logger.debug(
-                        "trafilatura_language_detection_failed",
-                        error=str(e)
-                    )
+                    self.logger.debug("trafilatura_language_detection_failed", error=str(e))
 
             # Fallback: Simple language detection based on content
             # Try to detect common language patterns
             lang = self._simple_language_detect(content)
 
-            self.logger.info(
-                "language_detected",
-                language=lang,
-                method="fallback"
-            )
+            self.logger.info("language_detected", language=lang, method="fallback")
 
             return lang
 
@@ -488,7 +455,7 @@ class HTMLProcessor:
             raise ProcessingError(
                 message=f"Failed to detect language: {e}",
                 error_code="PROC_004",
-                original_exception=e
+                original_exception=e,
             )
 
     def _simple_language_detect(self, text: str) -> str:

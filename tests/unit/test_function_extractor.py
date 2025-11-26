@@ -20,10 +20,10 @@ from zapomni_core.code.function_extractor import (
 )
 from zapomni_core.exceptions import ExtractionError, ValidationError
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def extractor_basic():
@@ -55,6 +55,7 @@ def extractor_with_complexity():
 # ============================================================================
 # Test Initialization
 # ============================================================================
+
 
 class TestFunctionExtractorInitialization:
     """Test suite for FunctionExtractor initialization."""
@@ -95,6 +96,7 @@ class TestFunctionExtractorInitialization:
 # ============================================================================
 # Test Simple Function Extraction
 # ============================================================================
+
 
 class TestSimpleFunctionExtraction:
     """Test extraction of simple functions without parameters."""
@@ -152,6 +154,7 @@ def outer():
 # ============================================================================
 # Test Function with Parameters
 # ============================================================================
+
 
 class TestParameterExtraction:
     """Test extraction of function parameters."""
@@ -247,6 +250,7 @@ def complex_func(a: int, b: str = "x", *args, kw_only: float, **kwargs):
 # Test Docstring Extraction
 # ============================================================================
 
+
 class TestDocstringExtraction:
     """Test extraction of docstrings."""
 
@@ -299,6 +303,7 @@ def simple():
 # ============================================================================
 # Test Decorator Extraction
 # ============================================================================
+
 
 class TestDecoratorExtraction:
     """Test extraction of decorators."""
@@ -357,6 +362,7 @@ def get_value(self):
 # Test Async Functions
 # ============================================================================
 
+
 class TestAsyncFunctionExtraction:
     """Test extraction of async functions."""
 
@@ -388,6 +394,7 @@ def fetch_data(url):
 # ============================================================================
 # Test Generator Detection
 # ============================================================================
+
 
 class TestGeneratorDetection:
     """Test detection of generator functions."""
@@ -431,6 +438,7 @@ def regular():
 # Test Line Number Tracking
 # ============================================================================
 
+
 class TestLineNumberTracking:
     """Test tracking of function line numbers."""
 
@@ -470,6 +478,7 @@ def empty():
 # Test Function Body Extraction
 # ============================================================================
 
+
 class TestFunctionBodyExtraction:
     """Test extraction of function body source code."""
 
@@ -503,6 +512,7 @@ def add(x, y):
 # ============================================================================
 # Test Complexity Calculation
 # ============================================================================
+
 
 class TestComplexityCalculation:
     """Test cyclomatic complexity calculation."""
@@ -556,6 +566,7 @@ def decision(x):
 # Test Error Handling
 # ============================================================================
 
+
 class TestErrorHandling:
     """Test error handling for invalid inputs."""
 
@@ -606,6 +617,7 @@ def broken():
 # Test Metadata Serialization
 # ============================================================================
 
+
 class TestMetadataSerialization:
     """Test serialization of function metadata."""
 
@@ -646,6 +658,7 @@ def add(x: int, y: int) -> int:
 # ============================================================================
 # Test Return Type Extraction
 # ============================================================================
+
 
 class TestReturnTypeExtraction:
     """Test extraction of return type annotations."""
@@ -688,6 +701,7 @@ def no_return():
 # ============================================================================
 # Test Signature Generation
 # ============================================================================
+
 
 class TestSignatureGeneration:
     """Test function signature generation."""
@@ -732,6 +746,7 @@ async def fetch():
 # ============================================================================
 # Test Edge Cases
 # ============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and special scenarios."""

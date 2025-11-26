@@ -12,18 +12,19 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock
-from pydantic import ValidationError
 from uuid import uuid4
 
-from zapomni_mcp.tools.get_related import GetRelatedTool, GetRelatedRequest
-from zapomni_core.memory_processor import MemoryProcessor
-from zapomni_db.models import Entity
+import pytest
+from pydantic import ValidationError
+
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
     DatabaseError,
 )
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_db.models import Entity
+from zapomni_mcp.tools.get_related import GetRelatedRequest, GetRelatedTool
 
 
 class TestGetRelatedToolInit:

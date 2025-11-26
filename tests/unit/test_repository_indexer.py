@@ -10,16 +10,17 @@ Follows TDD approach with comprehensive mocking of dependencies.
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
 
 from zapomni_core.code.repository_indexer import (
-    CodeRepositoryIndexer,
     DEFAULT_CODE_EXTENSIONS,
     DEFAULT_IGNORE_PATTERNS,
+    CodeRepositoryIndexer,
 )
-from zapomni_core.exceptions import ValidationError, ProcessingError
+from zapomni_core.exceptions import ProcessingError, ValidationError
 
 
 class TestCodeRepositoryIndexerInit:

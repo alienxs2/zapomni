@@ -11,11 +11,12 @@ License: MIT
 
 import asyncio
 from typing import List, Optional, Union
+
 import structlog
 from sentence_transformers import CrossEncoder
 
+from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError
 
 logger = structlog.get_logger()
 
@@ -301,14 +302,18 @@ class CrossEncoderReranker:
             if self.fallback_enabled:
                 # Fallback: return results sorted by original scores
                 logger.info("using_fallback_scores")
-                return sorted(
-                    results,
-                    key=lambda x: x.relevance_score,
-                    reverse=True,
-                )[:top_k] if top_k else sorted(
-                    results,
-                    key=lambda x: x.relevance_score,
-                    reverse=True,
+                return (
+                    sorted(
+                        results,
+                        key=lambda x: x.relevance_score,
+                        reverse=True,
+                    )[:top_k]
+                    if top_k
+                    else sorted(
+                        results,
+                        key=lambda x: x.relevance_score,
+                        reverse=True,
+                    )
                 )
             else:
                 raise
@@ -323,14 +328,18 @@ class CrossEncoderReranker:
             if self.fallback_enabled:
                 # Fallback: return results sorted by original scores
                 logger.info("using_fallback_scores")
-                return sorted(
-                    results,
-                    key=lambda x: x.relevance_score,
-                    reverse=True,
-                )[:top_k] if top_k else sorted(
-                    results,
-                    key=lambda x: x.relevance_score,
-                    reverse=True,
+                return (
+                    sorted(
+                        results,
+                        key=lambda x: x.relevance_score,
+                        reverse=True,
+                    )[:top_k]
+                    if top_k
+                    else sorted(
+                        results,
+                        key=lambda x: x.relevance_score,
+                        reverse=True,
+                    )
                 )
             else:
                 raise SearchError(
@@ -479,10 +488,7 @@ class CrossEncoderReranker:
             )
 
         # Process queries concurrently
-        tasks = [
-            self.rerank(q["query"], q["results"])
-            for q in queries
-        ]
+        tasks = [self.rerank(q["query"], q["results"]) for q in queries]
 
         results = await asyncio.gather(*tasks, return_exceptions=False)
 

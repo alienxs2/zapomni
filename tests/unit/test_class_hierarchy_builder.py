@@ -16,23 +16,24 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import ast
 from typing import List
 
+import pytest
+
 from zapomni_core.code.class_hierarchy_builder import (
+    AttributeInfo,
     ClassHierarchyBuilder,
     ClassInfo,
-    MethodInfo,
-    AttributeInfo,
     HierarchyNode,
+    MethodInfo,
 )
-from zapomni_core.exceptions import ValidationError, ExtractionError
-
+from zapomni_core.exceptions import ExtractionError, ValidationError
 
 # ============================================================================
 # Test Data / Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def builder():
@@ -256,6 +257,7 @@ class AsyncTask:
 # Tests: Extract Classes (Basic)
 # ============================================================================
 
+
 class TestExtractClassesBasic:
     """Tests for basic class extraction."""
 
@@ -301,6 +303,7 @@ class TestExtractClassesBasic:
 # Tests: Base Classes & Inheritance
 # ============================================================================
 
+
 class TestBaseClasses:
     """Tests for base class extraction."""
 
@@ -339,6 +342,7 @@ class TestBaseClasses:
 # ============================================================================
 # Tests: Methods
 # ============================================================================
+
 
 class TestMethods:
     """Tests for method extraction and classification."""
@@ -424,6 +428,7 @@ class TestMethods:
 # Tests: Attributes
 # ============================================================================
 
+
 class TestAttributes:
     """Tests for attribute extraction."""
 
@@ -478,6 +483,7 @@ class TestAttributes:
 # Tests: Decorators
 # ============================================================================
 
+
 class TestDecorators:
     """Tests for decorator extraction."""
 
@@ -511,6 +517,7 @@ class Point:
 # Tests: Nested Classes
 # ============================================================================
 
+
 class TestNestedClasses:
     """Tests for nested class handling."""
 
@@ -538,6 +545,7 @@ class TestNestedClasses:
 # Tests: Abstract Classes
 # ============================================================================
 
+
 class TestAbstractClasses:
     """Tests for abstract class detection."""
 
@@ -561,6 +569,7 @@ class TestAbstractClasses:
 # ============================================================================
 # Tests: Build Hierarchy
 # ============================================================================
+
 
 class TestBuildHierarchy:
     """Tests for building class inheritance hierarchy."""
@@ -623,6 +632,7 @@ class TestBuildHierarchy:
 # Tests: ClassInfo Data Model
 # ============================================================================
 
+
 class TestClassInfoModel:
     """Tests for ClassInfo data model."""
 
@@ -656,6 +666,7 @@ class TestClassInfoModel:
 # Tests: Error Handling
 # ============================================================================
 
+
 class TestErrorHandling:
     """Tests for error handling."""
 
@@ -687,6 +698,7 @@ class TestErrorHandling:
 # ============================================================================
 # Tests: Complex Real-World Scenarios
 # ============================================================================
+
 
 class TestComplexScenarios:
     """Tests for complex real-world code patterns."""
@@ -766,6 +778,7 @@ class Container(Generic[T]):
 # ============================================================================
 # Tests: Integration
 # ============================================================================
+
 
 class TestIntegration:
     """Integration tests combining multiple features."""

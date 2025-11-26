@@ -13,23 +13,24 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from pydantic import ValidationError
 
-from zapomni_mcp.tools.build_graph import (
-    BuildGraphTool,
-    BuildGraphRequest,
-    BuildGraphOptions,
-    BuildGraphResponse,
-)
-from zapomni_core.memory_processor import MemoryProcessor
-from zapomni_core.extractors.entity_extractor import Entity
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    ExtractionError,
     DatabaseError,
+    ExtractionError,
     ProcessingError,
+)
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.extractors.entity_extractor import Entity
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_mcp.tools.build_graph import (
+    BuildGraphOptions,
+    BuildGraphRequest,
+    BuildGraphResponse,
+    BuildGraphTool,
 )
 
 

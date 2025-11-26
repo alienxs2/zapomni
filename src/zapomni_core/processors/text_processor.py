@@ -10,19 +10,20 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 import structlog
 
 from zapomni_core.chunking.semantic_chunker import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
-from zapomni_db.falkordb_client import FalkorDBClient
 from zapomni_core.exceptions import (
-    ValidationError,
-    ProcessingError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
+    ProcessingError,
+    ValidationError,
 )
-from zapomni_db.models import Memory, Chunk
+from zapomni_db.falkordb_client import FalkorDBClient
+from zapomni_db.models import Chunk, Memory
 
 
 class TextProcessor:
@@ -92,11 +93,7 @@ class TextProcessor:
             db_type=type(self.db_client).__name__,
         )
 
-    async def add_text(
-        self,
-        text: str,
-        metadata: Dict[str, Any]
-    ) -> str:
+    async def add_text(self, text: str, metadata: Dict[str, Any]) -> str:
         """
         Process text and store as memory in database.
 
@@ -155,7 +152,7 @@ class TextProcessor:
         self.logger.debug(
             "add_text_started",
             text_length=len(text) if isinstance(text, str) else 0,
-            metadata_keys=list(metadata.keys()) if isinstance(metadata, dict) else []
+            metadata_keys=list(metadata.keys()) if isinstance(metadata, dict) else [],
         )
 
         # Validate text
@@ -163,14 +160,14 @@ class TextProcessor:
             raise ValidationError(
                 message=f"text must be a string, got {type(text).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "str", "actual_type": type(text).__name__}
+                details={"expected_type": "str", "actual_type": type(text).__name__},
             )
 
         if not text or not text.strip():
             raise ValidationError(
                 message="text cannot be empty or whitespace-only",
                 error_code="VAL_001",
-                details={"text_length": len(text)}
+                details={"text_length": len(text)},
             )
 
         # Validate metadata
@@ -178,47 +175,33 @@ class TextProcessor:
             raise ValidationError(
                 message=f"metadata must be a dict, got {type(metadata).__name__}",
                 error_code="VAL_002",
-                details={"expected_type": "dict", "actual_type": type(metadata).__name__}
+                details={"expected_type": "dict", "actual_type": type(metadata).__name__},
             )
 
         # STEP 2: CHUNK TEXT
-        self.logger.info(
-            "chunking_text",
-            text_length=len(text)
-        )
+        self.logger.info("chunking_text", text_length=len(text))
 
         try:
             chunks: List[Chunk] = self.chunker.chunk_text(text)
         except ProcessingError:
             # Re-raise ProcessingError as-is
-            self.logger.error(
-                "chunking_failed",
-                text_length=len(text)
-            )
+            self.logger.error("chunking_failed", text_length=len(text))
             raise
         except Exception as e:
             # Wrap unexpected errors
             self.logger.error(
-                "chunking_unexpected_error",
-                error=str(e),
-                error_type=type(e).__name__
+                "chunking_unexpected_error", error=str(e), error_type=type(e).__name__
             )
             raise ProcessingError(
                 message=f"Unexpected error during chunking: {e}",
                 error_code="PROC_001",
-                original_exception=e
+                original_exception=e,
             )
 
-        self.logger.info(
-            "chunking_complete",
-            num_chunks=len(chunks)
-        )
+        self.logger.info("chunking_complete", num_chunks=len(chunks))
 
         # STEP 3: GENERATE EMBEDDINGS
-        self.logger.info(
-            "generating_embeddings",
-            num_chunks=len(chunks)
-        )
+        self.logger.info("generating_embeddings", num_chunks=len(chunks))
 
         # Extract chunk texts for embedding
         chunk_texts = [chunk.text for chunk in chunks]
@@ -227,28 +210,20 @@ class TextProcessor:
             embeddings: List[List[float]] = await self.embedder.embed_batch(chunk_texts)
         except EmbeddingError:
             # Re-raise EmbeddingError as-is
-            self.logger.error(
-                "embedding_failed",
-                num_chunks=len(chunks)
-            )
+            self.logger.error("embedding_failed", num_chunks=len(chunks))
             raise
         except Exception as e:
             # Wrap unexpected errors
             self.logger.error(
-                "embedding_unexpected_error",
-                error=str(e),
-                error_type=type(e).__name__
+                "embedding_unexpected_error", error=str(e), error_type=type(e).__name__
             )
             raise EmbeddingError(
                 message=f"Unexpected error during embedding: {e}",
                 error_code="EMB_001",
-                original_exception=e
+                original_exception=e,
             )
 
-        self.logger.info(
-            "embedding_complete",
-            num_embeddings=len(embeddings)
-        )
+        self.logger.info("embedding_complete", num_embeddings=len(embeddings))
 
         # STEP 4: VALIDATE PIPELINE RESULTS
         # Ensure chunks and embeddings count match
@@ -256,10 +231,7 @@ class TextProcessor:
             raise ProcessingError(
                 message=f"Chunks/embeddings count mismatch: {len(chunks)} chunks, {len(embeddings)} embeddings",
                 error_code="PROC_001",
-                details={
-                    "num_chunks": len(chunks),
-                    "num_embeddings": len(embeddings)
-                }
+                details={"num_chunks": len(chunks), "num_embeddings": len(embeddings)},
             )
 
         # Validate embedding dimensions (must be 768)
@@ -271,45 +243,31 @@ class TextProcessor:
                     details={
                         "index": i,
                         "expected_dimension": 768,
-                        "actual_dimension": len(embedding)
-                    }
+                        "actual_dimension": len(embedding),
+                    },
                 )
 
         # STEP 5: CREATE MEMORY OBJECT
-        memory = Memory(
-            text=text,
-            chunks=chunks,
-            embeddings=embeddings,
-            metadata=metadata
-        )
+        memory = Memory(text=text, chunks=chunks, embeddings=embeddings, metadata=metadata)
 
         # STEP 6: STORE IN DATABASE
         self.logger.info(
-            "storing_memory",
-            num_chunks=len(chunks),
-            metadata_keys=list(metadata.keys())
+            "storing_memory", num_chunks=len(chunks), metadata_keys=list(metadata.keys())
         )
 
         try:
             memory_id = await self.db_client.add_memory(memory)
         except DatabaseError:
             # Re-raise DatabaseError as-is
-            self.logger.error(
-                "storage_failed",
-                num_chunks=len(chunks)
-            )
+            self.logger.error("storage_failed", num_chunks=len(chunks))
             raise
         except Exception as e:
             # Wrap unexpected errors
-            self.logger.error(
-                "storage_unexpected_error",
-                error=str(e),
-                error_type=type(e).__name__
-            )
+            self.logger.error("storage_unexpected_error", error=str(e), error_type=type(e).__name__)
             raise DatabaseError(
                 message=f"Unexpected error during storage: {e}",
                 error_code="DB_001",
-                original_exception=e
+                original_exception=e,
             )
 
         # STEP 7: SUCCESS
@@ -317,7 +275,7 @@ class TextProcessor:
             "text_processed_successfully",
             memory_id=memory_id,
             num_chunks=len(chunks),
-            text_length=len(text)
+            text_length=len(text),
         )
 
         return memory_id

@@ -16,20 +16,19 @@ from __future__ import annotations
 import json
 import uuid
 import xml.etree.ElementTree as ET
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import structlog
 
-from zapomni_db import FalkorDBClient
 from zapomni_core.exceptions import (
-    ValidationError,
     DatabaseError,
     ProcessingError,
+    ValidationError,
 )
-
+from zapomni_db import FalkorDBClient
 
 logger = structlog.get_logger(__name__)
 

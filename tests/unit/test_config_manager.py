@@ -8,8 +8,9 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 def test_config_manager_alias_exists():
@@ -21,8 +22,8 @@ def test_config_manager_alias_exists():
 
 def test_config_manager_is_zapomni_settings():
     """Test that ConfigManager is an alias for ZapomniSettings."""
-    from zapomni_mcp.config import ConfigManager
     from zapomni_core.config import ZapomniSettings
+    from zapomni_mcp.config import ConfigManager
 
     # ConfigManager should be the same class as ZapomniSettings
     assert ConfigManager is ZapomniSettings
@@ -30,8 +31,8 @@ def test_config_manager_is_zapomni_settings():
 
 def test_zapomni_settings_reexport():
     """Test that ZapomniSettings is re-exported from zapomni_mcp."""
-    from zapomni_mcp.config import ZapomniSettings
     from zapomni_core.config import ZapomniSettings as CoreSettings
+    from zapomni_mcp.config import ZapomniSettings
 
     # Should be the same class
     assert ZapomniSettings is CoreSettings
@@ -39,8 +40,8 @@ def test_zapomni_settings_reexport():
 
 def test_get_config_summary_reexport():
     """Test that get_config_summary is re-exported."""
-    from zapomni_mcp.config import get_config_summary
     from zapomni_core.config import get_config_summary as core_get_config_summary
+    from zapomni_mcp.config import get_config_summary
 
     # Should be the same function
     assert get_config_summary is core_get_config_summary
@@ -48,8 +49,8 @@ def test_get_config_summary_reexport():
 
 def test_validate_configuration_reexport():
     """Test that validate_configuration is re-exported."""
-    from zapomni_mcp.config import validate_configuration
     from zapomni_core.config import validate_configuration as core_validate_configuration
+    from zapomni_mcp.config import validate_configuration
 
     # Should be the same function
     assert validate_configuration is core_validate_configuration
@@ -61,8 +62,7 @@ def test_config_manager_instantiation():
 
     # Create instance with custom values to avoid side effects
     config = ConfigManager(
-        data_dir=Path("/tmp/test_zapomni_data"),
-        temp_dir=Path("/tmp/test_zapomni_temp")
+        data_dir=Path("/tmp/test_zapomni_data"), temp_dir=Path("/tmp/test_zapomni_temp")
     )
 
     assert config is not None
@@ -77,7 +77,7 @@ def test_config_manager_defaults():
 
     config = ConfigManager(
         data_dir=Path("/tmp/test_zapomni_data_defaults"),
-        temp_dir=Path("/tmp/test_zapomni_temp_defaults")
+        temp_dir=Path("/tmp/test_zapomni_temp_defaults"),
     )
 
     # Test FalkorDB defaults
@@ -101,8 +101,7 @@ def test_config_manager_computed_properties():
     from zapomni_mcp.config import ConfigManager
 
     config = ConfigManager(
-        data_dir=Path("/tmp/test_zapomni_data_props"),
-        temp_dir=Path("/tmp/test_zapomni_temp_props")
+        data_dir=Path("/tmp/test_zapomni_data_props"), temp_dir=Path("/tmp/test_zapomni_temp_props")
     )
 
     # Test computed properties exist and work
@@ -127,7 +126,7 @@ def test_module_all_export():
         "ConfigManager",
         "ZapomniSettings",
         "get_config_summary",
-        "validate_configuration"
+        "validate_configuration",
     ]
 
     for export in expected_exports:
@@ -140,7 +139,7 @@ def test_helper_functions_work():
 
     config = ConfigManager(
         data_dir=Path("/tmp/test_zapomni_data_helpers"),
-        temp_dir=Path("/tmp/test_zapomni_temp_helpers")
+        temp_dir=Path("/tmp/test_zapomni_temp_helpers"),
     )
 
     # Test get_config_summary
@@ -160,6 +159,7 @@ def test_no_import_errors():
     """Test that importing config module doesn't raise errors."""
     try:
         import zapomni_mcp.config
+
         assert True
     except ImportError as e:
         pytest.fail(f"Import failed: {e}")
@@ -167,15 +167,16 @@ def test_no_import_errors():
 
 def test_config_manager_validation():
     """Test that ConfigManager validates configuration."""
-    from zapomni_mcp.config import ConfigManager
     from pydantic import ValidationError
+
+    from zapomni_mcp.config import ConfigManager
 
     # Test invalid port raises ValidationError
     with pytest.raises(ValidationError):
         ConfigManager(
             falkordb_port=99999,  # Out of valid range
             data_dir=Path("/tmp/test_zapomni_invalid"),
-            temp_dir=Path("/tmp/test_zapomni_temp_invalid")
+            temp_dir=Path("/tmp/test_zapomni_temp_invalid"),
         )
 
 
@@ -189,7 +190,7 @@ def test_config_manager_custom_values():
         max_chunk_size=1024,
         log_level="DEBUG",
         data_dir=Path("/tmp/test_zapomni_custom"),
-        temp_dir=Path("/tmp/test_zapomni_temp_custom")
+        temp_dir=Path("/tmp/test_zapomni_temp_custom"),
     )
 
     assert config.falkordb_host == "custom.db.host"
@@ -206,7 +207,7 @@ def test_import_from_mcp_package():
         ConfigManager,
         ZapomniSettings,
         get_config_summary,
-        validate_configuration
+        validate_configuration,
     )
 
     assert ConfigManager is not None

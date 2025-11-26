@@ -13,32 +13,33 @@ Test Coverage:
 Total: 31+ comprehensive tests
 """
 
-import pytest
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from typing import List
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import pytest
+
+from zapomni_core.exceptions import (
+    DatabaseError,
+    ExtractionError,
+    ProcessingError,
+    ValidationError,
+)
+from zapomni_core.extractors.entity_extractor import Entity, EntityExtractor
 from zapomni_core.graph.graph_builder import (
     GraphBuilder,
     GraphNode,
     GraphRelationship,
 )
-from zapomni_core.extractors.entity_extractor import Entity, EntityExtractor
 from zapomni_db import FalkorDBClient
 from zapomni_db.models import Entity as DBEntity
-from zapomni_core.exceptions import (
-    ValidationError,
-    ExtractionError,
-    DatabaseError,
-    ProcessingError,
-)
-
 
 # ============================================================================
 # __init__ TESTS (5 tests)
 # ============================================================================
+
 
 class TestGraphBuilderInit:
     """Test GraphBuilder initialization."""
@@ -89,6 +90,7 @@ class TestGraphBuilderInit:
 # ============================================================================
 # build_graph TESTS (8 tests)
 # ============================================================================
+
 
 class TestGraphBuilderBuildGraph:
     """Test GraphBuilder.build_graph method."""
@@ -152,7 +154,9 @@ class TestGraphBuilderBuildGraph:
 
         # Mock entities
         entities = [
-            Entity(name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.9),
+            Entity(
+                name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.9
+            ),
             Entity(name="Google", type="ORG", description="Tech company", confidence=0.95),
         ]
         extractor.extract_entities.return_value = entities
@@ -230,6 +234,7 @@ class TestGraphBuilderBuildGraph:
 # add_entity_nodes TESTS (6 tests)
 # ============================================================================
 
+
 class TestGraphBuilderAddEntityNodes:
     """Test GraphBuilder.add_entity_nodes method."""
 
@@ -267,7 +272,9 @@ class TestGraphBuilderAddEntityNodes:
         """Test adding a single entity."""
         builder, _, db_client = setup
 
-        entity = Entity(name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.9)
+        entity = Entity(
+            name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.9
+        )
         db_client.add_entity.return_value = "entity-1"
 
         created, merged = await builder.add_entity_nodes([entity])
@@ -352,6 +359,7 @@ class TestGraphBuilderAddEntityNodes:
 # add_relationships TESTS (3 tests)
 # ============================================================================
 
+
 class TestGraphBuilderAddRelationships:
     """Test GraphBuilder.add_relationships method."""
 
@@ -401,6 +409,7 @@ class TestGraphBuilderAddRelationships:
 # get_graph_stats TESTS (2 tests)
 # ============================================================================
 
+
 class TestGraphBuilderGetGraphStats:
     """Test GraphBuilder.get_graph_stats method."""
 
@@ -434,6 +443,7 @@ class TestGraphBuilderGetGraphStats:
 # clear_cache TESTS (1 test)
 # ============================================================================
 
+
 class TestGraphBuilderClearCache:
     """Test GraphBuilder.clear_cache method."""
 
@@ -457,6 +467,7 @@ class TestGraphBuilderClearCache:
 # ============================================================================
 # GraphNode and GraphRelationship TESTS (4 tests)
 # ============================================================================
+
 
 class TestGraphNode:
     """Test GraphNode data model."""
@@ -532,6 +543,7 @@ class TestGraphRelationship:
 # ============================================================================
 # Integration Tests (3 tests)
 # ============================================================================
+
 
 class TestGraphBuilderIntegration:
     """Integration tests for GraphBuilder."""

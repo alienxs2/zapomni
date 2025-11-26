@@ -14,14 +14,13 @@ License: MIT
 import argparse
 import asyncio
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from zapomni_mcp.config import Settings, SSEConfig
 from zapomni_mcp.server import MCPServer
-
 
 # Fixtures
 
@@ -43,9 +42,7 @@ def mock_memory_processor():
     mock.clear_all = AsyncMock(return_value={"cleared": True})
     mock.build_graph = AsyncMock(return_value={"entities": [], "relationships": []})
     mock.get_related = AsyncMock(return_value=[])
-    mock.graph_status = AsyncMock(
-        return_value={"total_nodes": 0, "total_relationships": 0}
-    )
+    mock.graph_status = AsyncMock(return_value={"total_nodes": 0, "total_relationships": 0})
     mock.export_graph = AsyncMock(return_value="")
     mock.code_indexer = None
     return mock
@@ -68,9 +65,7 @@ def mock_core_engine():
     mock.clear_all = AsyncMock(return_value={"cleared": True})
     mock.build_graph = AsyncMock(return_value={"entities": [], "relationships": []})
     mock.get_related = AsyncMock(return_value=[])
-    mock.graph_status = AsyncMock(
-        return_value={"total_nodes": 0, "total_relationships": 0}
-    )
+    mock.graph_status = AsyncMock(return_value={"total_nodes": 0, "total_relationships": 0})
     mock.export_graph = AsyncMock(return_value="")
     return mock
 
@@ -286,7 +281,9 @@ class TestToolRegistration:
         mock_tool.name = "test_tool"
         mock_tool.description = "A test tool"
         mock_tool.input_schema = {"type": "object"}
-        mock_tool.execute = AsyncMock(return_value={"content": [{"type": "text", "text": "success"}], "isError": False})
+        mock_tool.execute = AsyncMock(
+            return_value={"content": [{"type": "text", "text": "success"}], "isError": False}
+        )
 
         mcp_server.register_tool(mock_tool)
 

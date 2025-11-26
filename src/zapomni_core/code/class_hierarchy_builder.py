@@ -35,6 +35,7 @@ logger = get_logger(__name__)
 # Data Models
 # ============================================================================
 
+
 @dataclass
 class MethodInfo:
     """
@@ -50,6 +51,7 @@ class MethodInfo:
         end_lineno: End line number (if available)
         is_async: Whether method is async
     """
+
     name: str
     type: str
     args: List[str]
@@ -71,6 +73,7 @@ class AttributeInfo:
         value: Default value as string (if present)
         lineno: Line number where attribute is defined
     """
+
     name: str
     type_annotation: Optional[str] = None
     value: Optional[str] = None
@@ -94,6 +97,7 @@ class ClassInfo:
         parent_class: Name of parent class if nested (None if module-level)
         is_abstract: Whether class is abstract (has abc.ABC base or abstractmethod)
     """
+
     name: str
     base_classes: List[str] = field(default_factory=list)
     methods: List[MethodInfo] = field(default_factory=list)
@@ -108,36 +112,36 @@ class ClassInfo:
     def to_dict(self) -> Dict[str, Any]:
         """Convert ClassInfo to dictionary."""
         return {
-            'name': self.name,
-            'base_classes': self.base_classes,
-            'methods': [
+            "name": self.name,
+            "base_classes": self.base_classes,
+            "methods": [
                 {
-                    'name': m.name,
-                    'type': m.type,
-                    'args': m.args,
-                    'docstring': m.docstring,
-                    'decorators': m.decorators,
-                    'lineno': m.lineno,
-                    'end_lineno': m.end_lineno,
-                    'is_async': m.is_async,
+                    "name": m.name,
+                    "type": m.type,
+                    "args": m.args,
+                    "docstring": m.docstring,
+                    "decorators": m.decorators,
+                    "lineno": m.lineno,
+                    "end_lineno": m.end_lineno,
+                    "is_async": m.is_async,
                 }
                 for m in self.methods
             ],
-            'attributes': [
+            "attributes": [
                 {
-                    'name': a.name,
-                    'type_annotation': a.type_annotation,
-                    'value': a.value,
-                    'lineno': a.lineno,
+                    "name": a.name,
+                    "type_annotation": a.type_annotation,
+                    "value": a.value,
+                    "lineno": a.lineno,
                 }
                 for a in self.attributes
             ],
-            'docstring': self.docstring,
-            'decorators': self.decorators,
-            'lineno': self.lineno,
-            'end_lineno': self.end_lineno,
-            'parent_class': self.parent_class,
-            'is_abstract': self.is_abstract,
+            "docstring": self.docstring,
+            "decorators": self.decorators,
+            "lineno": self.lineno,
+            "end_lineno": self.end_lineno,
+            "parent_class": self.parent_class,
+            "is_abstract": self.is_abstract,
         }
 
 
@@ -151,6 +155,7 @@ class HierarchyNode:
         children: List of child classes (subclasses)
         depth: Depth in hierarchy (0 = root)
     """
+
     class_info: ClassInfo
     children: List[HierarchyNode] = field(default_factory=list)
     depth: int = 0
@@ -159,6 +164,7 @@ class HierarchyNode:
 # ============================================================================
 # ClassHierarchyBuilder
 # ============================================================================
+
 
 class ClassHierarchyBuilder:
     """
@@ -199,8 +205,7 @@ class ClassHierarchyBuilder:
         """
         if not isinstance(ast_tree, ast.Module):
             raise ValidationError(
-                "ast_tree must be an ast.Module instance",
-                error_code="ERR_INVALID_AST_TYPE"
+                "ast_tree must be an ast.Module instance", error_code="ERR_INVALID_AST_TYPE"
             )
 
         try:
@@ -212,22 +217,16 @@ class ClassHierarchyBuilder:
             for class_info in visitor.classes:
                 self._class_name_map[class_info.name] = class_info
 
-            self.logger.info(
-                "classes_extracted",
-                count=len(visitor.classes)
-            )
+            self.logger.info("classes_extracted", count=len(visitor.classes))
 
             return visitor.classes
 
         except Exception as exc:
-            self.logger.error(
-                "class_extraction_failed",
-                error=str(exc)
-            )
+            self.logger.error("class_extraction_failed", error=str(exc))
             raise ExtractionError(
                 message="Failed to extract classes from AST",
                 details={"error": str(exc)},
-                original_exception=exc
+                original_exception=exc,
             )
 
     def get_base_classes(self, node: ast.ClassDef) -> List[str]:
@@ -253,9 +252,7 @@ class ClassHierarchyBuilder:
             return base_classes
         except Exception as exc:
             self.logger.warning(
-                "base_class_extraction_failed",
-                class_name=node.name,
-                error=str(exc)
+                "base_class_extraction_failed", class_name=node.name, error=str(exc)
             )
             return []
 
@@ -292,7 +289,7 @@ class ClassHierarchyBuilder:
                         docstring=ast.get_docstring(item),
                         decorators=decorator_names,
                         lineno=item.lineno,
-                        end_lineno=getattr(item, 'end_lineno', None),
+                        end_lineno=getattr(item, "end_lineno", None),
                         is_async=isinstance(item, ast.AsyncFunctionDef),
                     )
                     methods.append(method_info)
@@ -300,11 +297,7 @@ class ClassHierarchyBuilder:
             return methods
 
         except Exception as exc:
-            self.logger.warning(
-                "method_extraction_failed",
-                class_name=node.name,
-                error=str(exc)
-            )
+            self.logger.warning("method_extraction_failed", class_name=node.name, error=str(exc))
             return []
 
     def get_attributes(self, node: ast.ClassDef) -> List[AttributeInfo]:
@@ -350,7 +343,7 @@ class ClassHierarchyBuilder:
                         if isinstance(target, ast.Name):
                             # Skip if this looks like a method or constant-like name
                             # (heuristic: starts with _)
-                            if not target.id.startswith('_'):
+                            if not target.id.startswith("_"):
                                 value = ast.unparse(item.value)
                                 attributes.append(
                                     AttributeInfo(
@@ -363,11 +356,7 @@ class ClassHierarchyBuilder:
             return attributes
 
         except Exception as exc:
-            self.logger.warning(
-                "attribute_extraction_failed",
-                class_name=node.name,
-                error=str(exc)
-            )
+            self.logger.warning("attribute_extraction_failed", class_name=node.name, error=str(exc))
             return []
 
     def build_hierarchy(
@@ -414,20 +403,22 @@ class ClassHierarchyBuilder:
             self.logger.info(
                 "hierarchy_built",
                 total_classes=len(classes),
-                roots=sum(1 for c in class_info.base_classes if not c in class_map for class_info in classes)
+                roots=sum(
+                    1
+                    for c in class_info.base_classes
+                    if not c in class_map
+                    for class_info in classes
+                ),
             )
 
             return nodes
 
         except Exception as exc:
-            self.logger.error(
-                "hierarchy_building_failed",
-                error=str(exc)
-            )
+            self.logger.error("hierarchy_building_failed", error=str(exc))
             raise ExtractionError(
                 message="Failed to build class hierarchy",
                 details={"error": str(exc)},
-                original_exception=exc
+                original_exception=exc,
             )
 
     # ========================================================================
@@ -455,12 +446,12 @@ class ClassHierarchyBuilder:
     @staticmethod
     def _classify_method(decorators: List[str]) -> str:
         """Classify method type based on decorators."""
-        if 'classmethod' in decorators:
-            return 'class'
-        elif 'staticmethod' in decorators:
-            return 'static'
+        if "classmethod" in decorators:
+            return "class"
+        elif "staticmethod" in decorators:
+            return "static"
         else:
-            return 'instance'
+            return "instance"
 
     @staticmethod
     def _get_method_args(
@@ -472,13 +463,13 @@ class ClassHierarchyBuilder:
         start_index = 0
 
         # Skip first argument for instance and class methods
-        if method_type in ('instance', 'class'):
+        if method_type in ("instance", "class"):
             start_index = 1
 
         arguments = node.args
 
         # Positional-only args
-        for arg in getattr(arguments, 'posonlyargs', [])[start_index:]:
+        for arg in getattr(arguments, "posonlyargs", [])[start_index:]:
             args.append(arg.arg)
 
         # Regular args
@@ -503,6 +494,7 @@ class ClassHierarchyBuilder:
 # ============================================================================
 # AST Visitor
 # ============================================================================
+
 
 class _ClassVisitor(ast.NodeVisitor):
     """AST visitor to extract class definitions."""
@@ -531,10 +523,7 @@ class _ClassVisitor(ast.NodeVisitor):
         ]
 
         # Check if abstract
-        is_abstract = (
-            'abstractmethod' in decorators or
-            any('ABC' in base for base in base_classes)
-        )
+        is_abstract = "abstractmethod" in decorators or any("ABC" in base for base in base_classes)
 
         # Create ClassInfo
         class_info = ClassInfo(
@@ -545,7 +534,7 @@ class _ClassVisitor(ast.NodeVisitor):
             docstring=ast.get_docstring(node),
             decorators=decorators,
             lineno=node.lineno,
-            end_lineno=getattr(node, 'end_lineno', None),
+            end_lineno=getattr(node, "end_lineno", None),
             parent_class=self.parent_stack[-1] if self.parent_stack else None,
             is_abstract=is_abstract,
         )

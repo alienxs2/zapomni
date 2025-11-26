@@ -8,14 +8,15 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
 from typing import List
-import numpy as np
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import numpy as np
+import pytest
+
+from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_core.search.reranker import CrossEncoderReranker
 from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError
 
 
 class TestCrossEncoderRerankerInit:
@@ -23,7 +24,7 @@ class TestCrossEncoderRerankerInit:
 
     def test_init_with_default_model(self):
         """Test initialization with default model."""
-        with patch('zapomni_core.search.reranker.CrossEncoder'):
+        with patch("zapomni_core.search.reranker.CrossEncoder"):
             reranker = CrossEncoderReranker()
 
             assert reranker.model_name == "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -33,7 +34,7 @@ class TestCrossEncoderRerankerInit:
     def test_init_with_custom_model_name(self):
         """Test initialization with custom model name."""
         custom_model = "cross-encoder/ms-marco-MiniLM-L-12-v2"
-        with patch('zapomni_core.search.reranker.CrossEncoder'):
+        with patch("zapomni_core.search.reranker.CrossEncoder"):
             reranker = CrossEncoderReranker(model_name=custom_model)
 
             assert reranker.model_name == custom_model
@@ -41,7 +42,7 @@ class TestCrossEncoderRerankerInit:
 
     def test_init_with_fallback_disabled(self):
         """Test initialization with fallback disabled."""
-        with patch('zapomni_core.search.reranker.CrossEncoder'):
+        with patch("zapomni_core.search.reranker.CrossEncoder"):
             reranker = CrossEncoderReranker(fallback_enabled=False)
 
             assert reranker.fallback_enabled is False
@@ -55,7 +56,7 @@ class TestCrossEncoderRerankerInit:
 
     def test_init_with_none_model_name_uses_default(self):
         """Test initialization with None model_name uses default."""
-        with patch('zapomni_core.search.reranker.CrossEncoder'):
+        with patch("zapomni_core.search.reranker.CrossEncoder"):
             reranker = CrossEncoderReranker(model_name=None)
 
             assert reranker.model_name == CrossEncoderReranker.DEFAULT_MODEL
@@ -74,7 +75,7 @@ class TestCrossEncoderRerankerModelLoading:
     def test_load_model_loads_cross_encoder(self):
         """Test that _load_model loads CrossEncoder."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
 
@@ -83,7 +84,9 @@ class TestCrossEncoderRerankerModelLoading:
     def test_load_model_caches_model(self):
         """Test that _load_model caches the model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder) as mock_ce:
+        with patch(
+            "zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder
+        ) as mock_ce:
             reranker = CrossEncoderReranker()
             reranker._load_model()
             reranker._load_model()  # Call again
@@ -93,7 +96,9 @@ class TestCrossEncoderRerankerModelLoading:
 
     def test_load_model_failure_raises_search_error(self):
         """Test that model loading failure raises SearchError."""
-        with patch('zapomni_core.search.reranker.CrossEncoder', side_effect=OSError("Model not found")):
+        with patch(
+            "zapomni_core.search.reranker.CrossEncoder", side_effect=OSError("Model not found")
+        ):
             reranker = CrossEncoderReranker()
 
             with pytest.raises(SearchError) as exc_info:
@@ -109,7 +114,7 @@ class TestCrossEncoderRerankerRerank:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -122,19 +127,19 @@ class TestCrossEncoderRerankerRerank:
                 memory_id="mem-1",
                 content="Python is a programming language",
                 relevance_score=0.8,
-                metadata={"source": "docs"}
+                metadata={"source": "docs"},
             ),
             SearchResult(
                 memory_id="mem-2",
                 content="Java is an object-oriented programming language",
                 relevance_score=0.7,
-                metadata={"source": "wiki"}
+                metadata={"source": "wiki"},
             ),
             SearchResult(
                 memory_id="mem-3",
                 content="C++ is a compiled programming language",
                 relevance_score=0.6,
-                metadata={"source": "manual"}
+                metadata={"source": "manual"},
             ),
         ]
 
@@ -182,11 +187,7 @@ class TestCrossEncoderRerankerRerank:
 
         mock_reranker.model.predict.return_value = np.array([2.0, 1.0, 0.5])
 
-        result = await mock_reranker.rerank(
-            query=query,
-            results=sample_search_results,
-            top_k=2
-        )
+        result = await mock_reranker.rerank(query=query, results=sample_search_results, top_k=2)
 
         assert len(result) == 2
         assert result[0].memory_id == "mem-1"
@@ -208,10 +209,7 @@ class TestCrossEncoderRerankerRerank:
     async def test_rerank_result_without_content_raises_error(self, mock_reranker):
         """Test reranking fails when result has no content."""
         result = SearchResult(
-            memory_id="mem-1",
-            content="",  # Empty content
-            relevance_score=0.8,
-            metadata={}
+            memory_id="mem-1", content="", relevance_score=0.8, metadata={}  # Empty content
         )
 
         with pytest.raises(ValidationError):
@@ -262,7 +260,7 @@ class TestCrossEncoderRerankerRerank:
         mock_encoder = MagicMock()
         mock_encoder.predict.side_effect = Exception("Model error")
 
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker(fallback_enabled=False)
             reranker._load_model()
 
@@ -275,11 +273,7 @@ class TestCrossEncoderRerankerRerank:
         query = "test"
 
         with pytest.raises(ValidationError):
-            await mock_reranker.rerank(
-                query=query,
-                results=sample_search_results,
-                top_k=0
-            )
+            await mock_reranker.rerank(query=query, results=sample_search_results, top_k=0)
 
 
 class TestCrossEncoderRerankerScoring:
@@ -289,7 +283,7 @@ class TestCrossEncoderRerankerScoring:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -314,7 +308,7 @@ class TestCrossEncoderRerankerScoring:
         contents = [
             "Python is a programming language",
             "Java is an object-oriented language",
-            "C++ is compiled"
+            "C++ is compiled",
         ]
 
         mock_reranker.model.predict.return_value = np.array([2.0, -1.0, -2.0])
@@ -377,7 +371,7 @@ class TestCrossEncoderRerankerBatchProcessing:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -389,21 +383,22 @@ class TestCrossEncoderRerankerBatchProcessing:
             {
                 "query": "Python",
                 "results": [
-                    SearchResult(memory_id="m1", content="Python code", relevance_score=0.8, metadata={})
-                ]
+                    SearchResult(
+                        memory_id="m1", content="Python code", relevance_score=0.8, metadata={}
+                    )
+                ],
             },
             {
                 "query": "Java",
                 "results": [
-                    SearchResult(memory_id="m2", content="Java code", relevance_score=0.7, metadata={})
-                ]
-            }
+                    SearchResult(
+                        memory_id="m2", content="Java code", relevance_score=0.7, metadata={}
+                    )
+                ],
+            },
         ]
 
-        mock_reranker.model.predict.side_effect = [
-            np.array([2.0]),
-            np.array([1.5])
-        ]
+        mock_reranker.model.predict.side_effect = [np.array([2.0]), np.array([1.5])]
 
         results = await mock_reranker.rerank_batch(batch_queries)
 
@@ -425,7 +420,7 @@ class TestCrossEncoderRerankerErrorHandling:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -433,7 +428,9 @@ class TestCrossEncoderRerankerErrorHandling:
     @pytest.mark.asyncio
     async def test_rerank_model_loading_error_handled(self):
         """Test handling of model loading errors."""
-        with patch('zapomni_core.search.reranker.CrossEncoder', side_effect=OSError("Model not found")):
+        with patch(
+            "zapomni_core.search.reranker.CrossEncoder", side_effect=OSError("Model not found")
+        ):
             reranker = CrossEncoderReranker()
 
             with pytest.raises(SearchError):
@@ -453,7 +450,7 @@ class TestCrossEncoderRerankerEdgeCases:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -462,9 +459,7 @@ class TestCrossEncoderRerankerEdgeCases:
     async def test_rerank_very_long_query(self, mock_reranker):
         """Test reranking with very long query."""
         long_query = "Python programming language " * 100
-        results = [
-            SearchResult(memory_id="m1", content="Python", relevance_score=0.8, metadata={})
-        ]
+        results = [SearchResult(memory_id="m1", content="Python", relevance_score=0.8, metadata={})]
 
         mock_reranker.model.predict.return_value = np.array([1.5])
 
@@ -478,10 +473,7 @@ class TestCrossEncoderRerankerEdgeCases:
         query = "test"
         results = [
             SearchResult(
-                memory_id=f"m{i}",
-                content=f"content {i}",
-                relevance_score=0.5,
-                metadata={}
+                memory_id=f"m{i}", content=f"content {i}", relevance_score=0.5, metadata={}
             )
             for i in range(100)
         ]
@@ -501,7 +493,7 @@ class TestCrossEncoderRerankerEdgeCases:
                 memory_id="m1",
                 content="Test with special chars: !@#$%^&*()",
                 relevance_score=0.8,
-                metadata={}
+                metadata={},
             )
         ]
 
@@ -521,7 +513,7 @@ class TestCrossEncoderRerankerEdgeCases:
                 memory_id="m1",
                 content="Test with unicode: 中文, العربية, Ελληνικά",
                 relevance_score=0.8,
-                metadata={}
+                metadata={},
             )
         ]
 
@@ -553,7 +545,7 @@ class TestCrossEncoderRerankerIntegration:
     def mock_reranker(self):
         """Reranker instance with mocked model."""
         mock_encoder = MagicMock()
-        with patch('zapomni_core.search.reranker.CrossEncoder', return_value=mock_encoder):
+        with patch("zapomni_core.search.reranker.CrossEncoder", return_value=mock_encoder):
             reranker = CrossEncoderReranker()
             reranker._load_model()
             return reranker
@@ -567,13 +559,13 @@ class TestCrossEncoderRerankerIntegration:
                 memory_id="m1",
                 content="JavaScript frameworks",
                 relevance_score=0.9,  # High initial score but low relevance
-                metadata={}
+                metadata={},
             ),
             SearchResult(
                 memory_id="m2",
                 content="Django is a Python web framework",
                 relevance_score=0.7,  # Lower initial score but high relevance
-                metadata={}
+                metadata={},
             ),
         ]
 
@@ -595,29 +587,25 @@ class TestCrossEncoderRerankerIntegration:
                 memory_id="m1",
                 content="Content 1",
                 relevance_score=0.5,
-                metadata={"source": "paper1", "year": 2020}
+                metadata={"source": "paper1", "year": 2020},
             ),
             SearchResult(
                 memory_id="m2",
                 content="Content 2",
                 relevance_score=0.6,
-                metadata={"source": "paper2", "year": 2021}
+                metadata={"source": "paper2", "year": 2021},
             ),
             SearchResult(
                 memory_id="m3",
                 content="Content 3",
                 relevance_score=0.4,
-                metadata={"source": "paper3", "year": 2022}
+                metadata={"source": "paper3", "year": 2022},
             ),
         ]
 
         mock_reranker.model.predict.return_value = np.array([2.0, 1.5, 0.5])
 
-        reranked = await mock_reranker.rerank(
-            query=query,
-            results=results,
-            top_k=2
-        )
+        reranked = await mock_reranker.rerank(query=query, results=results, top_k=2)
 
         assert len(reranked) == 2
         assert reranked[0].metadata["source"] == "paper1"

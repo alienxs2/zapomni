@@ -10,11 +10,12 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
 import structlog
 
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import DatabaseError
+from zapomni_core.memory_processor import MemoryProcessor
 
 if TYPE_CHECKING:
     from zapomni_mcp.session_manager import SessionManager
@@ -109,7 +110,7 @@ class GetStatsTool:
         """
         if self._session_manager is not None:
             return self._session_manager
-        if self._mcp_server is not None and hasattr(self._mcp_server, '_session_manager'):
+        if self._mcp_server is not None and hasattr(self._mcp_server, "_session_manager"):
             return self._mcp_server._session_manager
         return None
 
@@ -238,9 +239,7 @@ class GetStatsTool:
         lines.append(f"Total Memories: {stats.get('total_memories', 0):,}")
         lines.append(f"Total Chunks: {stats.get('total_chunks', 0):,}")
         lines.append(f"Database Size: {stats.get('database_size_mb', 0.0):.2f} MB")
-        lines.append(
-            f"Average Chunks per Memory: {stats.get('avg_chunks_per_memory', 0.0):.1f}"
-        )
+        lines.append(f"Average Chunks per Memory: {stats.get('avg_chunks_per_memory', 0.0):.1f}")
 
         # Optional fields (only if present and not None)
         if "total_entities" in stats and stats["total_entities"] is not None:

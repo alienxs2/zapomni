@@ -20,31 +20,32 @@ Test Coverage:
 Total: 15+ comprehensive tests
 """
 
-import pytest
 import json
 import time
-from unittest.mock import Mock, MagicMock, patch, call
 from typing import Any
+from unittest.mock import MagicMock, Mock, call, patch
 
-from zapomni_db.redis_cache.cache_client import (
-    RedisClient,
-    CacheError,
-    SerializationError,
-    DeserializationError,
-    RedisConnectionError
-)
+import pytest
 import redis
 
+from zapomni_db.redis_cache.cache_client import (
+    CacheError,
+    DeserializationError,
+    RedisClient,
+    RedisConnectionError,
+    SerializationError,
+)
 
 # ============================================================================
 # __init__ TESTS
 # ============================================================================
 
+
 class TestRedisClientInit:
     """Test RedisClient initialization."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_init_defaults(self, mock_redis_class, mock_pool_class):
         """Test initialization with default parameters."""
         mock_redis_instance = MagicMock()
@@ -59,8 +60,8 @@ class TestRedisClientInit:
         assert client.ttl_seconds == 86400
         assert client.max_connections == 10
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_init_custom_params(self, mock_redis_class, mock_pool_class):
         """Test initialization with custom parameters."""
         mock_redis_instance = MagicMock()
@@ -68,11 +69,7 @@ class TestRedisClientInit:
         mock_redis_instance.ping.return_value = True
 
         client = RedisClient(
-            host="custom-host",
-            port=6379,
-            db=5,
-            ttl_seconds=3600,
-            max_connections=20
+            host="custom-host", port=6379, db=5, ttl_seconds=3600, max_connections=20
         )
 
         assert client.host == "custom-host"
@@ -106,8 +103,8 @@ class TestRedisClientInit:
         with pytest.raises(ValueError, match="ttl_seconds must be positive"):
             RedisClient(ttl_seconds=0)
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_init_connection_failure_raises(self, mock_redis_class, mock_pool_class):
         """Test that connection failure raises RedisConnectionError."""
         mock_redis_instance = MagicMock()
@@ -122,17 +119,18 @@ class TestRedisClientInit:
 # GET() TESTS
 # ============================================================================
 
+
 class TestRedisClientGet:
     """Test RedisClient.get() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_get_success_with_data(self, mock_redis_class, mock_pool_class):
         """Test successful get with existing key."""
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
-        mock_redis_instance.get.return_value = b'[0.1, 0.2, 0.3]'
+        mock_redis_instance.get.return_value = b"[0.1, 0.2, 0.3]"
 
         client = RedisClient()
         result = client.get("embedding_key")
@@ -140,8 +138,8 @@ class TestRedisClientGet:
         assert result == [0.1, 0.2, 0.3]
         mock_redis_instance.get.assert_called_once_with("embedding_key")
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_get_cache_miss(self, mock_redis_class, mock_pool_class):
         """Test get with non-existent key returns None."""
         mock_redis_instance = MagicMock()
@@ -154,8 +152,8 @@ class TestRedisClientGet:
 
         assert result is None
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_get_empty_key_raises(self, mock_redis_class, mock_pool_class):
         """Test that empty key raises ValueError."""
         mock_redis_instance = MagicMock()
@@ -166,22 +164,22 @@ class TestRedisClientGet:
         with pytest.raises(ValueError, match="key must be non-empty string"):
             client.get("")
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_get_invalid_json_raises(self, mock_redis_class, mock_pool_class):
         """Test that corrupted JSON raises DeserializationError."""
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
-        mock_redis_instance.get.return_value = b'invalid json {{'
+        mock_redis_instance.get.return_value = b"invalid json {{"
 
         client = RedisClient()
         with pytest.raises(DeserializationError):
             client.get("bad_key")
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
-    @patch('zapomni_db.redis_cache.cache_client.time.sleep')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
+    @patch("zapomni_db.redis_cache.cache_client.time.sleep")
     def test_get_retry_on_connection_error(self, mock_sleep, mock_redis_class, mock_pool_class):
         """Test that get retries on connection error with exponential backoff."""
         mock_redis_instance = MagicMock()
@@ -192,7 +190,7 @@ class TestRedisClientGet:
         mock_redis_instance.get.side_effect = [
             redis.ConnectionError("Connection lost"),
             redis.ConnectionError("Connection lost"),
-            b'{"success": true}'
+            b'{"success": true}',
         ]
 
         client = RedisClient()
@@ -205,9 +203,9 @@ class TestRedisClientGet:
         mock_sleep.assert_any_call(1)
         mock_sleep.assert_any_call(2)
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
-    @patch('zapomni_db.redis_cache.cache_client.time.sleep')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
+    @patch("zapomni_db.redis_cache.cache_client.time.sleep")
     def test_get_fails_after_max_retries(self, mock_sleep, mock_redis_class, mock_pool_class):
         """Test that get fails after max retries exceeded."""
         mock_redis_instance = MagicMock()
@@ -224,11 +222,12 @@ class TestRedisClientGet:
 # SET() TESTS
 # ============================================================================
 
+
 class TestRedisClientSet:
     """Test RedisClient.set() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_set_success_with_default_ttl(self, mock_redis_class, mock_pool_class):
         """Test successful set with default TTL."""
         mock_redis_instance = MagicMock()
@@ -246,8 +245,8 @@ class TestRedisClientSet:
         assert call_args[0][0] == "key1"
         assert call_args[1]["ex"] == 86400
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_set_success_with_custom_ttl(self, mock_redis_class, mock_pool_class):
         """Test successful set with custom TTL."""
         mock_redis_instance = MagicMock()
@@ -262,8 +261,8 @@ class TestRedisClientSet:
         call_args = mock_redis_instance.set.call_args
         assert call_args[1]["ex"] == 3600
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_set_empty_key_raises(self, mock_redis_class, mock_pool_class):
         """Test that empty key raises ValueError."""
         mock_redis_instance = MagicMock()
@@ -274,8 +273,8 @@ class TestRedisClientSet:
         with pytest.raises(ValueError, match="key must be non-empty string"):
             client.set("", "value")
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_set_negative_ttl_raises(self, mock_redis_class, mock_pool_class):
         """Test that negative TTL raises ValueError."""
         mock_redis_instance = MagicMock()
@@ -286,8 +285,8 @@ class TestRedisClientSet:
         with pytest.raises(ValueError, match="ttl must be positive"):
             client.set("key1", "value", ttl=-1)
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_set_non_serializable_raises(self, mock_redis_class, mock_pool_class):
         """Test that non-serializable value raises SerializationError."""
         mock_redis_instance = MagicMock()
@@ -303,9 +302,9 @@ class TestRedisClientSet:
         with pytest.raises(SerializationError):
             client.set("key1", NonSerializable())
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
-    @patch('zapomni_db.redis_cache.cache_client.time.sleep')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
+    @patch("zapomni_db.redis_cache.cache_client.time.sleep")
     def test_set_retry_on_connection_error(self, mock_sleep, mock_redis_class, mock_pool_class):
         """Test that set retries on connection error."""
         mock_redis_instance = MagicMock()
@@ -313,10 +312,7 @@ class TestRedisClientSet:
         mock_redis_instance.ping.return_value = True
 
         # Fail once, then succeed
-        mock_redis_instance.set.side_effect = [
-            redis.ConnectionError("Connection lost"),
-            True
-        ]
+        mock_redis_instance.set.side_effect = [redis.ConnectionError("Connection lost"), True]
 
         client = RedisClient()
         result = client.set("key1", "value")
@@ -331,11 +327,12 @@ class TestRedisClientSet:
 # DELETE() TESTS
 # ============================================================================
 
+
 class TestRedisClientDelete:
     """Test RedisClient.delete() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_delete_success(self, mock_redis_class, mock_pool_class):
         """Test successful deletion of existing key."""
         mock_redis_instance = MagicMock()
@@ -348,8 +345,8 @@ class TestRedisClientDelete:
 
         assert result is True
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_delete_miss(self, mock_redis_class, mock_pool_class):
         """Test delete of non-existent key returns False."""
         mock_redis_instance = MagicMock()
@@ -362,8 +359,8 @@ class TestRedisClientDelete:
 
         assert result is False
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_delete_empty_key_raises(self, mock_redis_class, mock_pool_class):
         """Test that empty key raises ValueError."""
         mock_redis_instance = MagicMock()
@@ -374,9 +371,9 @@ class TestRedisClientDelete:
         with pytest.raises(ValueError, match="key must be non-empty string"):
             client.delete("")
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
-    @patch('zapomni_db.redis_cache.cache_client.time.sleep')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
+    @patch("zapomni_db.redis_cache.cache_client.time.sleep")
     def test_delete_retry_on_connection_error(self, mock_sleep, mock_redis_class, mock_pool_class):
         """Test that delete retries on connection error."""
         mock_redis_instance = MagicMock()
@@ -384,10 +381,7 @@ class TestRedisClientDelete:
         mock_redis_instance.ping.return_value = True
 
         # Fail once, then succeed
-        mock_redis_instance.delete.side_effect = [
-            redis.ConnectionError("Connection lost"),
-            1
-        ]
+        mock_redis_instance.delete.side_effect = [redis.ConnectionError("Connection lost"), 1]
 
         client = RedisClient()
         result = client.delete("key1")
@@ -400,11 +394,12 @@ class TestRedisClientDelete:
 # EXISTS() TESTS
 # ============================================================================
 
+
 class TestRedisClientExists:
     """Test RedisClient.exists() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_exists_success(self, mock_redis_class, mock_pool_class):
         """Test exists returns True for existing key."""
         mock_redis_instance = MagicMock()
@@ -417,8 +412,8 @@ class TestRedisClientExists:
 
         assert result is True
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_exists_miss(self, mock_redis_class, mock_pool_class):
         """Test exists returns False for non-existent key."""
         mock_redis_instance = MagicMock()
@@ -436,11 +431,12 @@ class TestRedisClientExists:
 # PING() TESTS
 # ============================================================================
 
+
 class TestRedisClientPing:
     """Test RedisClient.ping() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_ping_success(self, mock_redis_class, mock_pool_class):
         """Test ping returns True on success."""
         mock_redis_instance = MagicMock()
@@ -452,8 +448,8 @@ class TestRedisClientPing:
 
         assert result is True
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_ping_pong_response(self, mock_redis_class, mock_pool_class):
         """Test ping handles PONG response."""
         mock_redis_instance = MagicMock()
@@ -470,36 +466,35 @@ class TestRedisClientPing:
 # SCAN() TESTS
 # ============================================================================
 
+
 class TestRedisClientScan:
     """Test RedisClient.scan() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_scan_all_keys(self, mock_redis_class, mock_pool_class):
         """Test scan with * pattern returns all keys."""
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
-        mock_redis_instance.scan_iter.return_value = iter([
-            b'embedding_1', b'embedding_2', b'metadata_1'
-        ])
+        mock_redis_instance.scan_iter.return_value = iter(
+            [b"embedding_1", b"embedding_2", b"metadata_1"]
+        )
 
         client = RedisClient()
         result = client.scan("*")
 
         assert len(result) == 3
-        assert 'embedding_1' in result or b'embedding_1' in result
+        assert "embedding_1" in result or b"embedding_1" in result
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_scan_with_pattern(self, mock_redis_class, mock_pool_class):
         """Test scan with pattern filters keys."""
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
-        mock_redis_instance.scan_iter.return_value = iter([
-            'embedding_1', 'embedding_2'
-        ])
+        mock_redis_instance.scan_iter.return_value = iter(["embedding_1", "embedding_2"])
 
         client = RedisClient()
         result = client.scan("embedding_*")
@@ -512,45 +507,45 @@ class TestRedisClientScan:
 # INFO() TESTS
 # ============================================================================
 
+
 class TestRedisClientInfo:
     """Test RedisClient.info() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_info_success(self, mock_redis_class, mock_pool_class):
         """Test info returns valid statistics."""
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
         mock_redis_instance.info.return_value = {
-            'used_memory': 1024 * 1024,  # 1 MB
-            'used_memory_human': '1M',
-            'maxmemory': 100 * 1024 * 1024,  # 100 MB
-            'maxmemory_policy': 'allkeys-lru',
-            'keyspace': {
-                'db0': {'keys': 10}
-            }
+            "used_memory": 1024 * 1024,  # 1 MB
+            "used_memory_human": "1M",
+            "maxmemory": 100 * 1024 * 1024,  # 100 MB
+            "maxmemory_policy": "allkeys-lru",
+            "keyspace": {"db0": {"keys": 10}},
         }
 
         client = RedisClient()
         result = client.info()
 
-        assert 'used_memory_mb' in result
-        assert 'total_keys' in result
-        assert 'eviction_policy' in result
-        assert result['used_memory_mb'] == 1.0
-        assert result['total_keys'] == 10
+        assert "used_memory_mb" in result
+        assert "total_keys" in result
+        assert "eviction_policy" in result
+        assert result["used_memory_mb"] == 1.0
+        assert result["total_keys"] == 10
 
 
 # ============================================================================
 # CLOSE() TESTS
 # ============================================================================
 
+
 class TestRedisClientClose:
     """Test RedisClient.close() method."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_close_success(self, mock_redis_class, mock_pool_class):
         """Test close releases connections."""
         mock_redis_instance = MagicMock()
@@ -566,8 +561,8 @@ class TestRedisClientClose:
         mock_redis_instance.close.assert_called_once()
         mock_pool_instance.disconnect.assert_called_once()
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_close_idempotent(self, mock_redis_class, mock_pool_class):
         """Test close can be called multiple times safely."""
         mock_redis_instance = MagicMock()
@@ -588,11 +583,12 @@ class TestRedisClientClose:
 # SERIALIZATION TESTS
 # ============================================================================
 
+
 class TestRedisClientSerialization:
     """Test RedisClient serialization/deserialization."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_serialize_list(self, mock_redis_class, mock_pool_class):
         """Test _serialize converts list to JSON."""
         mock_redis_instance = MagicMock()
@@ -602,11 +598,11 @@ class TestRedisClientSerialization:
         client = RedisClient()
         result = client._serialize([0.1, 0.2, 0.3])
 
-        assert result == '[0.1, 0.2, 0.3]'
+        assert result == "[0.1, 0.2, 0.3]"
         assert isinstance(result, str)
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_serialize_dict(self, mock_redis_class, mock_pool_class):
         """Test _serialize converts dict to JSON."""
         mock_redis_instance = MagicMock()
@@ -620,8 +616,8 @@ class TestRedisClientSerialization:
         assert data["key"] == "value"
         assert data["num"] == 42
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_deserialize_list(self, mock_redis_class, mock_pool_class):
         """Test _deserialize converts JSON to list."""
         mock_redis_instance = MagicMock()
@@ -629,12 +625,12 @@ class TestRedisClientSerialization:
         mock_redis_instance.ping.return_value = True
 
         client = RedisClient()
-        result = client._deserialize('[0.1, 0.2, 0.3]')
+        result = client._deserialize("[0.1, 0.2, 0.3]")
 
         assert result == [0.1, 0.2, 0.3]
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_deserialize_bytes(self, mock_redis_class, mock_pool_class):
         """Test _deserialize handles bytes input."""
         mock_redis_instance = MagicMock()
@@ -646,8 +642,8 @@ class TestRedisClientSerialization:
 
         assert result == {"key": "value"}
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_deserialize_invalid_json_raises(self, mock_redis_class, mock_pool_class):
         """Test _deserialize raises on invalid JSON."""
         mock_redis_instance = MagicMock()
@@ -656,18 +652,19 @@ class TestRedisClientSerialization:
 
         client = RedisClient()
         with pytest.raises(DeserializationError):
-            client._deserialize('invalid json {{')
+            client._deserialize("invalid json {{")
 
 
 # ============================================================================
 # INTEGRATION-LIKE TESTS
 # ============================================================================
 
+
 class TestRedisClientIntegrationScenarios:
     """Test realistic usage scenarios."""
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_roundtrip_embedding(self, mock_redis_class, mock_pool_class):
         """Test set then get roundtrip with embedding."""
         mock_redis_instance = MagicMock()
@@ -690,8 +687,8 @@ class TestRedisClientIntegrationScenarios:
         result = client.get("emb_123")
         assert result == embedding
 
-    @patch('zapomni_db.redis_cache.cache_client.ConnectionPool')
-    @patch('zapomni_db.redis_cache.cache_client.Redis')
+    @patch("zapomni_db.redis_cache.cache_client.ConnectionPool")
+    @patch("zapomni_db.redis_cache.cache_client.Redis")
     def test_cache_workflow(self, mock_redis_class, mock_pool_class):
         """Test typical cache workflow: set, exists, get, delete."""
         mock_redis_instance = MagicMock()

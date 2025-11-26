@@ -17,8 +17,8 @@ License: MIT
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .server import MCPServer, ServerStats, ConfigurationError
     from .config import Settings, SSEConfig
+    from .server import ConfigurationError, MCPServer, ServerStats
     from .session_manager import SessionManager, SessionState
     from .sse_transport import create_sse_app
 
@@ -27,27 +27,35 @@ def __getattr__(name: str) -> Any:
     """Lazy import to support deferred initialization."""
     if name == "MCPServer":
         from .server import MCPServer
+
         return MCPServer
     elif name == "ServerStats":
         from .server import ServerStats
+
         return ServerStats
     elif name == "ConfigurationError":
         from .server import ConfigurationError
+
         return ConfigurationError
     elif name == "Settings":
         from .config import Settings
+
         return Settings
     elif name == "SSEConfig":
         from .config import SSEConfig
+
         return SSEConfig
     elif name == "SessionManager":
         from .session_manager import SessionManager
+
         return SessionManager
     elif name == "SessionState":
         from .session_manager import SessionState
+
         return SessionState
     elif name == "create_sse_app":
         from .sse_transport import create_sse_app
+
         return create_sse_app
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

@@ -8,14 +8,15 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
 from datetime import datetime, timezone
 from typing import List
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
+from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_core.search.vector_search import VectorSearch
 from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError
 
 
 class TestVectorSearchInit:
@@ -26,10 +27,7 @@ class TestVectorSearchInit:
         mock_db_client = Mock()
         mock_embedder = Mock()
 
-        search = VectorSearch(
-            db_client=mock_db_client,
-            embedder=mock_embedder
-        )
+        search = VectorSearch(db_client=mock_db_client, embedder=mock_embedder)
 
         assert search.db_client is mock_db_client
         assert search.embedder is mock_embedder
@@ -62,10 +60,7 @@ class TestVectorSearchSearch:
     @pytest.fixture
     def vector_search(self, mock_db_client, mock_embedder):
         """VectorSearch instance with mocked dependencies."""
-        return VectorSearch(
-            db_client=mock_db_client,
-            embedder=mock_embedder
-        )
+        return VectorSearch(db_client=mock_db_client, embedder=mock_embedder)
 
     @pytest.mark.asyncio
     async def test_search_basic_query(self, vector_search, mock_embedder, mock_db_client):
@@ -84,7 +79,7 @@ class TestVectorSearchSearch:
                 tags=["python", "programming"],
                 source="doc1.txt",
                 timestamp=datetime.now(timezone.utc),
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         mock_db_client.vector_search.return_value = mock_results
@@ -100,9 +95,7 @@ class TestVectorSearchSearch:
         # Verify calls
         mock_embedder.embed_text.assert_called_once_with(query_text)
         mock_db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=10,
-            filters=None
+            embedding=mock_embedding, limit=10, filters=None
         )
 
     @pytest.mark.asyncio
@@ -116,9 +109,7 @@ class TestVectorSearchSearch:
         await vector_search.search(query_text, limit=5)
 
         mock_db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=5,
-            filters=None
+            embedding=mock_embedding, limit=5, filters=None
         )
 
     @pytest.mark.asyncio
@@ -133,9 +124,7 @@ class TestVectorSearchSearch:
         await vector_search.search(query_text, filters=filters)
 
         mock_db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=10,
-            filters=filters
+            embedding=mock_embedding, limit=10, filters=filters
         )
 
     @pytest.mark.asyncio
@@ -175,7 +164,9 @@ class TestVectorSearchSearch:
         assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_search_multiple_results_sorted(self, vector_search, mock_embedder, mock_db_client):
+    async def test_search_multiple_results_sorted(
+        self, vector_search, mock_embedder, mock_db_client
+    ):
         """Test search returns results sorted by similarity score."""
         mock_embedding = [0.1] * 768
         mock_embedder.embed_text.return_value = mock_embedding
@@ -190,7 +181,7 @@ class TestVectorSearchSearch:
                 tags=[],
                 source="doc1.txt",
                 timestamp=datetime.now(timezone.utc),
-                chunk_index=0
+                chunk_index=0,
             ),
             SearchResult(
                 memory_id="mem-2",
@@ -200,7 +191,7 @@ class TestVectorSearchSearch:
                 tags=[],
                 source="doc2.txt",
                 timestamp=datetime.now(timezone.utc),
-                chunk_index=0
+                chunk_index=0,
             ),
             SearchResult(
                 memory_id="mem-3",
@@ -210,8 +201,8 @@ class TestVectorSearchSearch:
                 tags=[],
                 source="doc3.txt",
                 timestamp=datetime.now(timezone.utc),
-                chunk_index=0
-            )
+                chunk_index=0,
+            ),
         ]
         mock_db_client.vector_search.return_value = mock_results
 
@@ -228,8 +219,7 @@ class TestVectorSearchSearch:
         from zapomni_core.exceptions import EmbeddingError
 
         mock_embedder.embed_text.side_effect = EmbeddingError(
-            message="Ollama connection failed",
-            error_code="EMB_001"
+            message="Ollama connection failed", error_code="EMB_001"
         )
 
         with pytest.raises(SearchError) as exc_info:
@@ -245,9 +235,7 @@ class TestVectorSearchSearch:
         mock_embedding = [0.1] * 768
         mock_embedder.embed_text.return_value = mock_embedding
 
-        mock_db_client.vector_search.side_effect = DatabaseError(
-            "Database connection failed"
-        )
+        mock_db_client.vector_search.side_effect = DatabaseError("Database connection failed")
 
         with pytest.raises(SearchError) as exc_info:
             await vector_search.search("test query")
@@ -309,7 +297,7 @@ class TestVectorSearchResultFormatting:
                 tags=["test"],
                 source="test.txt",
                 timestamp=datetime.now(timezone.utc),
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         vector_search.db_client.vector_search = AsyncMock(return_value=expected_results)
@@ -342,9 +330,7 @@ class TestVectorSearchEdgeCases:
         await vector_search.search("test", filters=None)
 
         vector_search.db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=10,
-            filters=None
+            embedding=mock_embedding, limit=10, filters=None
         )
 
     @pytest.mark.asyncio
@@ -357,9 +343,7 @@ class TestVectorSearchEdgeCases:
         await vector_search.search("test", filters={})
 
         vector_search.db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=10,
-            filters={}
+            embedding=mock_embedding, limit=10, filters={}
         )
 
     @pytest.mark.asyncio
@@ -373,9 +357,7 @@ class TestVectorSearchEdgeCases:
         await vector_search.search("test", limit=1000)
 
         vector_search.db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=1000,
-            filters=None
+            embedding=mock_embedding, limit=1000, filters=None
         )
 
     @pytest.mark.asyncio
@@ -389,7 +371,5 @@ class TestVectorSearchEdgeCases:
         await vector_search.search("test", limit=1)
 
         vector_search.db_client.vector_search.assert_called_once_with(
-            embedding=mock_embedding,
-            limit=1,
-            filters=None
+            embedding=mock_embedding, limit=1, filters=None
         )

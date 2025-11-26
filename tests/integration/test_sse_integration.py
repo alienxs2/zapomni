@@ -21,7 +21,6 @@ from starlette.testclient import TestClient
 from zapomni_mcp.config import SSEConfig
 from zapomni_mcp.session_manager import SessionManager, generate_session_id
 
-
 # Fixtures
 
 
@@ -428,9 +427,7 @@ class TestErrorPropagation:
         # Create session with failing transport
         session_id = "error-session"
         mock_transport = MagicMock()
-        mock_transport.handle_post_message = AsyncMock(
-            side_effect=Exception("Transport failed")
-        )
+        mock_transport.handle_post_message = AsyncMock(side_effect=Exception("Transport failed"))
 
         await session_manager.create_session(
             session_id=session_id,
@@ -456,9 +453,7 @@ class TestErrorPropagation:
         # Create session with failing transport
         session_id = "error-count-session"
         mock_transport = MagicMock()
-        mock_transport.handle_post_message = AsyncMock(
-            side_effect=Exception("Error")
-        )
+        mock_transport.handle_post_message = AsyncMock(side_effect=Exception("Error"))
 
         await session_manager.create_session(
             session_id=session_id,
@@ -542,8 +537,9 @@ class TestStaleSessionCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_stale_sessions(self, mock_mcp_server, sse_config):
         """Should cleanup stale sessions."""
-        from zapomni_mcp.sse_transport import create_sse_app
         import time
+
+        from zapomni_mcp.sse_transport import create_sse_app
 
         app = create_sse_app(mock_mcp_server, sse_config)
         session_manager = mock_mcp_server._session_manager

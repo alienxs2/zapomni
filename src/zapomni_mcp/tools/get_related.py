@@ -8,17 +8,17 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, Optional, List
-import structlog
-from pydantic import ValidationError, BaseModel, ConfigDict
 import uuid
+from typing import Any, Dict, List, Optional
 
-from zapomni_core.memory_processor import MemoryProcessor
+import structlog
+from pydantic import BaseModel, ConfigDict, ValidationError
+
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
     DatabaseError,
 )
-
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
 
 logger = structlog.get_logger(__name__)
 

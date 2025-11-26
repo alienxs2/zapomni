@@ -8,11 +8,12 @@ Tests use mocked trafilatura to avoid external dependencies.
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 
+from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.processors.html_processor import HTMLProcessor
-from zapomni_core.exceptions import ValidationError, ProcessingError
 
 
 class TestHTMLProcessorInit:
@@ -338,7 +339,9 @@ class TestDetectLanguage:
         """Should detect English text."""
         processor = HTMLProcessor()
 
-        html = "<html><body><p>This is English text for testing language detection.</p></body></html>"
+        html = (
+            "<html><body><p>This is English text for testing language detection.</p></body></html>"
+        )
 
         with patch("zapomni_core.processors.html_processor.trafilatura") as mock_traf:
             mock_traf.extract.return_value = "This is English text for testing language detection."

@@ -9,16 +9,18 @@ License: MIT
 """
 
 import os
-import pytest
 import tempfile
 from pathlib import Path
-from pydantic import ValidationError, SecretStr
-from zapomni_core.config import ZapomniSettings, get_config_summary, validate_configuration
 
+import pytest
+from pydantic import SecretStr, ValidationError
+
+from zapomni_core.config import ZapomniSettings, get_config_summary, validate_configuration
 
 # ============================================================
 # CONFIGURATION LOADING TESTS
 # ============================================================
+
 
 def test_default_configuration():
     """Test that default configuration loads successfully with all defaults."""
@@ -70,11 +72,7 @@ def test_environment_override(monkeypatch):
 def test_dotenv_loading(tmp_path, monkeypatch):
     """Test loading configuration from .env file."""
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "FALKORDB_PORT=7001\n"
-        "GRAPH_NAME=test_graph\n"
-        "LOG_LEVEL=WARNING\n"
-    )
+    env_file.write_text("FALKORDB_PORT=7001\n" "GRAPH_NAME=test_graph\n" "LOG_LEVEL=WARNING\n")
 
     # Change to temp directory
     monkeypatch.chdir(tmp_path)
@@ -100,6 +98,7 @@ def test_system_env_overrides_dotenv(tmp_path, monkeypatch):
 # ============================================================
 # VALIDATION TESTS
 # ============================================================
+
 
 def test_invalid_port_zero():
     """Test that port 0 is invalid."""
@@ -211,12 +210,10 @@ def test_vector_dimensions_non_standard_warning():
 # COMPUTED PROPERTIES TESTS
 # ============================================================
 
+
 def test_falkordb_connection_string_no_password():
     """Test connection string generation without password."""
-    settings = ZapomniSettings(
-        falkordb_host="localhost",
-        falkordb_port=6379
-    )
+    settings = ZapomniSettings(falkordb_host="localhost", falkordb_port=6379)
 
     assert settings.falkordb_connection_string == "redis://localhost:6379"
 
@@ -224,9 +221,7 @@ def test_falkordb_connection_string_no_password():
 def test_falkordb_connection_string_with_password():
     """Test connection string generation with password."""
     settings = ZapomniSettings(
-        falkordb_host="localhost",
-        falkordb_port=6379,
-        falkordb_password="secret123"
+        falkordb_host="localhost", falkordb_port=6379, falkordb_password="secret123"
     )
 
     assert settings.falkordb_connection_string == "redis://secret123@localhost:6379"
@@ -234,10 +229,7 @@ def test_falkordb_connection_string_with_password():
 
 def test_redis_connection_string():
     """Test Redis connection string format."""
-    settings = ZapomniSettings(
-        redis_host="redis.host",
-        redis_port=6380
-    )
+    settings = ZapomniSettings(redis_host="redis.host", redis_port=6380)
 
     assert settings.redis_connection_string == "redis://redis.host:6380"
 
@@ -264,6 +256,7 @@ def test_is_development_false():
 # SECRET HANDLING TESTS
 # ============================================================
 
+
 def test_secret_masking():
     """Test that SecretStr fields are masked in string representation."""
     settings = ZapomniSettings(falkordb_password="super_secret")
@@ -284,6 +277,7 @@ def test_secret_access():
 # ============================================================
 # DIRECTORY CREATION TESTS
 # ============================================================
+
 
 def test_data_dir_created(tmp_path):
     """Test that data_dir is created if it doesn't exist."""
@@ -324,6 +318,7 @@ def test_directory_creation_nested(tmp_path):
 # ============================================================
 # HELPER FUNCTIONS TESTS
 # ============================================================
+
 
 def test_get_config_summary():
     """Test configuration summary structure."""
@@ -374,24 +369,18 @@ def test_validate_configuration_detects_issues(tmp_path):
 # INTEGRATION TESTS
 # ============================================================
 
+
 def test_full_configuration_lifecycle(tmp_path, monkeypatch):
     """Test complete configuration lifecycle with all features."""
     # Setup environment
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "FALKORDB_HOST=testdb.local\n"
-        "FALKORDB_PORT=6381\n"
-        "LOG_LEVEL=DEBUG\n"
-    )
+    env_file.write_text("FALKORDB_HOST=testdb.local\n" "FALKORDB_PORT=6381\n" "LOG_LEVEL=DEBUG\n")
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("MAX_CHUNK_SIZE", "1024")  # Override .env
 
     # Create settings
-    settings = ZapomniSettings(
-        data_dir=tmp_path / "data",
-        temp_dir=tmp_path / "temp"
-    )
+    settings = ZapomniSettings(data_dir=tmp_path / "data", temp_dir=tmp_path / "temp")
 
     # Verify loaded correctly
     assert settings.falkordb_host == "testdb.local"

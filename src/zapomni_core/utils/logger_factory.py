@@ -11,10 +11,12 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import structlog
 from typing import Optional
-from zapomni_core.logging_service import LoggingService
+
+import structlog
+
 from zapomni_core.config import settings
+from zapomni_core.logging_service import LoggingService
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
@@ -73,10 +75,7 @@ def get_logger(name: str) -> structlog.BoundLogger:
     return LoggingService.get_logger(name)
 
 
-def configure_logging(
-    level: Optional[str] = None,
-    format: str = "json"
-) -> None:
+def configure_logging(level: Optional[str] = None, format: str = "json") -> None:
     """
     Configure structured logging infrastructure.
 

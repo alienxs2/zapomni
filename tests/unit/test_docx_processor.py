@@ -10,10 +10,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 from unittest.mock import MagicMock, patch
+from zipfile import BadZipFile
 
 import pytest
 from docx.opc.exceptions import PackageNotFoundError
-from zipfile import BadZipFile
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.processors.docx_processor import DOCXProcessor
@@ -72,9 +72,7 @@ class TestDOCXProcessor:
 
         document = MagicMock()
         document.paragraphs = _build_paragraphs([" Hello world  ", "", "Paragraph two"])
-        document.tables = [
-            _build_table([["Cell 1", "Cell   2"], ["Row 2, Col 1", ""]])
-        ]
+        document.tables = [_build_table([["Cell 1", "Cell   2"], ["Row 2, Col 1", ""]])]
         document.sections = []
         document.core_properties = _build_core_properties()
 
@@ -157,9 +155,7 @@ class TestDOCXProcessor:
 
         assert "exist" in exc_info.value.message.lower()
 
-    def test_process_docx_wrong_extension_raises_validation_error(
-        self, tmp_path: Path
-    ) -> None:
+    def test_process_docx_wrong_extension_raises_validation_error(self, tmp_path: Path) -> None:
         wrong_path = tmp_path / "file.txt"
         wrong_path.write_text("not a docx")
 

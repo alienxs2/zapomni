@@ -8,11 +8,12 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import sys
 import logging
+import sys
 import traceback
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from typing import Any, Optional
+
 import structlog
 from structlog.types import Processor
 
@@ -36,6 +37,7 @@ class LoggingConfig:
             sensitive_keys={"password", "api_key", "token"}
         )
     """
+
     level: str = "INFO"
     format: str = "json"  # "json" or "console"
     output_stream: Any = sys.stderr
@@ -45,11 +47,21 @@ class LoggingConfig:
     def __post_init__(self):
         if not self.sensitive_keys:
             self.sensitive_keys = {
-                "password", "passwd", "pwd",
-                "api_key", "apikey", "key",
-                "token", "access_token", "refresh_token",
-                "secret", "auth", "authorization",
-                "credit_card", "ssn", "social_security"
+                "password",
+                "passwd",
+                "pwd",
+                "api_key",
+                "apikey",
+                "key",
+                "token",
+                "access_token",
+                "refresh_token",
+                "secret",
+                "auth",
+                "authorization",
+                "credit_card",
+                "ssn",
+                "social_security",
             }
 
 
@@ -93,10 +105,7 @@ class LoggingService:
 
     @classmethod
     def configure_logging(
-        cls,
-        level: str = "INFO",
-        format: str = "json",
-        config: Optional[LoggingConfig] = None
+        cls, level: str = "INFO", format: str = "json", config: Optional[LoggingConfig] = None
     ) -> None:
         """
         Configure global structured logging infrastructure.
@@ -146,9 +155,7 @@ class LoggingService:
             # Validate format
             format_lower = format.lower()
             if format_lower not in ["json", "console"]:
-                raise ValueError(
-                    f"Invalid format: {format}. Must be 'json' or 'console'"
-                )
+                raise ValueError(f"Invalid format: {format}. Must be 'json' or 'console'")
 
             cfg = LoggingConfig(level=level_upper, format=format_lower)
 
@@ -163,9 +170,7 @@ class LoggingService:
         # Configure structlog
         structlog.configure(
             processors=processors,
-            wrapper_class=structlog.make_filtering_bound_logger(
-                getattr(logging, cfg.level)
-            ),
+            wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, cfg.level)),
             context_class=dict,
             logger_factory=structlog.PrintLoggerFactory(file=cfg.output_stream),
             cache_logger_on_first_use=True,
@@ -198,9 +203,7 @@ class LoggingService:
         """
         # Check if configured
         if not cls._configured:
-            raise RuntimeError(
-                "Logging not configured. Call configure_logging() first."
-            )
+            raise RuntimeError("Logging not configured. Call configure_logging() first.")
 
         # Validate name
         if not name:
@@ -226,7 +229,7 @@ class LoggingService:
         correlation_id: str,
         metadata: Optional[dict[str, Any]] = None,
         logger_name: str = "zapomni",
-        level: str = "info"
+        level: str = "info",
     ) -> None:
         """
         Log an operation with full context.
@@ -289,7 +292,7 @@ class LoggingService:
         correlation_id: str,
         context: Optional[dict[str, Any]] = None,
         logger_name: str = "zapomni",
-        include_stack_trace: bool = True
+        include_stack_trace: bool = True,
     ) -> None:
         """
         Log an error with full context and stack trace.
@@ -329,7 +332,7 @@ class LoggingService:
         # Extract error details
         error_type = type(error).__name__
         error_message = str(error)
-        error_code = getattr(error, 'error_code', None)
+        error_code = getattr(error, "error_code", None)
 
         # Build log context
         log_context = {
@@ -358,7 +361,7 @@ class LoggingService:
         duration_ms: float,
         correlation_id: str,
         metadata: Optional[dict[str, Any]] = None,
-        logger_name: str = "zapomni"
+        logger_name: str = "zapomni",
     ) -> None:
         """
         Log performance metrics for an operation.
@@ -496,13 +499,9 @@ class LoggingService:
 
         # Add renderer based on format
         if cls._config and cls._config.format == "console":
-            processors.append(
-                structlog.dev.ConsoleRenderer(colors=True)
-            )
+            processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
             # Default to JSON
-            processors.append(
-                structlog.processors.JSONRenderer()
-            )
+            processors.append(structlog.processors.JSONRenderer())
 
         return processors

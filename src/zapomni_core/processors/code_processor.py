@@ -6,9 +6,8 @@ functions, classes, and imports while preserving metadata such as line numbers
 and qualified names.
 """
 
-from typing import Any, Dict, List, Sequence, Union
-
 import ast
+from typing import Any, Dict, List, Sequence, Union
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.utils import get_logger
@@ -119,13 +118,9 @@ def _collect_methods(node: ast.ClassDef, parent_names: List[str]) -> List[Dict[s
     methods: List[Dict[str, Any]] = []
     for child in node.body:
         if isinstance(child, ast.FunctionDef):
-            methods.append(
-                _build_function_summary(child, parent_names, False)
-            )
+            methods.append(_build_function_summary(child, parent_names, False))
         elif isinstance(child, ast.AsyncFunctionDef):
-            methods.append(
-                _build_function_summary(child, parent_names, True)
-            )
+            methods.append(_build_function_summary(child, parent_names, True))
     return methods
 
 
@@ -137,11 +132,7 @@ def _collect_classes(tree: ast.Module) -> List[Dict[str, Any]]:
 
         def visit_ClassDef(self, node: ast.ClassDef) -> None:
             qualified_parent = ".".join(self.parent_stack) if self.parent_stack else ""
-            qualified_name = (
-                f"{qualified_parent}.{node.name}"
-                if qualified_parent
-                else node.name
-            )
+            qualified_name = f"{qualified_parent}.{node.name}" if qualified_parent else node.name
             entry = {
                 "name": node.name,
                 "qualified_name": qualified_name,

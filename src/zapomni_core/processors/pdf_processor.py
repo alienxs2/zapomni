@@ -14,7 +14,6 @@ import fitz
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.utils import get_logger
 
-
 Metadata = Dict[str, Any]
 
 

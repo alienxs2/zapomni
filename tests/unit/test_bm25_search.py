@@ -13,15 +13,15 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
+from datetime import datetime
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from zapomni_core.search.bm25_search import BM25Search
-from zapomni_core.exceptions import ValidationError, SearchError
-from zapomni_db.models import SearchResult
-from datetime import datetime
+import pytest
 
+from zapomni_core.exceptions import SearchError, ValidationError
+from zapomni_core.search.bm25_search import BM25Search
+from zapomni_db.models import SearchResult
 
 # ==================== FIXTURES ====================
 
@@ -34,7 +34,7 @@ def sample_documents() -> List[str]:
         "Machine learning is a subset of artificial intelligence",
         "Natural language processing uses machine learning algorithms",
         "Deep learning neural networks require large datasets",
-        "Python programming is popular for data science and AI"
+        "Python programming is popular for data science and AI",
     ]
 
 

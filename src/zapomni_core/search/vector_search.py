@@ -9,13 +9,13 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+from typing import Any, Dict, List, Optional
+
 import structlog
-from typing import List, Dict, Any, Optional
 
-from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError, EmbeddingError
+from zapomni_core.exceptions import EmbeddingError, SearchError, ValidationError
 from zapomni_db.exceptions import DatabaseError
-
+from zapomni_db.models import SearchResult
 
 logger = structlog.get_logger(__name__)
 
@@ -85,14 +85,14 @@ class VectorSearch:
             raise ValidationError(
                 message="db_client cannot be None",
                 error_code="VAL_001",
-                details={"parameter": "db_client"}
+                details={"parameter": "db_client"},
             )
 
         if embedder is None:
             raise ValidationError(
                 message="embedder cannot be None",
                 error_code="VAL_001",
-                details={"parameter": "embedder"}
+                details={"parameter": "embedder"},
             )
 
         self.db_client = db_client
@@ -101,14 +101,11 @@ class VectorSearch:
         logger.info(
             "vector_search_initialized",
             db_client_type=type(db_client).__name__,
-            embedder_type=type(embedder).__name__
+            embedder_type=type(embedder).__name__,
         )
 
     async def search(
-        self,
-        query: str,
-        limit: int = 10,
-        filters: Optional[Dict[str, Any]] = None
+        self, query: str, limit: int = 10, filters: Optional[Dict[str, Any]] = None
     ) -> List[SearchResult]:
         """
         Perform semantic search on stored memories.
@@ -179,9 +176,7 @@ class VectorSearch:
         # Validate query not empty
         if not query:
             raise ValidationError(
-                message="Query cannot be empty",
-                error_code="VAL_001",
-                details={"query": query}
+                message="Query cannot be empty", error_code="VAL_001", details={"query": query}
             )
 
         # Validate limit range
@@ -189,21 +184,21 @@ class VectorSearch:
             raise ValidationError(
                 message=f"Limit must be int, got {type(limit).__name__}",
                 error_code="VAL_002",
-                details={"limit": limit, "type": type(limit).__name__}
+                details={"limit": limit, "type": type(limit).__name__},
             )
 
         if limit < 1:
             raise ValidationError(
                 message=f"Limit must be >= 1, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit}
+                details={"limit": limit},
             )
 
         if limit > 1000:
             raise ValidationError(
                 message=f"Limit cannot exceed 1000, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit, "max": 1000}
+                details={"limit": limit, "max": 1000},
             )
 
         # STEP 2: GENERATE QUERY EMBEDDING
@@ -213,40 +208,33 @@ class VectorSearch:
                 "generating_query_embedding",
                 query_length=len(query),
                 limit=limit,
-                has_filters=filters is not None
+                has_filters=filters is not None,
             )
 
             query_embedding = await self.embedder.embed_text(query)
 
-            logger.debug(
-                "query_embedding_generated",
-                embedding_dimensions=len(query_embedding)
-            )
+            logger.debug("query_embedding_generated", embedding_dimensions=len(query_embedding))
 
         except EmbeddingError as e:
             logger.error(
                 "embedding_generation_failed",
                 error=str(e),
-                query=query[:100]  # Log first 100 chars
+                query=query[:100],  # Log first 100 chars
             )
             raise SearchError(
                 message=f"Embedding generation failed: {str(e)}",
                 error_code="SEARCH_001",
                 details={"query": query[:100], "embedding_error": str(e)},
-                original_exception=e
+                original_exception=e,
             )
 
         except Exception as e:
-            logger.error(
-                "unexpected_embedding_error",
-                error=str(e),
-                error_type=type(e).__name__
-            )
+            logger.error("unexpected_embedding_error", error=str(e), error_type=type(e).__name__)
             raise SearchError(
                 message=f"Unexpected error during embedding generation: {str(e)}",
                 error_code="SEARCH_001",
                 details={"error_type": type(e).__name__},
-                original_exception=e
+                original_exception=e,
             )
 
         # STEP 3: EXECUTE VECTOR SEARCH
@@ -256,13 +244,11 @@ class VectorSearch:
                 "executing_vector_search",
                 embedding_dimensions=len(query_embedding),
                 limit=limit,
-                filters=filters
+                filters=filters,
             )
 
             results = await self.db_client.vector_search(
-                embedding=query_embedding,
-                limit=limit,
-                filters=filters
+                embedding=query_embedding, limit=limit, filters=filters
             )
 
             logger.info(
@@ -270,33 +256,25 @@ class VectorSearch:
                 query=query[:100],
                 result_count=len(results),
                 limit=limit,
-                has_filters=filters is not None
+                has_filters=filters is not None,
             )
 
             return results
 
         except DatabaseError as e:
-            logger.error(
-                "vector_search_failed",
-                error=str(e),
-                query=query[:100]
-            )
+            logger.error("vector_search_failed", error=str(e), query=query[:100])
             raise SearchError(
                 message=f"Vector search failed: {str(e)}",
                 error_code="SEARCH_001",
                 details={"query": query[:100], "database_error": str(e)},
-                original_exception=e
+                original_exception=e,
             )
 
         except Exception as e:
-            logger.error(
-                "unexpected_search_error",
-                error=str(e),
-                error_type=type(e).__name__
-            )
+            logger.error("unexpected_search_error", error=str(e), error_type=type(e).__name__)
             raise SearchError(
                 message=f"Unexpected error during vector search: {str(e)}",
                 error_code="SEARCH_001",
                 details={"error_type": type(e).__name__},
-                original_exception=e
+                original_exception=e,
             )

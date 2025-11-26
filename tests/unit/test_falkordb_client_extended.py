@@ -10,20 +10,21 @@ Tests for:
 - graph_query
 """
 
-import pytest
-import uuid
 import asyncio
+import uuid
 from datetime import datetime, timezone
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import pytest
+
+from zapomni_db.exceptions import ConnectionError, DatabaseError, ValidationError
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_db.models import Entity, Relationship, QueryResult
-from zapomni_db.exceptions import ValidationError, DatabaseError, ConnectionError
-
+from zapomni_db.models import Entity, QueryResult, Relationship
 
 # ============================================================================
 # add_entity TESTS
 # ============================================================================
+
 
 class TestFalkorDBClientAddEntity:
     """Test FalkorDBClient.add_entity()."""
@@ -42,9 +43,9 @@ class TestFalkorDBClientAddEntity:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -52,10 +53,7 @@ class TestFalkorDBClientAddEntity:
     async def test_add_entity_success(self, mock_client):
         """Test successful entity addition."""
         entity = Entity(
-            name="Python",
-            type="TECHNOLOGY",
-            description="Programming language",
-            confidence=0.95
+            name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.95
         )
 
         entity_id = await mock_client.add_entity(entity)
@@ -67,10 +65,7 @@ class TestFalkorDBClientAddEntity:
     @pytest.mark.asyncio
     async def test_add_entity_minimal(self, mock_client):
         """Test entity with minimal required fields."""
-        entity = Entity(
-            name="AI",
-            type="CONCEPT"
-        )
+        entity = Entity(name="AI", type="CONCEPT")
 
         entity_id = await mock_client.add_entity(entity)
         assert entity_id is not None
@@ -78,39 +73,26 @@ class TestFalkorDBClientAddEntity:
     def test_add_entity_empty_name_raises(self):
         """Test ValidationError on empty name."""
         with pytest.raises(Exception, match="at least 1 character"):
-            entity = Entity(
-                name="",
-                type="CONCEPT"
-            )
+            entity = Entity(name="", type="CONCEPT")
 
     def test_add_entity_empty_type_raises(self):
         """Test ValidationError on empty type."""
         with pytest.raises(Exception, match="at least 1 character"):
-            entity = Entity(
-                name="Test",
-                type=""
-            )
+            entity = Entity(name="Test", type="")
 
     def test_add_entity_invalid_confidence_raises(self):
         """Test ValidationError on confidence out of range."""
         with pytest.raises(Exception, match="greater than or equal to 0"):
-            entity = Entity(
-                name="Test",
-                type="CONCEPT",
-                confidence=-0.1
-            )
+            entity = Entity(name="Test", type="CONCEPT", confidence=-0.1)
 
         with pytest.raises(Exception, match="less than or equal to 1"):
-            entity = Entity(
-                name="Test",
-                type="CONCEPT",
-                confidence=1.5
-            )
+            entity = Entity(name="Test", type="CONCEPT", confidence=1.5)
 
 
 # ============================================================================
 # add_relationship TESTS
 # ============================================================================
+
 
 class TestFalkorDBClientAddRelationship:
     """Test FalkorDBClient.add_relationship()."""
@@ -129,9 +111,9 @@ class TestFalkorDBClientAddRelationship:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -142,9 +124,7 @@ class TestFalkorDBClientAddRelationship:
         to_id = str(uuid.uuid4())
 
         rel_id = await mock_client.add_relationship(
-            from_entity_id=from_id,
-            to_entity_id=to_id,
-            relationship_type="USES"
+            from_entity_id=from_id, to_entity_id=to_id, relationship_type="USES"
         )
 
         assert isinstance(rel_id, str)
@@ -160,11 +140,7 @@ class TestFalkorDBClientAddRelationship:
             from_entity_id=from_id,
             to_entity_id=to_id,
             relationship_type="RELATED_TO",
-            properties={
-                "strength": 0.8,
-                "confidence": 0.9,
-                "context": "Test context"
-            }
+            properties={"strength": 0.8, "confidence": 0.9, "context": "Test context"},
         )
 
         assert rel_id is not None
@@ -174,51 +150,60 @@ class TestFalkorDBClientAddRelationship:
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="Invalid entity UUID"):
-            asyncio.run(client.add_relationship(
-                from_entity_id="invalid-uuid",
-                to_entity_id=str(uuid.uuid4()),
-                relationship_type="USES"
-            ))
+            asyncio.run(
+                client.add_relationship(
+                    from_entity_id="invalid-uuid",
+                    to_entity_id=str(uuid.uuid4()),
+                    relationship_type="USES",
+                )
+            )
 
     def test_add_relationship_invalid_to_uuid(self):
         """Test ValidationError on invalid to_entity_id."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="Invalid entity UUID"):
-            asyncio.run(client.add_relationship(
-                from_entity_id=str(uuid.uuid4()),
-                to_entity_id="invalid-uuid",
-                relationship_type="USES"
-            ))
+            asyncio.run(
+                client.add_relationship(
+                    from_entity_id=str(uuid.uuid4()),
+                    to_entity_id="invalid-uuid",
+                    relationship_type="USES",
+                )
+            )
 
     def test_add_relationship_invalid_strength(self):
         """Test ValidationError on invalid strength."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="strength must be in"):
-            asyncio.run(client.add_relationship(
-                from_entity_id=str(uuid.uuid4()),
-                to_entity_id=str(uuid.uuid4()),
-                relationship_type="USES",
-                properties={"strength": 1.5}
-            ))
+            asyncio.run(
+                client.add_relationship(
+                    from_entity_id=str(uuid.uuid4()),
+                    to_entity_id=str(uuid.uuid4()),
+                    relationship_type="USES",
+                    properties={"strength": 1.5},
+                )
+            )
 
     def test_add_relationship_invalid_confidence(self):
         """Test ValidationError on invalid confidence."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="confidence must be in"):
-            asyncio.run(client.add_relationship(
-                from_entity_id=str(uuid.uuid4()),
-                to_entity_id=str(uuid.uuid4()),
-                relationship_type="USES",
-                properties={"confidence": -0.1}
-            ))
+            asyncio.run(
+                client.add_relationship(
+                    from_entity_id=str(uuid.uuid4()),
+                    to_entity_id=str(uuid.uuid4()),
+                    relationship_type="USES",
+                    properties={"confidence": -0.1},
+                )
+            )
 
 
 # ============================================================================
 # get_related_entities TESTS
 # ============================================================================
+
 
 class TestFalkorDBClientGetRelatedEntities:
     """Test FalkorDBClient.get_related_entities()."""
@@ -237,7 +222,7 @@ class TestFalkorDBClientGetRelatedEntities:
                 "type": "TECHNOLOGY",
                 "description": "Programming language",
                 "confidence": 0.95,
-                "avg_strength": 0.8
+                "avg_strength": 0.8,
             },
             {
                 "id": str(uuid.uuid4()),
@@ -245,8 +230,8 @@ class TestFalkorDBClientGetRelatedEntities:
                 "type": "CONCEPT",
                 "description": "Artificial Intelligence",
                 "confidence": 0.90,
-                "avg_strength": 0.7
-            }
+                "avg_strength": 0.7,
+            },
         ]
         mock_result.row_count = 2
         mock_result.execution_time_ms = 15
@@ -254,9 +239,9 @@ class TestFalkorDBClientGetRelatedEntities:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -265,11 +250,7 @@ class TestFalkorDBClientGetRelatedEntities:
         """Test successful related entities retrieval."""
         entity_id = str(uuid.uuid4())
 
-        entities = await mock_client.get_related_entities(
-            entity_id=entity_id,
-            depth=1,
-            limit=10
-        )
+        entities = await mock_client.get_related_entities(entity_id=entity_id, depth=1, limit=10)
 
         assert isinstance(entities, list)
         assert len(entities) == 2
@@ -280,11 +261,7 @@ class TestFalkorDBClientGetRelatedEntities:
         """Test with depth=2."""
         entity_id = str(uuid.uuid4())
 
-        entities = await mock_client.get_related_entities(
-            entity_id=entity_id,
-            depth=2,
-            limit=20
-        )
+        entities = await mock_client.get_related_entities(entity_id=entity_id, depth=2, limit=20)
 
         assert isinstance(entities, list)
 
@@ -293,46 +270,36 @@ class TestFalkorDBClientGetRelatedEntities:
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="Invalid entity UUID"):
-            asyncio.run(client.get_related_entities(
-                entity_id="invalid-uuid",
-                depth=1
-            ))
+            asyncio.run(client.get_related_entities(entity_id="invalid-uuid", depth=1))
 
     def test_get_related_entities_depth_too_low(self):
         """Test ValidationError on depth < 1."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="depth must be in"):
-            asyncio.run(client.get_related_entities(
-                entity_id=str(uuid.uuid4()),
-                depth=0
-            ))
+            asyncio.run(client.get_related_entities(entity_id=str(uuid.uuid4()), depth=0))
 
     def test_get_related_entities_depth_too_high(self):
         """Test ValidationError on depth > 5."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="depth must be in"):
-            asyncio.run(client.get_related_entities(
-                entity_id=str(uuid.uuid4()),
-                depth=6
-            ))
+            asyncio.run(client.get_related_entities(entity_id=str(uuid.uuid4()), depth=6))
 
     def test_get_related_entities_limit_too_high(self):
         """Test ValidationError on limit > 100."""
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="limit must be in"):
-            asyncio.run(client.get_related_entities(
-                entity_id=str(uuid.uuid4()),
-                depth=1,
-                limit=101
-            ))
+            asyncio.run(
+                client.get_related_entities(entity_id=str(uuid.uuid4()), depth=1, limit=101)
+            )
 
 
 # ============================================================================
 # graph_query TESTS
 # ============================================================================
+
 
 class TestFalkorDBClientGraphQuery:
     """Test FalkorDBClient.graph_query()."""
@@ -346,7 +313,7 @@ class TestFalkorDBClientGraphQuery:
         mock_result = MagicMock()
         mock_result.rows = [
             {"m.id": "uuid-1", "m.text": "Test 1"},
-            {"m.id": "uuid-2", "m.text": "Test 2"}
+            {"m.id": "uuid-2", "m.text": "Test 2"},
         ]
         mock_result.row_count = 2
         mock_result.execution_time_ms = 20
@@ -354,9 +321,9 @@ class TestFalkorDBClientGraphQuery:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -368,16 +335,15 @@ class TestFalkorDBClientGraphQuery:
         )
 
         # The result is a QueryResult object
-        assert hasattr(result, 'rows')
-        assert hasattr(result, 'row_count')
-        assert hasattr(result, 'execution_time_ms')
+        assert hasattr(result, "rows")
+        assert hasattr(result, "row_count")
+        assert hasattr(result, "execution_time_ms")
 
     @pytest.mark.asyncio
     async def test_graph_query_with_parameters(self, mock_client):
         """Test query with parameters."""
         result = await mock_client.graph_query(
-            cypher="MATCH (m:Memory {id: $id}) RETURN m",
-            parameters={"id": "test-id"}
+            cypher="MATCH (m:Memory {id: $id}) RETURN m", parameters={"id": "test-id"}
         )
 
         assert result.row_count == 2
@@ -403,15 +369,15 @@ class TestFalkorDBClientGraphQuery:
         client = FalkorDBClient()
 
         with pytest.raises(ValidationError, match="JSON-serializable"):
-            asyncio.run(client.graph_query(
-                cypher="MATCH (n) RETURN n",
-                parameters={"binary": b"bytes"}
-            ))
+            asyncio.run(
+                client.graph_query(cypher="MATCH (n) RETURN n", parameters={"binary": b"bytes"})
+            )
 
 
 # ============================================================================
 # delete_memory TESTS
 # ============================================================================
+
 
 class TestFalkorDBClientDeleteMemory:
     """Test FalkorDBClient.delete_memory()."""
@@ -430,9 +396,9 @@ class TestFalkorDBClientDeleteMemory:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -450,9 +416,9 @@ class TestFalkorDBClientDeleteMemory:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 
@@ -486,6 +452,7 @@ class TestFalkorDBClientDeleteMemory:
 # clear_all TESTS
 # ============================================================================
 
+
 class TestFalkorDBClientClearAll:
     """Test FalkorDBClient.clear_all()."""
 
@@ -503,9 +470,9 @@ class TestFalkorDBClientClearAll:
         async def mock_execute(query, params):
             return mock_result
 
-        mocker.patch.object(client, '_execute_cypher', side_effect=mock_execute)
-        mocker.patch.object(client, '_initialized', True)
-        mocker.patch.object(client, '_schema_ready', True)
+        mocker.patch.object(client, "_execute_cypher", side_effect=mock_execute)
+        mocker.patch.object(client, "_initialized", True)
+        mocker.patch.object(client, "_schema_ready", True)
 
         return client
 

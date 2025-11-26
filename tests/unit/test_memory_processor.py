@@ -10,26 +10,26 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from typing import List
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import pytest
+
+from zapomni_core.exceptions import (
+    DatabaseError,
+    EmbeddingError,
+    ProcessingError,
+    SearchError,
+    ValidationError,
+)
 from zapomni_core.memory_processor import (
     MemoryProcessor,
     ProcessorConfig,
     SearchResultItem,
 )
-from zapomni_core.exceptions import (
-    ValidationError,
-    EmbeddingError,
-    DatabaseError,
-    ProcessingError,
-    SearchError,
-)
 from zapomni_db.models import Chunk, SearchResult
-
 
 # ============================================================================
 # Test Fixtures
@@ -97,9 +97,7 @@ def mock_chunker():
 def mock_embedder():
     """Mock OllamaEmbedder."""
     embedder = AsyncMock()
-    embedder.embed_text = AsyncMock(
-        return_value=[0.1] * 768  # 768-dimensional embedding
-    )
+    embedder.embed_text = AsyncMock(return_value=[0.1] * 768)  # 768-dimensional embedding
     return embedder
 
 
@@ -225,9 +223,7 @@ class TestMemoryProcessorInit:
                 config=config,
             )
 
-    def test_init_invalid_search_mode_raises(
-        self, mock_db_client, mock_chunker, mock_embedder
-    ):
+    def test_init_invalid_search_mode_raises(self, mock_db_client, mock_chunker, mock_embedder):
         """Test that invalid search_mode raises ValueError."""
         config = ProcessorConfig(search_mode="invalid_mode")
         with pytest.raises(ValueError, match="Invalid search_mode"):
@@ -358,9 +354,7 @@ class TestAddMemoryValidation:
         reserved_keys = ["memory_id", "timestamp", "chunks"]
         for key in reserved_keys:
             with pytest.raises(ValidationError, match=f"Reserved key in metadata"):
-                await memory_processor.add_memory(
-                    text="Test", metadata={key: "value"}
-                )
+                await memory_processor.add_memory(text="Test", metadata={key: "value"})
 
     @pytest.mark.asyncio
     async def test_add_memory_non_serializable_metadata_raises(self, memory_processor):
@@ -710,9 +704,7 @@ class TestBuildKnowledgeGraph:
     @pytest.mark.asyncio
     async def test_build_knowledge_graph_not_implemented(self, memory_processor):
         """Test that build_knowledge_graph raises NotImplementedError in Phase 1."""
-        with pytest.raises(
-            NotImplementedError, match="not yet implemented"
-        ):
+        with pytest.raises(NotImplementedError, match="not yet implemented"):
             await memory_processor.build_knowledge_graph()
 
 

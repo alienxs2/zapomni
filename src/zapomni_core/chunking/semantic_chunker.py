@@ -8,10 +8,9 @@ when available, with lightweight fallbacks for local testing environments.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence
-
-import logging
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_db.models import Chunk
@@ -176,9 +175,7 @@ class SemanticChunker:
             raise ValidationError("Text cannot be empty")
 
         if len(text) > 10_000_000:
-            raise ValidationError(
-                f"Text exceeds maximum length (10,000,000 chars): {len(text)}"
-            )
+            raise ValidationError(f"Text exceeds maximum length (10,000,000 chars): {len(text)}")
 
     def _count_tokens(self, text: str) -> int:
         """
@@ -364,9 +361,7 @@ class SemanticChunker:
                 )
             )
 
-        logger.debug(
-            f"Merging small chunks: input={len(chunks)}, output={len(reindexed)}"
-        )
+        logger.debug(f"Merging small chunks: input={len(chunks)}, output={len(reindexed)}")
 
         return reindexed
 

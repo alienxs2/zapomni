@@ -7,18 +7,19 @@ chunking → embedding → storage.
 Follows TDD approach with comprehensive mocking of dependencies.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
 import uuid
+from typing import List
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from zapomni_core.processors.text_processor import TextProcessor
+import pytest
+
 from zapomni_core.exceptions import (
-    ValidationError,
-    ProcessingError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
+    ProcessingError,
+    ValidationError,
 )
+from zapomni_core.processors.text_processor import TextProcessor
 from zapomni_db.models import Chunk, Memory
 
 
@@ -42,9 +43,7 @@ class TestTextProcessorInit:
         mock_db_client = AsyncMock()
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         assert processor.chunker is mock_chunker
@@ -64,20 +63,8 @@ class TestTextProcessorAddText:
         mock_db_client = AsyncMock()
 
         # Mock chunker output
-        chunk1 = Chunk(
-            text="Python is great.",
-            index=0,
-            start_char=0,
-            end_char=16,
-            metadata={}
-        )
-        chunk2 = Chunk(
-            text="It's easy to learn.",
-            index=1,
-            start_char=17,
-            end_char=36,
-            metadata={}
-        )
+        chunk1 = Chunk(text="Python is great.", index=0, start_char=0, end_char=16, metadata={})
+        chunk2 = Chunk(text="It's easy to learn.", index=1, start_char=17, end_char=36, metadata={})
         mock_chunker.chunk_text.return_value = [chunk1, chunk2]
 
         # Mock embedder output
@@ -91,9 +78,7 @@ class TestTextProcessorAddText:
 
         # Create processor with mocks
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         # Execute
@@ -162,8 +147,7 @@ class TestTextProcessorAddText:
         """Chunking failure should raise ProcessingError."""
         mock_chunker = MagicMock()
         mock_chunker.chunk_text.side_effect = ProcessingError(
-            message="Chunking failed",
-            error_code="PROC_001"
+            message="Chunking failed", error_code="PROC_001"
         )
 
         processor = TextProcessor(chunker=mock_chunker)
@@ -182,14 +166,10 @@ class TestTextProcessorAddText:
         chunk = Chunk(text="Test", index=0, start_char=0, end_char=4, metadata={})
         mock_chunker.chunk_text.return_value = [chunk]
         mock_embedder.embed_batch.side_effect = EmbeddingError(
-            message="Embedding failed",
-            error_code="EMB_001"
+            message="Embedding failed", error_code="EMB_001"
         )
 
-        processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder
-        )
+        processor = TextProcessor(chunker=mock_chunker, embedder=mock_embedder)
 
         with pytest.raises(EmbeddingError) as exc_info:
             await processor.add_text("Test text", {})
@@ -207,14 +187,11 @@ class TestTextProcessorAddText:
         mock_chunker.chunk_text.return_value = [chunk]
         mock_embedder.embed_batch.return_value = [[0.1] * 768]
         mock_db_client.add_memory.side_effect = DatabaseError(
-            message="Storage failed",
-            error_code="DB_001"
+            message="Storage failed", error_code="DB_001"
         )
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         with pytest.raises(DatabaseError) as exc_info:
@@ -229,22 +206,14 @@ class TestTextProcessorAddText:
         mock_embedder = AsyncMock()
         mock_db_client = AsyncMock()
 
-        chunk = Chunk(
-            text="Short text.",
-            index=0,
-            start_char=0,
-            end_char=11,
-            metadata={}
-        )
+        chunk = Chunk(text="Short text.", index=0, start_char=0, end_char=11, metadata={})
         mock_chunker.chunk_text.return_value = [chunk]
         mock_embedder.embed_batch.return_value = [[0.5] * 768]
         expected_memory_id = str(uuid.uuid4())
         mock_db_client.add_memory.return_value = expected_memory_id
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         memory_id = await processor.add_text("Short text.", {})
@@ -260,18 +229,16 @@ class TestTextProcessorAddText:
         mock_db_client = AsyncMock()
 
         chunks = [
-            Chunk(text=f"Chunk {i}", index=i, start_char=i*10, end_char=(i+1)*10, metadata={})
+            Chunk(text=f"Chunk {i}", index=i, start_char=i * 10, end_char=(i + 1) * 10, metadata={})
             for i in range(5)
         ]
         mock_chunker.chunk_text.return_value = chunks
-        mock_embedder.embed_batch.return_value = [[0.1 * (i+1)] * 768 for i in range(5)]
+        mock_embedder.embed_batch.return_value = [[0.1 * (i + 1)] * 768 for i in range(5)]
         expected_memory_id = str(uuid.uuid4())
         mock_db_client.add_memory.return_value = expected_memory_id
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         memory_id = await processor.add_text("Long text with multiple chunks.", {})
@@ -296,16 +263,14 @@ class TestTextProcessorAddText:
         mock_db_client.add_memory.return_value = expected_memory_id
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         metadata = {
             "source": "test.txt",
             "author": "test_user",
             "timestamp": "2025-11-23T10:00:00Z",
-            "tags": ["test", "unittest"]
+            "tags": ["test", "unittest"],
         }
 
         await processor.add_text("Test text", metadata)
@@ -328,12 +293,10 @@ class TestTextProcessorAddText:
         mock_db_client.add_memory.return_value = expected_memory_id
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
-        with patch.object(processor.logger, 'info') as mock_log:
+        with patch.object(processor.logger, "info") as mock_log:
             memory_id = await processor.add_text("Test text", {})
 
             # Verify logging was called
@@ -341,20 +304,21 @@ class TestTextProcessorAddText:
 
             # Check for success log with memory_id
             log_calls = [call[0] for call in mock_log.call_args_list]
-            assert any("text_processed" in str(call) or "success" in str(call) for call in log_calls)
+            assert any(
+                "text_processed" in str(call) or "success" in str(call) for call in log_calls
+            )
 
     @pytest.mark.asyncio
     async def test_add_text_logging_error_path(self):
         """Failed processing should log error messages."""
         mock_chunker = MagicMock()
         mock_chunker.chunk_text.side_effect = ProcessingError(
-            message="Chunking failed",
-            error_code="PROC_001"
+            message="Chunking failed", error_code="PROC_001"
         )
 
         processor = TextProcessor(chunker=mock_chunker)
 
-        with patch.object(processor.logger, 'error') as mock_error_log:
+        with patch.object(processor.logger, "error") as mock_error_log:
             with pytest.raises(ProcessingError):
                 await processor.add_text("Test text", {})
 
@@ -369,7 +333,7 @@ class TestTextProcessorAddText:
         mock_db_client = AsyncMock()
 
         chunks = [
-            Chunk(text=f"Chunk {i}", index=i, start_char=i*10, end_char=(i+1)*10, metadata={})
+            Chunk(text=f"Chunk {i}", index=i, start_char=i * 10, end_char=(i + 1) * 10, metadata={})
             for i in range(3)
         ]
         mock_chunker.chunk_text.return_value = chunks
@@ -378,9 +342,7 @@ class TestTextProcessorAddText:
         mock_embedder.embed_batch.return_value = [[0.1] * 768, [0.2] * 768]  # Only 2 instead of 3
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         # Should raise error due to mismatch
@@ -403,9 +365,7 @@ class TestTextProcessorAddText:
         mock_embedder.embed_batch.return_value = [[0.1] * 384]  # Wrong dimension
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         with pytest.raises(ProcessingError) as exc_info:
@@ -431,38 +391,34 @@ class TestTextProcessorIntegration:
                 index=0,
                 start_char=0,
                 end_char=45,
-                metadata={}
+                metadata={},
             ),
             Chunk(
                 text="It was created by Guido van Rossum in 1991.",
                 index=1,
                 start_char=46,
                 end_char=90,
-                metadata={}
+                metadata={},
             ),
             Chunk(
                 text="Python emphasizes code readability and simplicity.",
                 index=2,
                 start_char=91,
                 end_char=141,
-                metadata={}
+                metadata={},
             ),
         ]
         mock_chunker.chunk_text.return_value = chunks
 
         # Realistic embeddings (different values)
-        embeddings = [
-            [0.1 + i * 0.01] * 768 for i in range(3)
-        ]
+        embeddings = [[0.1 + i * 0.01] * 768 for i in range(3)]
         mock_embedder.embed_batch.return_value = embeddings
 
         expected_memory_id = str(uuid.uuid4())
         mock_db_client.add_memory.return_value = expected_memory_id
 
         processor = TextProcessor(
-            chunker=mock_chunker,
-            embedder=mock_embedder,
-            db_client=mock_db_client
+            chunker=mock_chunker, embedder=mock_embedder, db_client=mock_db_client
         )
 
         text = (
@@ -470,11 +426,7 @@ class TestTextProcessorIntegration:
             "It was created by Guido van Rossum in 1991. "
             "Python emphasizes code readability and simplicity."
         )
-        metadata = {
-            "source": "python_intro.txt",
-            "author": "wikipedia",
-            "category": "programming"
-        }
+        metadata = {"source": "python_intro.txt", "author": "wikipedia", "category": "programming"}
 
         memory_id = await processor.add_text(text, metadata)
 

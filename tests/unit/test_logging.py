@@ -9,15 +9,17 @@ License: MIT
 """
 
 import sys
+from io import StringIO
+
 import pytest
 import structlog
-from io import StringIO
-from zapomni_core.logging_service import LoggingService, LoggingConfig
 
+from zapomni_core.logging_service import LoggingConfig, LoggingService
 
 # ============================================================
 # FIXTURES
 # ============================================================
+
 
 @pytest.fixture(autouse=True)
 def reset_logging_service():
@@ -38,6 +40,7 @@ def reset_logging_service():
 # CONFIGURATION TESTS
 # ============================================================
 
+
 def test_configure_logging_success():
     """Test normal logging configuration."""
     LoggingService.configure_logging(level="INFO", format="json")
@@ -50,11 +53,7 @@ def test_configure_logging_success():
 
 def test_configure_logging_with_config_object():
     """Test configuration with LoggingConfig object."""
-    config = LoggingConfig(
-        level="DEBUG",
-        format="json",
-        sensitive_keys={"password", "api_key"}
-    )
+    config = LoggingConfig(level="DEBUG", format="json", sensitive_keys={"password", "api_key"})
 
     LoggingService.configure_logging(config=config)
 
@@ -95,6 +94,7 @@ def test_configure_logging_invalid_format():
 # GET LOGGER TESTS
 # ============================================================
 
+
 def test_get_logger_success():
     """Test getting logger after configuration."""
     LoggingService.configure_logging(level="INFO")
@@ -103,8 +103,8 @@ def test_get_logger_success():
 
     assert logger is not None
     # Logger is a BoundLoggerLazyProxy, which is a valid logger type
-    assert hasattr(logger, 'info')
-    assert hasattr(logger, 'error')
+    assert hasattr(logger, "info")
+    assert hasattr(logger, "error")
 
 
 def test_get_logger_caches_loggers():
@@ -161,6 +161,7 @@ def test_get_logger_very_long_name():
 # LOG OPERATION TESTS
 # ============================================================
 
+
 def test_log_operation_success():
     """Test logging operation with metadata."""
     LoggingService.configure_logging(level="INFO", format="json")
@@ -169,7 +170,7 @@ def test_log_operation_success():
     LoggingService.log_operation(
         operation="test_operation",
         correlation_id="test-uuid-123",
-        metadata={"key": "value", "count": 42}
+        metadata={"key": "value", "count": 42},
     )
 
     # If we get here, logging succeeded
@@ -181,10 +182,7 @@ def test_log_operation_empty_operation():
     LoggingService.configure_logging(level="INFO")
 
     with pytest.raises(ValueError) as exc_info:
-        LoggingService.log_operation(
-            operation="",
-            correlation_id="uuid"
-        )
+        LoggingService.log_operation(operation="", correlation_id="uuid")
 
     assert "operation" in str(exc_info.value).lower()
 
@@ -194,10 +192,7 @@ def test_log_operation_empty_correlation_id():
     LoggingService.configure_logging(level="INFO")
 
     with pytest.raises(ValueError) as exc_info:
-        LoggingService.log_operation(
-            operation="test",
-            correlation_id=""
-        )
+        LoggingService.log_operation(operation="test", correlation_id="")
 
     assert "correlation_id" in str(exc_info.value).lower()
 
@@ -210,11 +205,7 @@ def test_log_operation_sanitizes_sensitive_data():
     LoggingService.log_operation(
         operation="user_login",
         correlation_id="uuid",
-        metadata={
-            "username": "alice",
-            "password": "secret123",
-            "api_key": "sk-abc123"
-        }
+        metadata={"username": "alice", "password": "secret123", "api_key": "sk-abc123"},
     )
 
     # If we get here, logging succeeded
@@ -224,6 +215,7 @@ def test_log_operation_sanitizes_sensitive_data():
 # ============================================================
 # LOG ERROR TESTS
 # ============================================================
+
 
 def test_log_error_with_stack_trace():
     """Test logging error with stack trace."""
@@ -236,7 +228,7 @@ def test_log_error_with_stack_trace():
         error=error,
         correlation_id="uuid",
         context={"operation": "test_op"},
-        include_stack_trace=True
+        include_stack_trace=True,
     )
 
     # If we get here, error logging succeeded
@@ -250,11 +242,7 @@ def test_log_error_without_stack_trace():
     error = ValueError("Expected error")
 
     # Should not raise exceptions
-    LoggingService.log_error(
-        error=error,
-        correlation_id="uuid",
-        include_stack_trace=False
-    )
+    LoggingService.log_error(error=error, correlation_id="uuid", include_stack_trace=False)
 
     # If we get here, error logging succeeded
     assert True
@@ -263,6 +251,7 @@ def test_log_error_without_stack_trace():
 # ============================================================
 # LOG PERFORMANCE TESTS
 # ============================================================
+
 
 def test_log_performance_success():
     """Test logging performance metrics."""
@@ -273,7 +262,7 @@ def test_log_performance_success():
         operation="test_op",
         duration_ms=123.45,
         correlation_id="uuid",
-        metadata={"items_processed": 100}
+        metadata={"items_processed": 100},
     )
 
     # If we get here, performance logging succeeded
@@ -285,11 +274,7 @@ def test_log_performance_negative_duration():
     LoggingService.configure_logging(level="INFO")
 
     with pytest.raises(ValueError) as exc_info:
-        LoggingService.log_performance(
-            operation="test",
-            duration_ms=-10,
-            correlation_id="uuid"
-        )
+        LoggingService.log_performance(operation="test", duration_ms=-10, correlation_id="uuid")
 
     assert "negative" in str(exc_info.value).lower()
 
@@ -298,16 +283,12 @@ def test_log_performance_negative_duration():
 # SANITIZATION TESTS
 # ============================================================
 
+
 def test_sanitize_metadata_sensitive_keys():
     """Test sanitization of sensitive keys in metadata."""
     LoggingService.configure_logging(level="INFO")
 
-    metadata = {
-        "username": "alice",
-        "password": "secret",
-        "api_key": "key123",
-        "data": "public"
-    }
+    metadata = {"username": "alice", "password": "secret", "api_key": "key123", "data": "public"}
 
     sanitized = LoggingService._sanitize_metadata(metadata)
 
@@ -321,15 +302,7 @@ def test_sanitize_metadata_nested_dicts():
     """Test recursive sanitization of nested dictionaries."""
     LoggingService.configure_logging(level="INFO")
 
-    metadata = {
-        "user": {
-            "name": "alice",
-            "credentials": {
-                "password": "secret",
-                "token": "abc123"
-            }
-        }
-    }
+    metadata = {"user": {"name": "alice", "credentials": {"password": "secret", "token": "abc123"}}}
 
     sanitized = LoggingService._sanitize_metadata(metadata)
 
@@ -343,10 +316,7 @@ def test_sanitize_metadata_with_lists():
     LoggingService.configure_logging(level="INFO")
 
     metadata = {
-        "users": [
-            {"name": "alice", "password": "secret1"},
-            {"name": "bob", "password": "secret2"}
-        ]
+        "users": [{"name": "alice", "password": "secret1"}, {"name": "bob", "password": "secret2"}]
     }
 
     sanitized = LoggingService._sanitize_metadata(metadata)
@@ -359,6 +329,7 @@ def test_sanitize_metadata_with_lists():
 # ============================================================
 # INTEGRATION TESTS
 # ============================================================
+
 
 def test_end_to_end_logging_flow():
     """Test complete logging flow from configuration to output."""

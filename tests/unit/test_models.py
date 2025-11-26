@@ -4,19 +4,20 @@ Unit tests for shared data models (Pydantic schemas).
 Tests data model validation, constraints, serialization, and immutability.
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
 # Import will fail initially (TDD RED phase)
 from zapomni_db.models import (
     Chunk,
     ChunkData,
-    Memory,
     Entity,
+    Memory,
+    MemoryResult,
     Relationship,
     SearchResult,
-    MemoryResult,
 )
 
 

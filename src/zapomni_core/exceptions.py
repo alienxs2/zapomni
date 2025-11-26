@@ -9,7 +9,7 @@ License: MIT
 """
 
 import uuid
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class ZapomniError(Exception):
@@ -217,11 +217,7 @@ class QueryError(DatabaseError):
     """
 
     def __init__(
-        self,
-        message: str,
-        error_code: str = "QUERY_001",
-        is_timeout: bool = False,
-        **kwargs
+        self, message: str, error_code: str = "QUERY_001", is_timeout: bool = False, **kwargs
     ):
         """
         Initialize QueryError.

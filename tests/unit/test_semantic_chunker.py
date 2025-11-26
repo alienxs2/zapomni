@@ -11,8 +11,8 @@ from typing import List
 
 import pytest
 
-from zapomni_core.exceptions import ValidationError
 from zapomni_core.chunking.semantic_chunker import SemanticChunker
+from zapomni_core.exceptions import ValidationError
 from zapomni_db.models import Chunk
 
 
@@ -305,4 +305,3 @@ class TestSemanticChunkerMergeSmallChunks:
         assert merged[1].index == 1
         assert merged[0].text.startswith("AAA")
         assert "BBB" in merged[0].text
-

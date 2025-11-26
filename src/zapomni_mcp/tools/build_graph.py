@@ -8,21 +8,20 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, Tuple, Optional
 import time
-import structlog
-from pydantic import ValidationError, BaseModel, ConfigDict
-from typing_extensions import Annotated
-from pydantic import Field
+from typing import Any, Dict, Optional, Tuple
 
-from zapomni_core.memory_processor import MemoryProcessor
+import structlog
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from typing_extensions import Annotated
+
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    ExtractionError,
     DatabaseError,
+    ExtractionError,
     ProcessingError,
 )
-
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor
 
 logger = structlog.get_logger(__name__)
 
@@ -330,7 +329,7 @@ class BuildGraphTool:
 
             # Extract entities using async method to avoid blocking event loop
             # Falls back to sync if async method not available (backward compatibility)
-            if hasattr(entity_extractor, 'extract_entities_async'):
+            if hasattr(entity_extractor, "extract_entities_async"):
                 entities = await entity_extractor.extract_entities_async(text)
             else:
                 # Fallback for older EntityExtractor instances without async support

@@ -14,22 +14,23 @@ License: MIT
 
 from __future__ import annotations
 
-import uuid
 import asyncio
-from typing import List, Dict, Optional, Any, Tuple
+import uuid
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 
-from zapomni_core.extractors.entity_extractor import Entity as ExtractedEntity, EntityExtractor
+from zapomni_core.exceptions import (
+    DatabaseError,
+    ExtractionError,
+    ProcessingError,
+    ValidationError,
+)
+from zapomni_core.extractors.entity_extractor import Entity as ExtractedEntity
+from zapomni_core.extractors.entity_extractor import EntityExtractor
 from zapomni_db import FalkorDBClient
 from zapomni_db.models import Entity as DBEntity
-from zapomni_core.exceptions import (
-    ValidationError,
-    ExtractionError,
-    DatabaseError,
-    ProcessingError,
-)
 
 logger = structlog.get_logger(__name__)
 
@@ -37,6 +38,7 @@ logger = structlog.get_logger(__name__)
 # ============================================================================
 # GraphNode Data Models
 # ============================================================================
+
 
 class GraphNode:
     """
@@ -131,6 +133,7 @@ class GraphRelationship:
 # ============================================================================
 # GraphBuilder Class
 # ============================================================================
+
 
 class GraphBuilder:
     """
@@ -266,7 +269,7 @@ class GraphBuilder:
             self._logger.debug("extracting_entities", text_length=len(text))
 
             # Use async extraction if available (SSE transport), fallback to sync
-            if hasattr(self.entity_extractor, 'extract_entities_async'):
+            if hasattr(self.entity_extractor, "extract_entities_async"):
                 extracted_entities = await self.entity_extractor.extract_entities_async(text)
             else:
                 # Fallback for older EntityExtractor instances without async support
@@ -295,9 +298,7 @@ class GraphBuilder:
             # STEP 3: Phase 2 stub - relationship detection
             relationships_created = 0
             try:
-                relationships_created = await self.add_relationships(
-                    extracted_entities, text
-                )
+                relationships_created = await self.add_relationships(extracted_entities, text)
             except NotImplementedError:
                 self._logger.debug("relationships_phase2_stub")
 

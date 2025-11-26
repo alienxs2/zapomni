@@ -14,9 +14,9 @@ from zapomni_core.graph.graph_builder import (
     GraphRelationship,
 )
 from zapomni_core.graph.graph_exporter import (
-    GraphExporter,
     ExportResult,
     GraphData,
+    GraphExporter,
 )
 
 __all__ = [

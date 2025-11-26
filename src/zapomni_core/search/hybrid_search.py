@@ -14,13 +14,13 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import structlog
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
+import structlog
+
+from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError
-
 
 logger = structlog.get_logger(__name__)
 
@@ -93,14 +93,14 @@ class HybridSearch:
             raise ValidationError(
                 message="vector_search cannot be None",
                 error_code="VAL_001",
-                details={"parameter": "vector_search"}
+                details={"parameter": "vector_search"},
             )
 
         if bm25_search is None:
             raise ValidationError(
                 message="bm25_search cannot be None",
                 error_code="VAL_001",
-                details={"parameter": "bm25_search"}
+                details={"parameter": "bm25_search"},
             )
 
         self.vector_search = vector_search
@@ -109,7 +109,7 @@ class HybridSearch:
         logger.info(
             "hybrid_search_initialized",
             vector_search_type=type(vector_search).__name__,
-            bm25_search_type=type(bm25_search).__name__
+            bm25_search_type=type(bm25_search).__name__,
         )
 
     async def search(
@@ -117,7 +117,7 @@ class HybridSearch:
         query: str,
         limit: int = 10,
         alpha: float = 0.5,
-        filters: Optional[Dict[str, Any]] = None
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[SearchResult]:
         """
         Perform hybrid search combining BM25 and vector similarity.
@@ -198,9 +198,7 @@ class HybridSearch:
 
         if not query:
             raise ValidationError(
-                message="Query cannot be empty",
-                error_code="VAL_001",
-                details={"query": query}
+                message="Query cannot be empty", error_code="VAL_001", details={"query": query}
             )
 
         # STEP 2: VALIDATE LIMIT
@@ -208,21 +206,21 @@ class HybridSearch:
             raise ValidationError(
                 message=f"Limit must be int, got {type(limit).__name__}",
                 error_code="VAL_002",
-                details={"limit": limit, "type": type(limit).__name__}
+                details={"limit": limit, "type": type(limit).__name__},
             )
 
         if limit < 1:
             raise ValidationError(
                 message=f"Limit must be >= 1, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit}
+                details={"limit": limit},
             )
 
         if limit > 1000:
             raise ValidationError(
                 message=f"Limit cannot exceed 1000, got {limit}",
                 error_code="VAL_003",
-                details={"limit": limit, "max": 1000}
+                details={"limit": limit, "max": 1000},
             )
 
         # STEP 3: VALIDATE ALPHA
@@ -230,14 +228,14 @@ class HybridSearch:
             raise ValidationError(
                 message=f"Alpha must be float, got {type(alpha).__name__}",
                 error_code="VAL_002",
-                details={"alpha": alpha, "type": type(alpha).__name__}
+                details={"alpha": alpha, "type": type(alpha).__name__},
             )
 
         if alpha < 0.0 or alpha > 1.0:
             raise ValidationError(
                 message=f"Alpha must be between 0.0 and 1.0, got {alpha}",
                 error_code="VAL_003",
-                details={"alpha": alpha, "min": 0.0, "max": 1.0}
+                details={"alpha": alpha, "min": 0.0, "max": 1.0},
             )
 
         # STEP 4: EXECUTE PARALLEL SEARCHES
@@ -247,25 +245,20 @@ class HybridSearch:
                 query=query[:100],
                 limit=limit,
                 alpha=alpha,
-                has_filters=filters is not None
+                has_filters=filters is not None,
             )
 
             # Execute both searches in parallel
             vector_results = await self.vector_search.search(
-                query=query,
-                limit=limit,
-                filters=filters
+                query=query, limit=limit, filters=filters
             )
 
-            bm25_results = await self.bm25_search.search(
-                query=query,
-                limit=limit
-            )
+            bm25_results = await self.bm25_search.search(query=query, limit=limit)
 
             logger.debug(
                 "search_results_received",
                 vector_count=len(vector_results),
-                bm25_count=len(bm25_results)
+                bm25_count=len(bm25_results),
             )
 
         except (ValidationError, SearchError):
@@ -274,22 +267,18 @@ class HybridSearch:
 
         except Exception as e:
             logger.error(
-                "unexpected_hybrid_search_error",
-                error=str(e),
-                error_type=type(e).__name__
+                "unexpected_hybrid_search_error", error=str(e), error_type=type(e).__name__
             )
             raise SearchError(
                 message=f"Unexpected error during hybrid search: {str(e)}",
                 error_code="SEARCH_001",
                 details={"error_type": type(e).__name__},
-                original_exception=e
+                original_exception=e,
             )
 
         # STEP 5: CALCULATE RRF SCORES AND MERGE RESULTS
         merged_results = self._merge_with_rrf(
-            vector_results=vector_results,
-            bm25_results=bm25_results,
-            alpha=alpha
+            vector_results=vector_results, bm25_results=bm25_results, alpha=alpha
         )
 
         # STEP 6: SORT BY RRF SCORE AND APPLY LIMIT
@@ -303,7 +292,7 @@ class HybridSearch:
             vector_count=len(vector_results),
             bm25_count=len(bm25_results),
             alpha=alpha,
-            limit=limit
+            limit=limit,
         )
 
         return final_results
@@ -313,7 +302,7 @@ class HybridSearch:
         vector_results: List[SearchResult],
         bm25_results: List[Dict[str, Any]],
         alpha: float,
-        k: int = 60
+        k: int = 60,
     ) -> List[SearchResult]:
         """
         Merge results using Reciprocal Rank Fusion (RRF).
@@ -391,7 +380,7 @@ class HybridSearch:
                         tags=[],
                         source="bm25",
                         timestamp=datetime.now(),
-                        chunk_index=bm25_dict.get("index", rank)
+                        chunk_index=bm25_dict.get("index", rank),
                     )
                     result_by_chunk[pseudo_chunk_id] = pseudo_result
                     rrf_scores[pseudo_chunk_id] = 0.0
@@ -410,16 +399,22 @@ class HybridSearch:
                 tags=result.tags,
                 source=result.source,
                 timestamp=result.timestamp,
-                chunk_index=result.chunk_index
+                chunk_index=result.chunk_index,
             )
             merged_results.append(merged_result)
 
         logger.debug(
             "rrf_merge_completed",
             total_results=len(merged_results),
-            vector_only=len(vector_results) - sum(1 for r in vector_results if r.chunk_id in [b.get("text", "") for b in bm25_results]),
-            bm25_only=len(bm25_results) - sum(1 for b in bm25_results if b.get("text", "") in [r.text for r in vector_results]),
-            both=len([r for r in vector_results if r.text in [b.get("text", "") for b in bm25_results]])
+            vector_only=len(vector_results)
+            - sum(
+                1 for r in vector_results if r.chunk_id in [b.get("text", "") for b in bm25_results]
+            ),
+            bm25_only=len(bm25_results)
+            - sum(1 for b in bm25_results if b.get("text", "") in [r.text for r in vector_results]),
+            both=len(
+                [r for r in vector_results if r.text in [b.get("text", "") for b in bm25_results]]
+            ),
         )
 
         return merged_results

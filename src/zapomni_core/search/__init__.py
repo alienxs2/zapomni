@@ -17,9 +17,9 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from zapomni_core.search.vector_search import VectorSearch
 from zapomni_core.search.bm25_search import BM25Search
 from zapomni_core.search.hybrid_search import HybridSearch
 from zapomni_core.search.reranker import CrossEncoderReranker
+from zapomni_core.search.vector_search import VectorSearch
 
 __all__ = ["VectorSearch", "BM25Search", "HybridSearch", "CrossEncoderReranker"]

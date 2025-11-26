@@ -12,12 +12,13 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock
 
-from zapomni_mcp.tools.get_stats import GetStatsTool
-from zapomni_core.memory_processor import MemoryProcessor
+import pytest
+
 from zapomni_core.exceptions import DatabaseError
+from zapomni_core.memory_processor import MemoryProcessor
+from zapomni_mcp.tools.get_stats import GetStatsTool
 
 
 class TestGetStatsToolInit:
@@ -152,9 +153,7 @@ class TestGetStatsToolExecute:
         """Test execution when processor raises DatabaseError."""
         # Setup
         mock_processor.get_stats = AsyncMock(
-            side_effect=DatabaseError(
-                message="Connection lost", error_code="DB_001"
-            )
+            side_effect=DatabaseError(message="Connection lost", error_code="DB_001")
         )
         arguments = {}
 

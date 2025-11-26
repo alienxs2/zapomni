@@ -246,9 +246,7 @@ class OllamaEmbedder:
                     original_exception=e,
                 )
 
-    async def embed_batch(
-        self, texts: List[str], batch_size: int = 32
-    ) -> List[List[float]]:
+    async def embed_batch(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
         """
         Generate embeddings for multiple texts efficiently.
 
@@ -427,18 +425,14 @@ class OllamaEmbedder:
                     logger.debug("ollama_health_check_passed")
                     return True
 
-            logger.debug(
-                "ollama_health_check_failed", status_code=response.status_code
-            )
+            logger.debug("ollama_health_check_failed", status_code=response.status_code)
             return False
 
         except Exception as e:
             logger.debug("ollama_health_check_failed", error=str(e))
             return False
 
-    async def _call_ollama(
-        self, text: str, retry_count: int = 0
-    ) -> List[float]:
+    async def _call_ollama(self, text: str, retry_count: int = 0) -> List[float]:
         """
         Internal method: Call Ollama API with retry logic.
 

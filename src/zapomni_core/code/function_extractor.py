@@ -34,6 +34,7 @@ logger = structlog.get_logger()
 # Try to import radon for complexity calculation (optional)
 try:
     from radon.complexity import ComplexityVisitor
+
     RADON_AVAILABLE = True
 except ImportError:
     RADON_AVAILABLE = False
@@ -42,6 +43,7 @@ except ImportError:
 # ============================================================================
 # Data Models
 # ============================================================================
+
 
 @dataclass
 class Parameter:
@@ -54,6 +56,7 @@ class Parameter:
         default: Default value representation (if present)
         kind: Parameter kind (POSITIONAL_ONLY, POSITIONAL_OR_KEYWORD, etc.)
     """
+
     name: str
     annotation: Optional[str] = None
     default: Optional[str] = None
@@ -81,6 +84,7 @@ class FunctionMetadata:
         complexity_score: Cyclomatic complexity (if calculated)
         body_lines: Source code lines of function (if available)
     """
+
     name: str
     start_line: int
     end_line: int
@@ -127,6 +131,7 @@ class FunctionMetadata:
 # ============================================================================
 # FunctionExtractor Class
 # ============================================================================
+
 
 class FunctionExtractor:
     """
@@ -488,20 +493,13 @@ class FunctionExtractor:
         parameters = self._extract_parameters(node.args)
 
         # Get return type
-        return_type = (
-            ast.unparse(node.returns)
-            if node.returns
-            else None
-        )
+        return_type = ast.unparse(node.returns) if node.returns else None
 
         # Get docstring
         docstring = self.get_docstring(node)
 
         # Get decorators
-        decorators = [
-            ast.unparse(dec).split("(")[0].split(".")[-1]
-            for dec in node.decorator_list
-        ]
+        decorators = [ast.unparse(dec).split("(")[0].split(".")[-1] for dec in node.decorator_list]
 
         # Check if async
         is_async = isinstance(node, ast.AsyncFunctionDef)
@@ -556,11 +554,7 @@ class FunctionExtractor:
         for arg in args_node.args:
             param = Parameter(
                 name=arg.arg,
-                annotation=(
-                    ast.unparse(arg.annotation)
-                    if arg.annotation
-                    else None
-                ),
+                annotation=(ast.unparse(arg.annotation) if arg.annotation else None),
                 kind="POSITIONAL_OR_KEYWORD",
             )
             parameters.append(param)
@@ -582,11 +576,7 @@ class FunctionExtractor:
         for arg in args_node.kwonlyargs:
             param = Parameter(
                 name=arg.arg,
-                annotation=(
-                    ast.unparse(arg.annotation)
-                    if arg.annotation
-                    else None
-                ),
+                annotation=(ast.unparse(arg.annotation) if arg.annotation else None),
                 kind="KEYWORD_ONLY",
             )
             parameters.append(param)
@@ -596,9 +586,7 @@ class FunctionExtractor:
             param = Parameter(
                 name=f"**{args_node.kwarg.arg}",
                 annotation=(
-                    ast.unparse(args_node.kwarg.annotation)
-                    if args_node.kwarg.annotation
-                    else None
+                    ast.unparse(args_node.kwarg.annotation) if args_node.kwarg.annotation else None
                 ),
                 kind="VAR_KEYWORD",
             )

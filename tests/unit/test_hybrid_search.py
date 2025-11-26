@@ -12,14 +12,15 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 from datetime import datetime
 from typing import List
 from unittest.mock import AsyncMock, Mock, patch
 
-from zapomni_db.models import SearchResult
-from zapomni_core.exceptions import ValidationError, SearchError
+import pytest
+
+from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_core.search.hybrid_search import HybridSearch
+from zapomni_db.models import SearchResult
 
 
 @pytest.fixture
@@ -41,10 +42,7 @@ def mock_bm25_search():
 @pytest.fixture
 def hybrid_search(mock_vector_search, mock_bm25_search):
     """HybridSearch instance with mocked dependencies."""
-    return HybridSearch(
-        vector_search=mock_vector_search,
-        bm25_search=mock_bm25_search
-    )
+    return HybridSearch(vector_search=mock_vector_search, bm25_search=mock_bm25_search)
 
 
 @pytest.fixture
@@ -59,7 +57,7 @@ def sample_vector_results():
             tags=["python", "tutorial"],
             source="docs",
             timestamp=datetime.now(),
-            chunk_index=0
+            chunk_index=0,
         ),
         SearchResult(
             memory_id="mem2",
@@ -69,7 +67,7 @@ def sample_vector_results():
             tags=["python", "ml"],
             source="docs",
             timestamp=datetime.now(),
-            chunk_index=0
+            chunk_index=0,
         ),
         SearchResult(
             memory_id="mem3",
@@ -79,7 +77,7 @@ def sample_vector_results():
             tags=["data-science"],
             source="docs",
             timestamp=datetime.now(),
-            chunk_index=0
+            chunk_index=0,
         ),
     ]
 
@@ -88,21 +86,9 @@ def sample_vector_results():
 def sample_bm25_results():
     """Sample results from BM25 search (returns dicts, not SearchResult)."""
     return [
-        {
-            "text": "Machine learning with Python",
-            "score": 0.90,
-            "index": 1
-        },
-        {
-            "text": "Python best practices",
-            "score": 0.80,
-            "index": 3
-        },
-        {
-            "text": "Python programming tutorial",
-            "score": 0.70,
-            "index": 0
-        },
+        {"text": "Machine learning with Python", "score": 0.90, "index": 1},
+        {"text": "Python best practices", "score": 0.80, "index": 3},
+        {"text": "Python programming tutorial", "score": 0.70, "index": 0},
     ]
 
 
@@ -111,10 +97,7 @@ class TestHybridSearchInitialization:
 
     def test_init_with_valid_dependencies(self, mock_vector_search, mock_bm25_search):
         """Should initialize successfully with valid dependencies."""
-        search = HybridSearch(
-            vector_search=mock_vector_search,
-            bm25_search=mock_bm25_search
-        )
+        search = HybridSearch(vector_search=mock_vector_search, bm25_search=mock_bm25_search)
 
         assert search.vector_search == mock_vector_search
         assert search.bm25_search == mock_bm25_search
@@ -224,10 +207,7 @@ class TestReciprocalRankFusion:
 
     @pytest.mark.asyncio
     async def test_rrf_with_balanced_weighting(
-        self,
-        hybrid_search,
-        sample_vector_results,
-        sample_bm25_results
+        self, hybrid_search, sample_vector_results, sample_bm25_results
     ):
         """Should correctly merge results with balanced weighting (alpha=0.5)."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
@@ -237,14 +217,9 @@ class TestReciprocalRankFusion:
 
         # Verify both searches were called
         hybrid_search.vector_search.search.assert_called_once_with(
-            query="Python",
-            limit=10,
-            filters=None
+            query="Python", limit=10, filters=None
         )
-        hybrid_search.bm25_search.search.assert_called_once_with(
-            query="Python",
-            limit=10
-        )
+        hybrid_search.bm25_search.search.assert_called_once_with(query="Python", limit=10)
 
         # Should deduplicate mem1 and mem2 (appear in both)
         # BM25 result "Python best practices" doesn't match any vector result,
@@ -257,12 +232,7 @@ class TestReciprocalRankFusion:
         assert len(chunk_ids) == 4  # All unique chunks
 
     @pytest.mark.asyncio
-    async def test_rrf_vector_only(
-        self,
-        hybrid_search,
-        sample_vector_results,
-        sample_bm25_results
-    ):
+    async def test_rrf_vector_only(self, hybrid_search, sample_vector_results, sample_bm25_results):
         """Should use vector results only when alpha=1.0."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
         hybrid_search.bm25_search.search.return_value = sample_bm25_results
@@ -274,12 +244,7 @@ class TestReciprocalRankFusion:
         assert results[0].memory_id == "mem1"  # Highest vector score
 
     @pytest.mark.asyncio
-    async def test_rrf_bm25_only(
-        self,
-        hybrid_search,
-        sample_vector_results,
-        sample_bm25_results
-    ):
+    async def test_rrf_bm25_only(self, hybrid_search, sample_vector_results, sample_bm25_results):
         """Should use BM25 results only when alpha=0.0."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
         hybrid_search.bm25_search.search.return_value = sample_bm25_results
@@ -291,11 +256,7 @@ class TestReciprocalRankFusion:
         assert results[0].memory_id == "mem2"  # Highest BM25 score
 
     @pytest.mark.asyncio
-    async def test_rrf_with_empty_vector_results(
-        self,
-        hybrid_search,
-        sample_bm25_results
-    ):
+    async def test_rrf_with_empty_vector_results(self, hybrid_search, sample_bm25_results):
         """Should handle empty vector results gracefully."""
         hybrid_search.vector_search.search.return_value = []
         hybrid_search.bm25_search.search.return_value = sample_bm25_results
@@ -308,11 +269,7 @@ class TestReciprocalRankFusion:
         assert results[0].text == "Machine learning with Python"
 
     @pytest.mark.asyncio
-    async def test_rrf_with_empty_bm25_results(
-        self,
-        hybrid_search,
-        sample_vector_results
-    ):
+    async def test_rrf_with_empty_bm25_results(self, hybrid_search, sample_vector_results):
         """Should handle empty BM25 results gracefully."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
         hybrid_search.bm25_search.search.return_value = []
@@ -335,10 +292,7 @@ class TestReciprocalRankFusion:
 
     @pytest.mark.asyncio
     async def test_rrf_respects_limit(
-        self,
-        hybrid_search,
-        sample_vector_results,
-        sample_bm25_results
+        self, hybrid_search, sample_vector_results, sample_bm25_results
     ):
         """Should respect limit parameter in final results."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
@@ -355,10 +309,7 @@ class TestDeduplication:
 
     @pytest.mark.asyncio
     async def test_deduplication_by_chunk_id(
-        self,
-        hybrid_search,
-        sample_vector_results,
-        sample_bm25_results
+        self, hybrid_search, sample_vector_results, sample_bm25_results
     ):
         """Should deduplicate results by chunk_id."""
         hybrid_search.vector_search.search.return_value = sample_vector_results
@@ -382,14 +333,10 @@ class TestDeduplication:
             tags=[],
             source="docs",
             timestamp=datetime.now(),
-            chunk_index=0
+            chunk_index=0,
         )
         # BM25 returns dict, not SearchResult
-        bm25_result = {
-            "text": "Test",
-            "score": 0.5,
-            "index": 0
-        }
+        bm25_result = {"text": "Test", "score": 0.5, "index": 0}
 
         hybrid_search.vector_search.search.return_value = [result_high]
         hybrid_search.bm25_search.search.return_value = [bm25_result]
@@ -409,8 +356,7 @@ class TestErrorHandling:
     async def test_vector_search_error_propagation(self, hybrid_search):
         """Should propagate SearchError from vector search."""
         hybrid_search.vector_search.search.side_effect = SearchError(
-            message="Vector search failed",
-            error_code="SEARCH_001"
+            message="Vector search failed", error_code="SEARCH_001"
         )
 
         with pytest.raises(SearchError) as exc_info:
@@ -423,8 +369,7 @@ class TestErrorHandling:
         """Should propagate SearchError from BM25 search."""
         hybrid_search.vector_search.search.return_value = []
         hybrid_search.bm25_search.search.side_effect = SearchError(
-            message="BM25 search failed",
-            error_code="SEARCH_001"
+            message="BM25 search failed", error_code="SEARCH_001"
         )
 
         with pytest.raises(SearchError) as exc_info:
@@ -460,18 +405,14 @@ class TestRRFScoring:
                 tags=[],
                 source="test",
                 timestamp=datetime.now(),
-                chunk_index=0
+                chunk_index=0,
             )
             for i in range(3)
         ]
 
         # BM25 returns dicts, not SearchResult
         bm25_results = [
-            {
-                "text": f"Text {i}",
-                "score": 1.0 - (i * 0.1),
-                "index": i
-            }
+            {"text": f"Text {i}", "score": 1.0 - (i * 0.1), "index": i}
             for i in range(2, -1, -1)  # Reverse order
         ]
 
@@ -500,14 +441,10 @@ class TestRRFScoring:
             tags=[],
             source="test",
             timestamp=datetime.now(),
-            chunk_index=0
+            chunk_index=0,
         )
 
-        bm25_result = {
-            "text": "Test",
-            "score": 0.9,
-            "index": 0
-        }
+        bm25_result = {"text": "Test", "score": 0.9, "index": 0}
 
         hybrid_search.vector_search.search.return_value = [vector_result]
         hybrid_search.bm25_search.search.return_value = [bm25_result]
@@ -536,9 +473,7 @@ class TestFiltersParameter:
         await hybrid_search.search(query="test", limit=10, filters=filters)
 
         hybrid_search.vector_search.search.assert_called_once_with(
-            query="test",
-            limit=10,
-            filters=filters
+            query="test", limit=10, filters=filters
         )
 
     @pytest.mark.asyncio
@@ -551,7 +486,4 @@ class TestFiltersParameter:
         await hybrid_search.search(query="test", limit=10, filters=filters)
 
         # BM25 search should not receive filters
-        hybrid_search.bm25_search.search.assert_called_once_with(
-            query="test",
-            limit=10
-        )
+        hybrid_search.bm25_search.search.assert_called_once_with(query="test", limit=10)

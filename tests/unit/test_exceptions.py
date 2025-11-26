@@ -4,21 +4,22 @@ Unit tests for exception hierarchy and error handling.
 Tests exception creation, error codes, transient flags, and serialization.
 """
 
-import pytest
 import uuid
+
+import pytest
 
 # Import will fail initially (TDD RED phase)
 from zapomni_core.exceptions import (
-    ZapomniError,
-    ValidationError,
-    ProcessingError,
+    ConnectionError,
+    DatabaseError,
     EmbeddingError,
     ExtractionError,
-    SearchError,
-    DatabaseError,
-    ConnectionError,
+    ProcessingError,
     QueryError,
+    SearchError,
     TimeoutError,
+    ValidationError,
+    ZapomniError,
 )
 
 
@@ -456,4 +457,6 @@ class TestTransientFlags:
         ]
 
         for error in non_transient_errors:
-            assert error.is_transient is False, f"{error.__class__.__name__} should not be transient"
+            assert (
+                error.is_transient is False
+            ), f"{error.__class__.__name__} should not be transient"

@@ -26,10 +26,6 @@ Example:
     ```
 """
 
-from zapomni_core.processors.text_processor import TextProcessor
-from zapomni_core.processors.html_processor import HTMLProcessor
-from zapomni_core.processors.pdf_processor import PDFProcessor
-from zapomni_core.processors.markdown_processor import MarkdownProcessor
 from zapomni_core.processors.code_processor import (
     extract_classes,
     extract_functions,
@@ -38,7 +34,11 @@ from zapomni_core.processors.code_processor import (
     validate_syntax,
 )
 from zapomni_core.processors.docx_processor import DOCXProcessor
+from zapomni_core.processors.html_processor import HTMLProcessor
+from zapomni_core.processors.markdown_processor import MarkdownProcessor
+from zapomni_core.processors.pdf_processor import PDFProcessor
 from zapomni_core.processors.processor_factory import ProcessorFactory
+from zapomni_core.processors.text_processor import TextProcessor
 
 __all__ = [
     "TextProcessor",

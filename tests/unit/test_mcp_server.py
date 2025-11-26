@@ -24,7 +24,6 @@ from zapomni_core.exceptions import ValidationError
 from zapomni_mcp.config import Settings
 from zapomni_mcp.server import MCPServer, ServerStats
 
-
 # Fixtures
 
 

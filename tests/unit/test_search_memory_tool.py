@@ -12,19 +12,20 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
-from unittest.mock import AsyncMock, Mock
-from pydantic import ValidationError
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, Mock
 
-from zapomni_mcp.tools.search_memory import SearchMemoryTool, SearchMemoryRequest
-from zapomni_core.memory_processor import MemoryProcessor, SearchResultItem
+import pytest
+from pydantic import ValidationError
+
 from zapomni_core.exceptions import (
-    ValidationError as CoreValidationError,
-    SearchError,
-    EmbeddingError,
     DatabaseError,
+    EmbeddingError,
+    SearchError,
 )
+from zapomni_core.exceptions import ValidationError as CoreValidationError
+from zapomni_core.memory_processor import MemoryProcessor, SearchResultItem
+from zapomni_mcp.tools.search_memory import SearchMemoryRequest, SearchMemoryTool
 
 
 class TestSearchMemoryToolInit:
@@ -228,9 +229,7 @@ class TestSearchMemoryToolExecute:
         """Test execution when processor raises SearchError."""
         # Setup
         mock_processor.search_memory = AsyncMock(
-            side_effect=SearchError(
-                message="Vector index not found", error_code="SEARCH_001"
-            )
+            side_effect=SearchError(message="Vector index not found", error_code="SEARCH_001")
         )
         arguments = {"query": "test"}
 
@@ -246,9 +245,7 @@ class TestSearchMemoryToolExecute:
         """Test execution when processor raises DatabaseError."""
         # Setup
         mock_processor.search_memory = AsyncMock(
-            side_effect=DatabaseError(
-                message="Connection lost", error_code="DB_001"
-            )
+            side_effect=DatabaseError(message="Connection lost", error_code="DB_001")
         )
         arguments = {"query": "test"}
 

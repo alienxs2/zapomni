@@ -61,9 +61,7 @@ class TokenCounter:
                 )
                 self._fallback_mode = True
         else:
-            logger.debug(
-                "tiktoken not available. Using fallback whitespace-based tokenization."
-            )
+            logger.debug("tiktoken not available. Using fallback whitespace-based tokenization.")
             self._fallback_mode = True
 
     def count_tokens(self, text: str) -> int:

@@ -10,13 +10,14 @@ License: MIT
 
 import pytest
 import structlog
-from zapomni_core.utils import get_logger
-from zapomni_core.logging_service import LoggingService
 
+from zapomni_core.logging_service import LoggingService
+from zapomni_core.utils import get_logger
 
 # ============================================================
 # FIXTURES
 # ============================================================
+
 
 @pytest.fixture(autouse=True)
 def reset_logging_service():
@@ -45,16 +46,17 @@ def configured_logging():
 # LOGGER CREATION TESTS
 # ============================================================
 
+
 def test_get_logger_returns_bound_logger(configured_logging):
     """Test that get_logger returns a valid BoundLogger instance."""
     logger = get_logger("test.module")
 
     assert logger is not None
-    assert hasattr(logger, 'info')
-    assert hasattr(logger, 'debug')
-    assert hasattr(logger, 'warning')
-    assert hasattr(logger, 'error')
-    assert hasattr(logger, 'critical')
+    assert hasattr(logger, "info")
+    assert hasattr(logger, "debug")
+    assert hasattr(logger, "warning")
+    assert hasattr(logger, "error")
+    assert hasattr(logger, "critical")
 
 
 def test_get_logger_with_module_name(configured_logging):
@@ -84,6 +86,7 @@ def test_get_logger_different_names_different_instances(configured_logging):
 # CONFIGURATION TESTS
 # ============================================================
 
+
 def test_get_logger_requires_configuration():
     """Test that get_logger raises error if logging not configured."""
     with pytest.raises(RuntimeError) as exc_info:
@@ -101,24 +104,20 @@ def test_get_logger_respects_log_level(configured_logging):
     logger = get_logger("test.debug")
 
     # Logger should have debug method available
-    assert hasattr(logger, 'debug')
+    assert hasattr(logger, "debug")
 
 
 # ============================================================
 # STRUCTURED LOGGING OUTPUT TESTS
 # ============================================================
 
+
 def test_logger_supports_structured_logging(configured_logging):
     """Test that logger supports structured key-value logging."""
     logger = get_logger("test.structured")
 
     # Should not raise exception with structured args
-    logger.info(
-        "test_event",
-        correlation_id="test-uuid-123",
-        user_id="user-456",
-        count=42
-    )
+    logger.info("test_event", correlation_id="test-uuid-123", user_id="user-456", count=42)
 
     assert True  # If we reach here, logging succeeded
 
@@ -132,8 +131,8 @@ def test_logger_handles_nested_context(configured_logging):
         "complex_event",
         metadata={
             "user": {"id": "123", "name": "Alice"},
-            "stats": {"count": 10, "duration_ms": 150.5}
-        }
+            "stats": {"count": 10, "duration_ms": 150.5},
+        },
     )
 
     assert True
@@ -142,6 +141,7 @@ def test_logger_handles_nested_context(configured_logging):
 # ============================================================
 # MULTIPLE LOGGER INSTANCES TESTS
 # ============================================================
+
 
 def test_multiple_loggers_independent_context(configured_logging):
     """Test that multiple loggers maintain independent contexts."""
@@ -176,6 +176,7 @@ def test_many_logger_instances(configured_logging):
 # VALIDATION TESTS
 # ============================================================
 
+
 def test_get_logger_empty_name_raises_error(configured_logging):
     """Test that empty logger name raises ValueError."""
     with pytest.raises(ValueError) as exc_info:
@@ -198,6 +199,7 @@ def test_get_logger_very_long_name_raises_error(configured_logging):
 # INTEGRATION TESTS
 # ============================================================
 
+
 def test_end_to_end_logger_factory_usage(configured_logging):
     """Test complete workflow: configure, get logger, log messages."""
     # Get logger
@@ -218,10 +220,7 @@ def test_logger_factory_with_settings_integration():
     from zapomni_core.config import settings
 
     # Configure using settings.log_level
-    LoggingService.configure_logging(
-        level=settings.log_level,
-        format="json"
-    )
+    LoggingService.configure_logging(level=settings.log_level, format="json")
 
     logger = get_logger("settings.integration")
 
@@ -233,6 +232,7 @@ def test_logger_factory_with_settings_integration():
 # ============================================================
 # PERFORMANCE TESTS
 # ============================================================
+
 
 def test_get_logger_performance_cached(configured_logging):
     """Test that cached logger access is fast."""

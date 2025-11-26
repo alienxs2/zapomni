@@ -22,10 +22,10 @@ from zapomni_core.code.call_graph_analyzer import (
 )
 from zapomni_core.exceptions import ValidationError
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def analyzer() -> CallGraphAnalyzer:
@@ -44,6 +44,7 @@ def temp_py_file():
 # ============================================================================
 # Test Classes
 # ============================================================================
+
 
 class TestCallGraphAnalyzerInitialization:
     """Test suite for CallGraphAnalyzer initialization."""
@@ -237,9 +238,7 @@ def c():
         c_calls = [c for c in calls if c.caller == "c"]
         assert len(c_calls) >= 2
 
-    def test_find_calls_returns_function_call_objects(
-        self, analyzer: CallGraphAnalyzer
-    ) -> None:
+    def test_find_calls_returns_function_call_objects(self, analyzer: CallGraphAnalyzer) -> None:
         """Should return FunctionCall objects with required attributes."""
         code = """
 def helper():
@@ -284,9 +283,7 @@ def main():
         assert len(method_calls) > 0
         assert any(c.callee == "method" for c in method_calls)
 
-    def test_find_calls_raises_error_for_non_ast_node(
-        self, analyzer: CallGraphAnalyzer
-    ) -> None:
+    def test_find_calls_raises_error_for_non_ast_node(self, analyzer: CallGraphAnalyzer) -> None:
         """Should raise ValidationError for non-AST input."""
         with pytest.raises(ValidationError) as exc_info:
             analyzer.find_function_calls("not an ast node")
@@ -357,9 +354,7 @@ from pathlib import Path
         assert "Path" in imports
         assert len(imports) >= 3
 
-    def test_resolve_imports_returns_import_mapping(
-        self, analyzer: CallGraphAnalyzer
-    ) -> None:
+    def test_resolve_imports_returns_import_mapping(self, analyzer: CallGraphAnalyzer) -> None:
         """Should return ImportMapping objects."""
         code = "import json"
         tree = ast.parse(code)
@@ -372,9 +367,7 @@ from pathlib import Path
             assert hasattr(mapping, "alias")
             assert hasattr(mapping, "is_from_import")
 
-    def test_resolve_imports_raises_error_for_non_module(
-        self, analyzer: CallGraphAnalyzer
-    ) -> None:
+    def test_resolve_imports_raises_error_for_non_module(self, analyzer: CallGraphAnalyzer) -> None:
         """Should raise ValidationError for non-Module input."""
         with pytest.raises(ValidationError) as exc_info:
             analyzer.resolve_imports("not a module")  # type: ignore
@@ -504,8 +497,9 @@ def main():
                     is_defined = callee in graph
                     is_imported = callee in analyzer.imports
                     is_builtin = callee in builtin_functions
-                    assert is_defined or is_imported or is_builtin, \
-                        f"{callee} called by {func} but not defined, imported, or builtin"
+                    assert (
+                        is_defined or is_imported or is_builtin
+                    ), f"{callee} called by {func} but not defined, imported, or builtin"
 
             Path(f.name).unlink()
 

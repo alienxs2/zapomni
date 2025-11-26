@@ -12,8 +12,8 @@ Prerequisites:
 import pytest
 from falkordb import FalkorDB
 
-from zapomni_db.schema_manager import SchemaManager
 from zapomni_db.exceptions import DatabaseError, QuerySyntaxError
+from zapomni_db.schema_manager import SchemaManager
 
 
 @pytest.fixture(scope="module")
@@ -129,19 +129,23 @@ class TestSchemaManagerIntegration:
         manager.init_schema()
 
         # Create test Memory node
-        test_graph.query("""
+        test_graph.query(
+            """
             CREATE (m:Memory {
                 id: 'test-memory-123',
                 text: 'Test memory',
                 timestamp: datetime('2025-11-23T00:00:00Z')
             })
-        """)
+        """
+        )
 
         # Query using indexed property (should be fast)
-        result = test_graph.query("""
+        result = test_graph.query(
+            """
             MATCH (m:Memory {id: 'test-memory-123'})
             RETURN m.text AS text
-        """)
+        """
+        )
 
         assert len(result.result_set) == 1
         assert result.result_set[0][0] == "Test memory"
@@ -176,11 +180,13 @@ class TestSchemaManagerIntegration:
         manager.init_schema()
 
         # Create some test data
-        test_graph.query("""
+        test_graph.query(
+            """
             CREATE (m:Memory {id: 'test-123', text: 'Test'})
             CREATE (c:Chunk {id: 'chunk-1', text: 'Chunk'})
             CREATE (m)-[:HAS_CHUNK]->(c)
-        """)
+        """
+        )
 
         # Drop all
         manager.drop_all()
@@ -193,12 +199,8 @@ class TestSchemaManagerIntegration:
         result = test_graph.query("SHOW INDEXES")
         # After drop, should have no custom indexes
         assert len(result.result_set) == 0 or all(
-            row[0] not in [
-                "chunk_embedding_idx",
-                "memory_id_idx",
-                "entity_name_idx",
-                "timestamp_idx"
-            ]
+            row[0]
+            not in ["chunk_embedding_idx", "memory_id_idx", "entity_name_idx", "timestamp_idx"]
             for row in result.result_set
         )
 
@@ -208,14 +210,16 @@ class TestSchemaManagerIntegration:
         manager.init_schema()
 
         # Create nodes with documented labels
-        test_graph.query("""
+        test_graph.query(
+            """
             CREATE (m:Memory {id: '1'})
             CREATE (c:Chunk {id: '2'})
             CREATE (e:Entity {id: '3', name: 'Test Entity'})
             CREATE (d:Document {id: '4'})
             CREATE (m)-[:HAS_CHUNK]->(c)
             CREATE (c)-[:MENTIONS]->(e)
-        """)
+        """
+        )
 
         # Verify labels exist
         result = test_graph.query("MATCH (m:Memory) RETURN count(m) AS count")
@@ -265,8 +269,7 @@ class TestSchemaManagerIntegration:
 
         # Should have no errors (idempotent)
         assert len(errors) == 0 or all(
-            "already exists" in str(e).lower() or "initialized" in str(e).lower()
-            for e in errors
+            "already exists" in str(e).lower() or "initialized" in str(e).lower() for e in errors
         )
 
 
@@ -283,7 +286,7 @@ class TestSchemaManagerWithFalkorDBClient:
 
         # Note: This test would require a real FalkorDB connection
         # For now, we verify the import works and SchemaManager is accessible
-        assert hasattr(FalkorDBClient, '_init_schema')
+        assert hasattr(FalkorDBClient, "_init_schema")
 
 
 if __name__ == "__main__":

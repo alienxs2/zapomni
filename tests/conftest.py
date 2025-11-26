@@ -8,6 +8,7 @@ License: MIT
 """
 
 import pytest
+
 from zapomni_core.logging_service import LoggingService
 
 

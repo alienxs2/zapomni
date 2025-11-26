@@ -125,9 +125,10 @@ class CodeRepositoryIndexer:
             )
 
         if "max_file_size" in self.config:
-            if not isinstance(self.config["max_file_size"], int) or self.config[
-                "max_file_size"
-            ] <= 0:
+            if (
+                not isinstance(self.config["max_file_size"], int)
+                or self.config["max_file_size"] <= 0
+            ):
                 raise ValidationError(
                     "max_file_size must be a positive integer",
                     error_code="VAL_003",

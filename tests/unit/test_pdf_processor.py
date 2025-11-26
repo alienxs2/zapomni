@@ -42,9 +42,7 @@ def _mock_document(
     return doc
 
 
-def _attach_context_manager(
-    mock_open: MagicMock, document: MagicMock
-) -> None:
+def _attach_context_manager(mock_open: MagicMock, document: MagicMock) -> None:
     context = MagicMock()
     context.__enter__.return_value = document
     context.__exit__.return_value = False

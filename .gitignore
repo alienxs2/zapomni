@@ -12,6 +12,7 @@ build/
 
 # Internal documentation - not for public distribution
 .internal/
+.archive/
 
 # Development tools
 .codex/

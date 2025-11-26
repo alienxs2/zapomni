@@ -5,15 +5,16 @@ Tests query generation, parameter injection safety, validation, and edge cases.
 Focuses on security (no SQL injection), correctness, and parameter handling.
 """
 
-import pytest
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from zapomni_db.cypher_query_builder import CypherQueryBuilder
-from zapomni_db.models import Memory, Chunk, Entity
 from zapomni_db.exceptions import ValidationError
+from zapomni_db.models import Chunk, Entity, Memory
 
 
 class TestCypherQueryBuilderBasics:
@@ -51,7 +52,7 @@ class TestBuildAddMemoryQuery:
             text="Python is great",
             chunks=[Chunk(text="Python is great", index=0)],
             embeddings=[[0.1] * 768],
-            metadata={"source": "user", "tags": ["python"]}
+            metadata={"source": "user", "tags": ["python"]},
         )
 
         cypher, params = builder.build_add_memory_query(memory)
@@ -83,14 +84,10 @@ class TestBuildAddMemoryQuery:
             chunks=[
                 Chunk(text="Python is a", index=0),
                 Chunk(text="programming language", index=1),
-                Chunk(text="great language", index=2)
+                Chunk(text="great language", index=2),
             ],
-            embeddings=[
-                [0.1] * 768,
-                [0.2] * 768,
-                [0.3] * 768
-            ],
-            metadata={"source": "docs"}
+            embeddings=[[0.1] * 768, [0.2] * 768, [0.3] * 768],
+            metadata={"source": "docs"},
         )
 
         cypher, params = builder.build_add_memory_query(memory)
@@ -108,7 +105,7 @@ class TestBuildAddMemoryQuery:
             text="Test",
             chunks=[Chunk(text="test", index=0)],
             embeddings=[[0.1] * 512],  # Wrong dimension (512 instead of 768)
-            metadata={}
+            metadata={},
         )
 
         with pytest.raises(ValidationError) as exc_info:
@@ -119,10 +116,7 @@ class TestBuildAddMemoryQuery:
         """Test that each query gets unique memory_id and chunk_ids."""
         builder = CypherQueryBuilder()
         memory = Memory(
-            text="Test",
-            chunks=[Chunk(text="test", index=0)],
-            embeddings=[[0.1] * 768],
-            metadata={}
+            text="Test", chunks=[Chunk(text="test", index=0)], embeddings=[[0.1] * 768], metadata={}
         )
 
         cypher1, params1 = builder.build_add_memory_query(memory)
@@ -136,10 +130,7 @@ class TestBuildAddMemoryQuery:
         """Test handling of empty metadata."""
         builder = CypherQueryBuilder()
         memory = Memory(
-            text="Test",
-            chunks=[Chunk(text="test", index=0)],
-            embeddings=[[0.1] * 768],
-            metadata={}
+            text="Test", chunks=[Chunk(text="test", index=0)], embeddings=[[0.1] * 768], metadata={}
         )
 
         cypher, params = builder.build_add_memory_query(memory)
@@ -156,7 +147,7 @@ class TestBuildAddMemoryQuery:
             text="Test",
             chunks=[Chunk(text="test", index=0)],
             embeddings=[[0.1] * 768],
-            metadata=metadata
+            metadata=metadata,
         )
 
         cypher, params = builder.build_add_memory_query(memory)
@@ -174,9 +165,7 @@ class TestBuildVectorSearchQuery:
         embedding = [0.1] * 768
 
         cypher, params = builder.build_vector_search_query(
-            embedding=embedding,
-            limit=10,
-            min_similarity=0.5
+            embedding=embedding, limit=10, min_similarity=0.5
         )
 
         # Verify cypher structure
@@ -194,15 +183,9 @@ class TestBuildVectorSearchQuery:
     def test_build_vector_search_query_with_filters(self):
         """Test vector search with metadata filters."""
         builder = CypherQueryBuilder()
-        filters = {
-            "tags": ["python", "coding"],
-            "source": "docs"
-        }
+        filters = {"tags": ["python", "coding"], "source": "docs"}
 
-        cypher, params = builder.build_vector_search_query(
-            embedding=[0.1] * 768,
-            filters=filters
-        )
+        cypher, params = builder.build_vector_search_query(embedding=[0.1] * 768, filters=filters)
 
         # Verify filter parameters
         assert "tag_0" in params
@@ -223,15 +206,9 @@ class TestBuildVectorSearchQuery:
         date_from = datetime(2024, 1, 1)
         date_to = datetime(2025, 12, 31)
 
-        filters = {
-            "date_from": date_from,
-            "date_to": date_to
-        }
+        filters = {"date_from": date_from, "date_to": date_to}
 
-        cypher, params = builder.build_vector_search_query(
-            embedding=[0.1] * 768,
-            filters=filters
-        )
+        cypher, params = builder.build_vector_search_query(embedding=[0.1] * 768, filters=filters)
 
         # Verify date parameters are converted to ISO strings
         assert "date_from" in params
@@ -248,10 +225,7 @@ class TestBuildVectorSearchQuery:
         builder = CypherQueryBuilder()
 
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_vector_search_query(
-                embedding=[0.1] * 512,  # Wrong dimension
-                limit=10
-            )
+            builder.build_vector_search_query(embedding=[0.1] * 512, limit=10)  # Wrong dimension
         assert "Embedding dimension mismatch" in str(exc_info.value)
 
     def test_build_vector_search_query_invalid_limit(self):
@@ -260,18 +234,12 @@ class TestBuildVectorSearchQuery:
 
         # Limit too small
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_vector_search_query(
-                embedding=[0.1] * 768,
-                limit=0
-            )
+            builder.build_vector_search_query(embedding=[0.1] * 768, limit=0)
         assert "limit must be int in range [1, 1000]" in str(exc_info.value)
 
         # Limit too large
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_vector_search_query(
-                embedding=[0.1] * 768,
-                limit=1001
-            )
+            builder.build_vector_search_query(embedding=[0.1] * 768, limit=1001)
         assert "limit must be int in range [1, 1000]" in str(exc_info.value)
 
     def test_build_vector_search_query_invalid_min_similarity(self):
@@ -280,28 +248,19 @@ class TestBuildVectorSearchQuery:
 
         # Below range
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_vector_search_query(
-                embedding=[0.1] * 768,
-                min_similarity=-0.1
-            )
+            builder.build_vector_search_query(embedding=[0.1] * 768, min_similarity=-0.1)
         assert "min_similarity must be in [0.0, 1.0]" in str(exc_info.value)
 
         # Above range
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_vector_search_query(
-                embedding=[0.1] * 768,
-                min_similarity=1.1
-            )
+            builder.build_vector_search_query(embedding=[0.1] * 768, min_similarity=1.1)
         assert "min_similarity must be in [0.0, 1.0]" in str(exc_info.value)
 
     def test_build_vector_search_query_no_filters(self):
         """Test vector search without filters."""
         builder = CypherQueryBuilder()
 
-        cypher, params = builder.build_vector_search_query(
-            embedding=[0.1] * 768,
-            filters=None
-        )
+        cypher, params = builder.build_vector_search_query(embedding=[0.1] * 768, filters=None)
 
         # Should not have filter parameters
         assert "tag_" not in str(params)
@@ -315,11 +274,7 @@ class TestBuildGraphTraversalQuery:
         builder = CypherQueryBuilder()
         entity_id = str(uuid.uuid4())
 
-        cypher, params = builder.build_graph_traversal_query(
-            entity_id=entity_id,
-            depth=1,
-            limit=20
-        )
+        cypher, params = builder.build_graph_traversal_query(entity_id=entity_id, depth=1, limit=20)
 
         # Verify cypher structure
         assert "MATCH (start:Entity {id: $entity_id})" in cypher
@@ -336,11 +291,7 @@ class TestBuildGraphTraversalQuery:
         builder = CypherQueryBuilder()
         entity_id = str(uuid.uuid4())
 
-        cypher, params = builder.build_graph_traversal_query(
-            entity_id=entity_id,
-            depth=3,
-            limit=50
-        )
+        cypher, params = builder.build_graph_traversal_query(entity_id=entity_id, depth=3, limit=50)
 
         # Verify correct depth pattern
         assert "[rels*1..3]" in cypher
@@ -350,10 +301,7 @@ class TestBuildGraphTraversalQuery:
         builder = CypherQueryBuilder()
 
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_graph_traversal_query(
-                entity_id="not-a-uuid",
-                depth=1
-            )
+            builder.build_graph_traversal_query(entity_id="not-a-uuid", depth=1)
         assert "Invalid UUID format" in str(exc_info.value)
 
     def test_build_graph_traversal_query_invalid_depth(self):
@@ -363,18 +311,12 @@ class TestBuildGraphTraversalQuery:
 
         # Depth too small
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_graph_traversal_query(
-                entity_id=entity_id,
-                depth=0
-            )
+            builder.build_graph_traversal_query(entity_id=entity_id, depth=0)
         assert "depth must be int in range [1, 5]" in str(exc_info.value)
 
         # Depth too large
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_graph_traversal_query(
-                entity_id=entity_id,
-                depth=6
-            )
+            builder.build_graph_traversal_query(entity_id=entity_id, depth=6)
         assert "depth must be int in range [1, 5]" in str(exc_info.value)
 
     def test_build_graph_traversal_query_invalid_limit(self):
@@ -384,20 +326,12 @@ class TestBuildGraphTraversalQuery:
 
         # Limit too small
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_graph_traversal_query(
-                entity_id=entity_id,
-                depth=1,
-                limit=0
-            )
+            builder.build_graph_traversal_query(entity_id=entity_id, depth=1, limit=0)
         assert "limit must be int in range [1, 100]" in str(exc_info.value)
 
         # Limit too large
         with pytest.raises(ValidationError) as exc_info:
-            builder.build_graph_traversal_query(
-                entity_id=entity_id,
-                depth=1,
-                limit=101
-            )
+            builder.build_graph_traversal_query(entity_id=entity_id, depth=1, limit=101)
         assert "limit must be int in range [1, 100]" in str(exc_info.value)
 
 
@@ -458,10 +392,7 @@ class TestBuildAddEntityQuery:
         """Test add entity query generation."""
         builder = CypherQueryBuilder()
         entity = Entity(
-            name="Python",
-            type="TECHNOLOGY",
-            description="Programming language",
-            confidence=0.95
+            name="Python", type="TECHNOLOGY", description="Programming language", confidence=0.95
         )
 
         cypher, params = builder.build_add_entity_query(entity)
@@ -508,7 +439,7 @@ class TestBuildAddRelationshipQuery:
             from_entity_id=from_id,
             to_entity_id=to_id,
             relationship_type="MENTIONS",
-            properties={"strength": 0.8, "confidence": 0.9}
+            properties={"strength": 0.8, "confidence": 0.9},
         )
 
         # Verify cypher structure
@@ -532,7 +463,7 @@ class TestBuildAddRelationshipQuery:
             from_entity_id=from_id,
             to_entity_id=to_id,
             relationship_type="RELATED_TO",
-            properties=None
+            properties=None,
         )
 
         # Verify defaults
@@ -548,7 +479,7 @@ class TestBuildAddRelationshipQuery:
             builder.build_add_relationship_query(
                 from_entity_id="invalid",
                 to_entity_id=str(uuid.uuid4()),
-                relationship_type="MENTIONS"
+                relationship_type="MENTIONS",
             )
         assert "Invalid UUID format" in str(exc_info.value)
 
@@ -563,7 +494,7 @@ class TestBuildAddRelationshipQuery:
             builder.build_add_relationship_query(
                 from_entity_id=from_id,
                 to_entity_id=to_id,
-                relationship_type="mentions"  # lowercase
+                relationship_type="mentions",  # lowercase
             )
         assert "relationship_type must match pattern" in str(exc_info.value)
 
@@ -572,7 +503,7 @@ class TestBuildAddRelationshipQuery:
             builder.build_add_relationship_query(
                 from_entity_id=from_id,
                 to_entity_id=to_id,
-                relationship_type="MENTIONS-TYPE"  # hyphen not allowed
+                relationship_type="MENTIONS-TYPE",  # hyphen not allowed
             )
         assert "relationship_type must match pattern" in str(exc_info.value)
 
@@ -587,7 +518,7 @@ class TestBuildAddRelationshipQuery:
                 from_entity_id=from_id,
                 to_entity_id=to_id,
                 relationship_type="MENTIONS",
-                properties={"strength": 1.5}
+                properties={"strength": 1.5},
             )
         assert "[0.0, 1.0]" in str(exc_info.value)
 
@@ -600,14 +531,9 @@ class TestParameterInjectionSafety:
         builder = CypherQueryBuilder()
 
         # Try to inject malicious filter
-        filters = {
-            "tags": ["python'; DETACH DELETE *; //"]
-        }
+        filters = {"tags": ["python'; DETACH DELETE *; //"]}
 
-        cypher, params = builder.build_vector_search_query(
-            embedding=[0.1] * 768,
-            filters=filters
-        )
+        cypher, params = builder.build_vector_search_query(embedding=[0.1] * 768, filters=filters)
 
         # Verify the malicious string is in params, not in cypher
         assert params["tag_0"] == "python'; DETACH DELETE *; //"
@@ -621,8 +547,7 @@ class TestParameterInjectionSafety:
         # Try to inject via entity_id
         with pytest.raises(ValidationError):
             builder.build_graph_traversal_query(
-                entity_id="550e8400-e29b-41d4-a716-446655440000; MATCH (n) DETACH DELETE n",
-                depth=1
+                entity_id="550e8400-e29b-41d4-a716-446655440000; MATCH (n) DETACH DELETE n", depth=1
             )
 
     def test_relationship_type_validation(self):
@@ -636,7 +561,7 @@ class TestParameterInjectionSafety:
             builder.build_add_relationship_query(
                 from_entity_id=from_id,
                 to_entity_id=to_id,
-                relationship_type="MENTIONS}; DETACH DELETE *; {"  # Invalid format
+                relationship_type="MENTIONS}; DETACH DELETE *; {",  # Invalid format
             )
 
 
@@ -660,7 +585,7 @@ class TestValidationHelpers:
             "12345",
             "",
             "550e8400-e29b-41d4-a716-44665544000",  # Missing one char
-            "550e8400-e29b-41d4-a716-4466554400000"  # Extra char
+            "550e8400-e29b-41d4-a716-4466554400000",  # Extra char
         ]
 
         for invalid_uuid in invalid_uuids:
@@ -745,7 +670,7 @@ class TestBuildFilterClause:
             "tags": ["python"],
             "source": "docs",
             "date_from": datetime(2024, 1, 1),
-            "date_to": datetime(2025, 12, 31)
+            "date_to": datetime(2025, 12, 31),
         }
 
         clause, params = builder._build_filter_clause(filters)
@@ -785,10 +710,7 @@ class TestReturnTypes:
 
         # Test build_add_memory_query
         memory = Memory(
-            text="Test",
-            chunks=[Chunk(text="test", index=0)],
-            embeddings=[[0.1] * 768],
-            metadata={}
+            text="Test", chunks=[Chunk(text="test", index=0)], embeddings=[[0.1] * 768], metadata={}
         )
         result = builder.build_add_memory_query(memory)
         assert isinstance(result, tuple)
@@ -834,9 +756,7 @@ class TestReturnTypes:
 
         # Test build_add_relationship_query
         result = builder.build_add_relationship_query(
-            str(uuid.uuid4()),
-            str(uuid.uuid4()),
-            "MENTIONS"
+            str(uuid.uuid4()), str(uuid.uuid4()), "MENTIONS"
         )
         assert isinstance(result, tuple)
         assert len(result) == 2
@@ -854,7 +774,7 @@ class TestParameterization:
             text="Injected code: MATCH (n) DETACH DELETE n",
             chunks=[Chunk(text="test", index=0)],
             embeddings=[[0.1] * 768],
-            metadata={}
+            metadata={},
         )
 
         cypher, params = builder.build_add_memory_query(memory)
@@ -868,15 +788,9 @@ class TestParameterization:
         """Test that filter values use parameters."""
         builder = CypherQueryBuilder()
 
-        filters = {
-            "tags": ["python'; DELETE *; --"],
-            "source": "docs' OR '1'='1"
-        }
+        filters = {"tags": ["python'; DELETE *; --"], "source": "docs' OR '1'='1"}
 
-        cypher, params = builder.build_vector_search_query(
-            [0.1] * 768,
-            filters=filters
-        )
+        cypher, params = builder.build_vector_search_query([0.1] * 768, filters=filters)
 
         # Values should be in params
         assert params["tag_0"] == "python'; DELETE *; --"
@@ -884,4 +798,3 @@ class TestParameterization:
 
         # But not directly in cypher string
         assert "DELETE *" not in cypher.split("--")[0]
-

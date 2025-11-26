@@ -17,8 +17,8 @@ License: MIT
 """
 
 import json
-import unicodedata
 import re
+import unicodedata
 from typing import Any, Dict, Optional, Set
 
 from zapomni_core.exceptions import ValidationError
@@ -81,11 +81,7 @@ class InputValidator:
         """
         logger.debug("input_validator_initialized")
 
-    def validate_text(
-        self,
-        text: str,
-        max_size: Optional[int] = None
-    ) -> str:
+    def validate_text(self, text: str, max_size: Optional[int] = None) -> str:
         """
         Validate text input for memory storage.
 
@@ -129,7 +125,9 @@ class InputValidator:
         # Step 1: Type check (must be str)
         if not isinstance(text, str):
             error_msg = f"Text must be a string, got {type(text).__name__}"
-            logger.warning("validate_text_failed", reason="wrong_type", expected="str", got=type(text).__name__)
+            logger.warning(
+                "validate_text_failed", reason="wrong_type", expected="str", got=type(text).__name__
+            )
             raise ValidationError(error_msg, error_code="VAL_002")
 
         # Step 2: Sanitize input (strip, remove null bytes)
@@ -145,14 +143,14 @@ class InputValidator:
 
         # Step 5: Check size (encode to bytes, compare to max_size)
         effective_max_size = max_size if max_size is not None else self.MAX_TEXT_SIZE
-        text_bytes = sanitized_text.encode('utf-8')
+        text_bytes = sanitized_text.encode("utf-8")
         if len(text_bytes) > effective_max_size:
             error_msg = f"Text exceeds maximum size ({effective_max_size:,} bytes)"
             logger.warning(
                 "validate_text_failed",
                 reason="size_exceeded",
                 size=len(text_bytes),
-                max_size=effective_max_size
+                max_size=effective_max_size,
             )
             raise ValidationError(error_msg, error_code="VAL_003")
 
@@ -160,10 +158,7 @@ class InputValidator:
         # Step 6: Return sanitized text
         return sanitized_text
 
-    def validate_metadata(
-        self,
-        metadata: Optional[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def validate_metadata(self, metadata: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """
         Validate metadata dictionary.
 
@@ -218,7 +213,7 @@ class InputValidator:
                 "validate_metadata_failed",
                 reason="wrong_type",
                 expected="dict",
-                got=type(metadata).__name__
+                got=type(metadata).__name__,
             )
             raise ValidationError(error_msg, error_code="VAL_002")
 
@@ -237,37 +232,36 @@ class InputValidator:
                     "validate_metadata_failed",
                     reason="not_json_serializable",
                     key=key,
-                    value_type=type(value).__name__
+                    value_type=type(value).__name__,
                 )
                 raise ValidationError(error_msg, error_code="VAL_002")
 
         # Step 4: Serialize to JSON, check size < MAX_METADATA_SIZE
         try:
             metadata_json = json.dumps(metadata)
-            metadata_bytes = metadata_json.encode('utf-8')
+            metadata_bytes = metadata_json.encode("utf-8")
             if len(metadata_bytes) > self.MAX_METADATA_SIZE:
                 error_msg = f"Metadata exceeds maximum size ({self.MAX_METADATA_SIZE:,} bytes)"
                 logger.warning(
                     "validate_metadata_failed",
                     reason="size_exceeded",
                     size=len(metadata_bytes),
-                    max_size=self.MAX_METADATA_SIZE
+                    max_size=self.MAX_METADATA_SIZE,
                 )
                 raise ValidationError(error_msg, error_code="VAL_003")
         except (TypeError, ValueError) as e:
             # Shouldn't happen if _is_json_serializable works correctly
             error_msg = f"Metadata is not JSON-serializable: {str(e)}"
-            logger.warning("validate_metadata_failed", reason="json_serialization_error", error=str(e))
+            logger.warning(
+                "validate_metadata_failed", reason="json_serialization_error", error=str(e)
+            )
             raise ValidationError(error_msg, error_code="VAL_002")
 
         logger.debug("validate_metadata_success", key_count=len(metadata))
         # Step 5: Return metadata unchanged
         return metadata
 
-    def validate_query(
-        self,
-        query: str
-    ) -> str:
+    def validate_query(self, query: str) -> str:
         """
         Validate search query.
 
@@ -310,7 +304,7 @@ class InputValidator:
                 "validate_query_failed",
                 reason="wrong_type",
                 expected="str",
-                got=type(query).__name__
+                got=type(query).__name__,
             )
             raise ValidationError(error_msg, error_code="VAL_002")
 
@@ -329,7 +323,7 @@ class InputValidator:
                 "validate_query_failed",
                 reason="length_exceeded",
                 length=len(sanitized_query),
-                max_length=self.MAX_QUERY_LENGTH
+                max_length=self.MAX_QUERY_LENGTH,
             )
             raise ValidationError(error_msg, error_code="VAL_003")
 
@@ -337,11 +331,7 @@ class InputValidator:
         # Step 5: Return sanitized query
         return sanitized_query
 
-    def validate_limit(
-        self,
-        limit: int,
-        max_value: Optional[int] = None
-    ) -> int:
+    def validate_limit(self, limit: int, max_value: Optional[int] = None) -> int:
         """
         Validate pagination limit.
 
@@ -387,7 +377,7 @@ class InputValidator:
                 "validate_limit_failed",
                 reason="wrong_type",
                 expected="int",
-                got=type(limit).__name__
+                got=type(limit).__name__,
             )
             raise ValidationError(error_msg, error_code="VAL_002")
 
@@ -401,10 +391,7 @@ class InputValidator:
         if limit > effective_max:
             error_msg = f"Limit exceeds maximum ({effective_max})"
             logger.warning(
-                "validate_limit_failed",
-                reason="exceeds_maximum",
-                limit=limit,
-                max=effective_max
+                "validate_limit_failed", reason="exceeds_maximum", limit=limit, max=effective_max
             )
             raise ValidationError(error_msg, error_code="VAL_003")
 
@@ -412,10 +399,7 @@ class InputValidator:
         # Step 4: Return limit
         return limit
 
-    def sanitize_input(
-        self,
-        text: str
-    ) -> str:
+    def sanitize_input(self, text: str) -> str:
         """
         Sanitize text input (remove unsafe content).
 
@@ -456,47 +440,43 @@ class InputValidator:
         result = text.strip()
 
         # Step 2: Normalize Unicode (NFC normalization)
-        result = unicodedata.normalize('NFC', result)
+        result = unicodedata.normalize("NFC", result)
 
         # Step 3: Remove null bytes (\x00)
         result = self._remove_null_bytes(result)
 
         # Step 4: Remove control characters (except \n, \t)
-        result = ''.join(
-            char for char in result
-            if ord(char) >= 32 or char in '\n\t'
-        )
+        result = "".join(char for char in result if ord(char) >= 32 or char in "\n\t")
 
         # Step 5: Collapse multiple spaces to single space
         # Preserve newlines and tabs
-        lines = result.split('\n')
+        lines = result.split("\n")
         collapsed_lines = []
         for line in lines:
             # Collapse consecutive spaces, but preserve tabs
             simplified = []
             prev_space = False
             for char in line:
-                if char == ' ':
+                if char == " ":
                     if not prev_space:
                         simplified.append(char)
                     prev_space = True
                 else:
                     simplified.append(char)
-                    prev_space = (char == ' ')  # Reset to False for non-space
+                    prev_space = char == " "  # Reset to False for non-space
 
-            collapsed_lines.append(''.join(simplified))
+            collapsed_lines.append("".join(simplified))
 
-        result = '\n'.join(collapsed_lines)
+        result = "\n".join(collapsed_lines)
 
-        logger.debug("sanitize_input_complete", original_length=len(text), sanitized_length=len(result))
+        logger.debug(
+            "sanitize_input_complete", original_length=len(text), sanitized_length=len(result)
+        )
         return result
 
     # Private helper methods
 
-    def _check_encoding(
-        self,
-        text: str
-    ) -> None:
+    def _check_encoding(self, text: str) -> None:
         """
         Verify text is valid UTF-8.
 
@@ -508,20 +488,15 @@ class InputValidator:
         """
         try:
             # Encoding to bytes and back checks for UTF-8 validity
-            text.encode('utf-8').decode('utf-8')
+            text.encode("utf-8").decode("utf-8")
             logger.debug("check_encoding_success")
         except (UnicodeDecodeError, UnicodeEncodeError) as e:
             logger.warning("check_encoding_failed", error=str(e))
             raise ValidationError(
-                "Text contains invalid UTF-8 encoding",
-                error_code="VAL_004",
-                original_exception=e
+                "Text contains invalid UTF-8 encoding", error_code="VAL_004", original_exception=e
             )
 
-    def _is_json_serializable(
-        self,
-        obj: Any
-    ) -> bool:
+    def _is_json_serializable(self, obj: Any) -> bool:
         """
         Check if object can be JSON-serialized.
 
@@ -540,10 +515,7 @@ class InputValidator:
         except (TypeError, ValueError):
             return False
 
-    def _remove_null_bytes(
-        self,
-        text: str
-    ) -> str:
+    def _remove_null_bytes(self, text: str) -> str:
         """
         Remove null bytes and control characters from text.
 
@@ -557,4 +529,4 @@ class InputValidator:
             Preserves \\n (newline) and \\t (tab)
         """
         # Remove null bytes (\x00) specifically
-        return text.replace('\x00', '')
+        return text.replace("\x00", "")

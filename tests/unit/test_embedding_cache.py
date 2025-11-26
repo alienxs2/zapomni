@@ -13,12 +13,13 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
 import time
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+
 from zapomni_core.embeddings.embedding_cache import EmbeddingCache
 from zapomni_core.exceptions import ValidationError
-
 
 # ============================================================
 # FIXTURES
@@ -535,7 +536,7 @@ async def test_cache_hit_rate_target_60_percent(mock_redis_client, sample_embedd
 
     # Simulate realistic usage: some texts hit, some miss
     hit_texts = ["python", "django", "flask"]  # These will hit
-    miss_texts = ["react", "vue", "svelte"]   # These will miss
+    miss_texts = ["react", "vue", "svelte"]  # These will miss
 
     # First, set all texts to cache (both Redis and in-memory)
     mock_redis_client.set.return_value = True
@@ -597,7 +598,9 @@ def test_cache_initialization_with_redis(embedding_cache):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_set_stores_to_both_redis_and_memory(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_set_stores_to_both_redis_and_memory(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test that set operation stores to both Redis and in-memory cache."""
     import json
 
@@ -640,7 +643,9 @@ async def test_in_memory_only_set_and_get(cache_without_redis, sample_text, samp
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_fallback_to_memory_when_redis_fails(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_fallback_to_memory_when_redis_fails(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test fallback to in-memory cache when Redis fails during get."""
     import json
 
@@ -662,7 +667,9 @@ async def test_fallback_to_memory_when_redis_fails(embedding_cache, mock_redis_c
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_fallback_to_memory_on_redis_deserialization_error(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_fallback_to_memory_on_redis_deserialization_error(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test fallback to in-memory cache when Redis returns invalid JSON."""
     # First set both caches
     mock_redis_client.set.return_value = True
@@ -682,7 +689,9 @@ async def test_fallback_to_memory_on_redis_deserialization_error(embedding_cache
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_statistics_track_redis_vs_memory_hits(embedding_cache, mock_redis_client, sample_embedding):
+async def test_statistics_track_redis_vs_memory_hits(
+    embedding_cache, mock_redis_client, sample_embedding
+):
     """Test that statistics properly track Redis hits vs memory hits."""
     import json
 
@@ -728,7 +737,9 @@ async def test_in_memory_ttl_expiration(cache_without_redis, sample_text, sample
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_clear_clears_both_backends(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_clear_clears_both_backends(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test that clear() clears both Redis and in-memory caches."""
     # Set to both caches
     mock_redis_client.set.return_value = True
@@ -751,7 +762,9 @@ async def test_clear_clears_both_backends(embedding_cache, mock_redis_client, sa
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_clear_with_redis_failure_still_clears_memory(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_clear_with_redis_failure_still_clears_memory(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test that clear() clears in-memory cache even if Redis fails."""
     # Set to both caches
     mock_redis_client.set.return_value = True
@@ -771,7 +784,9 @@ async def test_clear_with_redis_failure_still_clears_memory(embedding_cache, moc
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_redis_error_on_set_still_caches_in_memory(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_redis_error_on_set_still_caches_in_memory(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test that set succeeds in in-memory even if Redis fails."""
     # Make Redis set fail
     mock_redis_client.set.side_effect = Exception("Redis connection lost")
@@ -791,7 +806,9 @@ async def test_redis_error_on_set_still_caches_in_memory(embedding_cache, mock_r
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_get_statistics_includes_backend_stats(embedding_cache, mock_redis_client, sample_embedding):
+async def test_get_statistics_includes_backend_stats(
+    embedding_cache, mock_redis_client, sample_embedding
+):
     """Test that get_statistics includes Redis vs memory hit breakdown."""
     import json
 
@@ -817,7 +834,9 @@ async def test_get_statistics_includes_backend_stats(embedding_cache, mock_redis
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_redis_hit_preferred_over_memory(embedding_cache, mock_redis_client, sample_text, sample_embedding):
+async def test_redis_hit_preferred_over_memory(
+    embedding_cache, mock_redis_client, sample_text, sample_embedding
+):
     """Test that Redis hit is counted instead of checking memory if Redis succeeds."""
     import json
 

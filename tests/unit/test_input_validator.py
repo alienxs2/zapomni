@@ -14,8 +14,9 @@ License: MIT
 """
 
 import pytest
-from zapomni_core.validation import InputValidator
+
 from zapomni_core.exceptions import ValidationError
+from zapomni_core.validation import InputValidator
 
 
 class TestInputValidatorInit:
@@ -203,41 +204,25 @@ class TestValidateMetadataSuccess:
 
     def test_validate_metadata_with_numbers(self, validator):
         """Test metadata with various number types."""
-        metadata = {
-            "count": 42,
-            "ratio": 3.14,
-            "flag": True
-        }
+        metadata = {"count": 42, "ratio": 3.14, "flag": True}
         result = validator.validate_metadata(metadata)
         assert result == metadata
 
     def test_validate_metadata_nested_structure(self, validator):
         """Test nested metadata structure."""
-        metadata = {
-            "user": {
-                "name": "Alice",
-                "tags": ["admin", "developer"],
-                "score": 95.5
-            }
-        }
+        metadata = {"user": {"name": "Alice", "tags": ["admin", "developer"], "score": 95.5}}
         result = validator.validate_metadata(metadata)
         assert result == metadata
 
     def test_validate_metadata_with_none_values(self, validator):
         """Test metadata with None values."""
-        metadata = {
-            "field1": "value",
-            "field2": None
-        }
+        metadata = {"field1": "value", "field2": None}
         result = validator.validate_metadata(metadata)
         assert result == metadata
 
     def test_validate_metadata_unicode_keys(self, validator):
         """Test metadata with Unicode keys and values."""
-        metadata = {
-            "язык": "Python",
-            "中文": "编程"
-        }
+        metadata = {"язык": "Python", "中文": "编程"}
         result = validator.validate_metadata(metadata)
         assert result == metadata
 
@@ -297,6 +282,7 @@ class TestValidateMetadataErrors:
 
     def test_validate_metadata_custom_object_raises(self, validator):
         """Test custom object raises."""
+
         class CustomObj:
             pass
 

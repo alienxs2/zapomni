@@ -11,11 +11,11 @@ License: MIT
 """
 
 from typing import Any, Dict
+
 import structlog
 
-from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.exceptions import DatabaseError
-
+from zapomni_core.memory_processor import MemoryProcessor
 
 logger = structlog.get_logger(__name__)
 
