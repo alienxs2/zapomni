@@ -10,9 +10,11 @@ This document outlines the development roadmap and current status of Zapomni.
 | Metric | Value |
 |--------|-------|
 | MCP Tools | 17 registered |
-| Tests | 1,858 passed, 6 skipped |
+| Unit Tests | 1,853 passed, 11 skipped |
+| E2E Tests | **115 passed** (NEW) |
+| Total Tests | **~1,968** |
 | Coverage | 74-89% (module-dependent) |
-| Test Runtime | ~35 seconds |
+| Test Runtime | ~35 seconds (unit) |
 | Python Files | 80 |
 | Lines of Code | ~29,000 |
 
@@ -20,8 +22,7 @@ This document outlines the development roadmap and current status of Zapomni.
 
 ```mermaid
 pie title Feature Maturity
-    "Stable" : 6
-    "Beta" : 1
+    "Stable" : 8
 ```
 
 | Feature | Status | Flag |
@@ -30,9 +31,10 @@ pie title Feature Maturity
 | Hybrid Search | Stable | `ENABLE_HYBRID_SEARCH=true` |
 | Knowledge Graph | Stable | `ENABLE_KNOWLEDGE_GRAPH=true` |
 | Code Indexing | Stable | `ENABLE_CODE_INDEXING=true` |
-| Semantic Cache | Beta | `ENABLE_SEMANTIC_CACHE=false` |
+| Semantic Cache | Stable | `ENABLE_SEMANTIC_CACHE=true` |
 | Git Hooks | Stable | - |
 | Workspaces | Stable | - |
+| E2E Testing | Stable | 115 tests |
 
 ## Version History
 
