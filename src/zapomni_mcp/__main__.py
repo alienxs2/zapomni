@@ -53,6 +53,7 @@ from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
 from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
+from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 from zapomni_db import FalkorDBClient
 from zapomni_db.pool_config import PoolConfig, RetryConfig
 from zapomni_mcp.config import Settings, SSEConfig
@@ -239,14 +240,45 @@ async def main(args: argparse.Namespace) -> None:
         # Note: EntityExtractor and GraphBuilder are loaded LAZILY on first use
         # This speeds up MCP server startup significantly (~3 sec faster)
         logger.info("Initializing MemoryProcessor (SpaCy/EntityExtractor loaded lazily)")
+
+        # Read feature flags from environment (all enabled by default except semantic cache)
+        enable_hybrid_search = os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true"
+        enable_knowledge_graph = os.getenv("ENABLE_KNOWLEDGE_GRAPH", "true").lower() == "true"
+        enable_code_indexing = os.getenv("ENABLE_CODE_INDEXING", "true").lower() == "true"
+        enable_semantic_cache = os.getenv("ENABLE_SEMANTIC_CACHE", "false").lower() == "true"
+
+        # Create ProcessorConfig with feature flags
+        processor_config = ProcessorConfig(
+            enable_cache=enable_semantic_cache,
+            enable_extraction=enable_knowledge_graph,
+            enable_graph=enable_knowledge_graph,
+            enable_llm_refinement=True,
+            search_mode="hybrid" if enable_hybrid_search else "vector",
+        )
+
+        logger.info(
+            "Feature flags loaded",
+            hybrid_search=enable_hybrid_search,
+            knowledge_graph=enable_knowledge_graph,
+            code_indexing=enable_code_indexing,
+            semantic_cache=enable_semantic_cache,
+            search_mode=processor_config.search_mode,
+        )
+
         processor = MemoryProcessor(
             db_client=db_client,
             chunker=chunker,
             embedder=embedder,
             extractor=None,  # Lazy loading - SpaCy loads on first build_graph call
-            config=ProcessorConfig(enable_llm_refinement=True),
+            config=processor_config,
         )
         logger.info("MemoryProcessor initialized")
+
+        # Attach code_indexer if code indexing is enabled
+        if enable_code_indexing:
+            logger.info("Initializing CodeRepositoryIndexer")
+            processor.code_indexer = CodeRepositoryIndexer()
+            logger.info("CodeRepositoryIndexer attached to MemoryProcessor")
 
         # STAGE 6: Create MCP server
         logger.info("Creating MCPServer")

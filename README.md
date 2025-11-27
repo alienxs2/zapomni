@@ -8,12 +8,24 @@ Zapomni is a local-first MCP (Model Context Protocol) memory server that provide
 
 **Key Features:**
 
-- Local-first architecture - all data and processing stays on your machine
-- Unified database - FalkorDB combines vector embeddings and knowledge graph in a single system
-- Hybrid search - vector similarity, BM25 keyword search, and graph traversal for optimal results
-- Zero configuration - works out-of-the-box with sensible defaults
-- MCP native - seamless integration with Claude, Cursor, Cline, and other MCP clients
-- Privacy guaranteed - your data never leaves your machine
+- **Local-first architecture** - all data and processing stays on your machine
+- **Unified database** - FalkorDB combines vector embeddings and knowledge graph in a single system
+- **Hybrid search** - vector similarity, BM25 keyword search, and graph traversal
+- **Knowledge graph** - automatic entity extraction and relationship mapping
+- **Code intelligence** - AST-based code analysis and indexing (14+ languages)
+- **Git Hooks integration** - automatic re-indexing on code changes
+- **MCP native** - seamless integration with Claude, Cursor, Cline, and other MCP clients
+- **Privacy guaranteed** - your data never leaves your machine
+
+**All features enabled by default:**
+
+Advanced features (hybrid search, knowledge graph, code indexing) are **enabled by default**. To disable them, set to `false` in your `.env` file:
+
+```bash
+ENABLE_HYBRID_SEARCH=false
+ENABLE_KNOWLEDGE_GRAPH=false
+ENABLE_CODE_INDEXING=false
+```
 
 ## Requirements
 
@@ -69,7 +81,20 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-### 4. Configure MCP client
+### 4. Configure environment (optional)
+
+```bash
+# Copy example configuration
+cp .env.example .env
+
+# Advanced features are enabled by default
+# To disable, uncomment and set to false:
+# ENABLE_HYBRID_SEARCH=false
+# ENABLE_KNOWLEDGE_GRAPH=false
+# ENABLE_CODE_INDEXING=false
+```
+
+### 5. Configure MCP client
 
 Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
 
@@ -89,7 +114,7 @@ Add to your MCP client configuration (e.g., `~/.config/claude/config.json`):
 }
 ```
 
-### 5. Start using
+### 6. Start using
 
 ```
 User: Remember that Python was created by Guido van Rossum in 1991
@@ -99,53 +124,17 @@ User: Who created Python?
 Claude: [Calls search_memory tool] Based on stored memory, Python was created by Guido van Rossum in 1991.
 ```
 
-## MCP Tools (18)
-
-### Memory Operations (4)
-
-| Tool | Description |
-|------|-------------|
-| `add_memory` | Store text with automatic chunking and embedding |
-| `search_memory` | Semantic search across stored memories with hybrid ranking |
-| `delete_memory` | Delete specific memory by ID (requires confirmation) |
-| `clear_all` | Clear all memories (requires exact phrase "DELETE ALL MEMORIES") |
-
-### Graph Operations (4)
-
-| Tool | Description |
-|------|-------------|
-| `build_graph` | Extract entities and build knowledge graph from text |
-| `get_related` | Find related entities through graph traversal (1-5 hop depth) |
-| `graph_status` | View knowledge graph statistics (nodes, edges, entity types) |
-| `export_graph` | Export graph in 4 formats (GraphML, Cytoscape JSON, Neo4j Cypher, JSON) |
-
-### Code Intelligence (1)
-
-| Tool | Description |
-|------|-------------|
-| `index_codebase` | Index code repository with AST analysis (14+ languages, call graphs, class hierarchies) |
-
-### System Management (3)
-
-| Tool | Description |
-|------|-------------|
-| `get_stats` | Query memory statistics (total memories, chunks, database size) |
-| `prune_memory` | Garbage collection for stale and orphaned nodes (dry-run mode available) |
-| `set_model` | Hot-reload Ollama LLM model without server restart |
-
-### Workspace Management (6)
-
-| Tool | Description |
-|------|-------------|
-| `create_workspace` | Create a new workspace for data isolation |
-| `list_workspaces` | List all available workspaces |
-| `set_current_workspace` | Set the current workspace for the session |
-| `get_current_workspace` | Get the current workspace for the session |
-| `delete_workspace` | Delete a workspace and all its data (requires confirmation) |
-
 ## Configuration
 
 Configuration is managed via environment variables. Copy `.env.example` to `.env` and customize as needed.
+
+**Note**: Advanced features (hybrid search, knowledge graph, code indexing) are **enabled by default**. To disable them in `.env`:
+
+```bash
+ENABLE_HYBRID_SEARCH=false
+ENABLE_KNOWLEDGE_GRAPH=false
+ENABLE_CODE_INDEXING=false
+```
 
 ### Essential Settings
 
@@ -155,83 +144,133 @@ Configuration is managed via environment variables. Copy `.env.example` to `.env
 | `FALKORDB_PORT` | 6381 | FalkorDB port |
 | `OLLAMA_BASE_URL` | http://localhost:11434 | Ollama API endpoint |
 | `OLLAMA_EMBEDDING_MODEL` | nomic-embed-text | Model for generating embeddings |
-| `OLLAMA_LLM_MODEL` | llama3.1:8b | Model for entity extraction and refinement |
+| `OLLAMA_LLM_MODEL` | llama3.1:8b | Model for entity extraction |
 | `MAX_CHUNK_SIZE` | 512 | Maximum tokens per chunk |
 | `CHUNK_OVERLAP` | 50 | Token overlap between chunks |
-| `VECTOR_DIMENSIONS` | 768 | Vector embedding dimensions |
 | `LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
-### Performance Tuning
+**Note**: The project uses 41 environment variables total. For complete configuration options, see the [Configuration Guide](docs/CONFIGURATION.md).
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FALKORDB_POOL_SIZE` | 20 | Connection pool size for concurrent requests |
-| `MAX_CONCURRENT_TASKS` | 4 | Maximum parallel processing tasks |
-| `HNSW_M` | 16 | HNSW index parameter (connections per layer) |
-| `HNSW_EF_CONSTRUCTION` | 200 | HNSW build-time accuracy parameter |
-| `HNSW_EF_SEARCH` | 100 | HNSW search-time accuracy parameter |
-| `MIN_SIMILARITY_THRESHOLD` | 0.5 | Minimum similarity score for search results |
+## MCP Tools
 
-### Optional Features
+Zapomni provides 18 MCP tools organized into 5 categories. Some tools require feature flags to be enabled.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REDIS_ENABLED` | false | Enable semantic caching with Redis |
-| `ENABLE_HYBRID_SEARCH` | false | Enable BM25 + vector hybrid search |
-| `ENABLE_KNOWLEDGE_GRAPH` | false | Enable automatic knowledge graph construction |
-| `ENABLE_CODE_INDEXING` | false | Enable code repository indexing |
+### Memory Operations (4 tools)
 
-See `.env.example` for complete configuration options.
+| Tool | Description | Requires Flag |
+|------|-------------|---------------|
+| `add_memory` | Store text with automatic chunking and embedding | - |
+| `search_memory` | Semantic search across stored memories | - |
+| `delete_memory` | Delete specific memory by ID | - |
+| `clear_all` | Clear all memories (safety confirmation required) | - |
+
+### Graph Operations (4 tools)
+
+| Tool | Description | Requires Flag |
+|------|-------------|---------------|
+| `build_graph` | Extract entities and build knowledge graph | `ENABLE_KNOWLEDGE_GRAPH` |
+| `get_related` | Find related entities through graph traversal | `ENABLE_KNOWLEDGE_GRAPH` |
+| `graph_status` | View knowledge graph statistics | `ENABLE_KNOWLEDGE_GRAPH` |
+| `export_graph` | Export graph (GraphML, Cytoscape, Neo4j, JSON) | `ENABLE_KNOWLEDGE_GRAPH` |
+
+### Code Intelligence (1 tool)
+
+| Tool | Description | Requires Flag |
+|------|-------------|---------------|
+| `index_codebase` | Index code repository with AST analysis (14+ languages) | `ENABLE_CODE_INDEXING` |
+
+### System Management (3 tools)
+
+| Tool | Description | Requires Flag |
+|------|-------------|---------------|
+| `get_stats` | Query memory statistics | - |
+| `prune_memory` | Garbage collection for stale nodes | - |
+| `set_model` | Hot-reload Ollama LLM model | - |
+
+### Workspace Management (5 tools)
+
+| Tool | Description | Requires Flag |
+|------|-------------|---------------|
+| `create_workspace` | Create a new workspace for data isolation | - |
+| `list_workspaces` | List all available workspaces | - |
+| `set_current_workspace` | Set the current workspace | - |
+| `get_current_workspace` | Get the current workspace | - |
+| `delete_workspace` | Delete a workspace and all its data | - |
+
+For detailed API documentation, see the [API Reference](docs/API.md).
 
 ## Architecture
 
+Zapomni consists of 4 layers:
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     MCP Client Layer                        │
-│              (Claude, Cursor, Cline, etc.)                  │
-└────────────────────────┬────────────────────────────────────┘
-                         │ MCP Protocol (stdio/SSE)
-┌────────────────────────▼────────────────────────────────────┐
-│                   zapomni_mcp (MCP Layer)                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ MCPServer: Protocol handling, tool registration     │   │
-│  │ Tools: 18 MCP tool implementations                  │   │
-│  │ Transport: stdio (default) or SSE (concurrent)      │   │
-│  └──────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                zapomni_core (Business Logic)                │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ MemoryProcessor: Orchestrates all operations        │   │
-│  │ Processors: Text, PDF, DOCX, HTML, Markdown, Code   │   │
-│  │ Chunking: Semantic text chunking                    │   │
-│  │ Embeddings: Ollama integration + caching            │   │
-│  │ Search: Vector, BM25, Hybrid, Graph traversal       │   │
-│  │ Extractors: Entity & relationship extraction        │   │
-│  │ Graph: Knowledge graph builder & exporter           │   │
-│  │ Code: AST analysis, call graphs, indexing           │   │
-│  └──────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                  zapomni_db (Data Layer)                    │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ FalkorDB Client: Graph queries, vector search       │   │
-│  │ Redis Cache: Semantic caching (optional)            │   │
-│  │ Models: Data structures and validation              │   │
-│  └──────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                   External Services                         │
-│    FalkorDB (6381)  │  Redis (6380)  │  Ollama (11434)      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              MCP Client Layer                       │
+│         (Claude, Cursor, Cline, etc.)               │
+└──────────────────┬──────────────────────────────────┘
+                   │ MCP Protocol (stdio/SSE)
+┌──────────────────▼──────────────────────────────────┐
+│           zapomni_mcp (MCP Layer)                   │
+│  • MCPServer: Protocol handling                     │
+│  • Tools: 18 MCP tool implementations               │
+│  • Transport: stdio (default) or SSE (concurrent)   │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│         zapomni_core (Business Logic)               │
+│  • MemoryProcessor: Orchestrates operations         │
+│  • Processors: Text, PDF, DOCX, HTML, Code          │
+│  • Search: Vector, BM25, Hybrid, Graph traversal    │
+│  • Extractors: Entity & relationship extraction     │
+│  • Code: AST analysis, call graphs, indexing        │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│           zapomni_db (Data Layer)                   │
+│  • FalkorDB Client: Graph queries, vector search    │
+│  • Redis Cache: Semantic caching (optional)         │
+│  • Models: Data structures and validation           │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│            External Services                        │
+│  FalkorDB (6381) │ Redis (6380) │ Ollama (11434)   │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│          zapomni_cli (CLI Tools)                    │
+│  • install-hooks: Git hooks installation            │
+│  • Git hooks: Auto-indexing triggers                │
+└─────────────────────────────────────────────────────┘
 ```
+
+For detailed architecture documentation, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Git Hooks Integration
+
+Automatically re-index your codebase when files change:
+
+```bash
+# Install Git hooks in your repository
+zapomni install-hooks [--repo-path PATH]
+```
+
+After installation, every git commit/merge/checkout automatically updates the knowledge graph. This ensures your AI assistant always has the latest code context.
+
+**Supported hooks:**
+- `post-commit` - Re-indexes changed files after commit
+- `post-merge` - Updates index after merge operations
+- `post-checkout` - Refreshes index when switching branches
+
+**Note**: Code indexing is enabled by default. Set `ENABLE_CODE_INDEXING=false` to disable.
+
+For more details, see the [CLI Guide](docs/CLI.md).
 
 ## Development
 
 ### Running Tests
+
+The project includes **2019 tests** (1864 unit tests + 155 integration tests) with high coverage (74-89% depending on module).
 
 ```bash
 # Run all tests
@@ -255,7 +294,7 @@ open htmlcov/index.html
 black src/ tests/
 isort src/ tests/
 
-# Type checking
+# Type checking (strict mode)
 mypy src/
 
 # Linting
@@ -265,18 +304,48 @@ flake8 src/ tests/
 pre-commit run --all-files
 ```
 
-### Build Package
+For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-```bash
-# Build distribution packages
-python -m build
+## Project Status
 
-# Install locally for testing
-pip install -e .
-```
+**Current Version**: v0.1.0 (Development)
+
+**What's Working**:
+- Core memory operations (add, search, statistics)
+- Knowledge graph construction and traversal (requires flag)
+- Workspace isolation
+- Git hooks integration
+- All 17 MCP tools available
+- Comprehensive test suite (2019 tests)
+
+**Note**: All advanced features are enabled by default.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+**Development Setup**:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with tests
+4. Ensure all tests pass (`pytest`)
+5. Run code quality checks (`pre-commit run --all-files`)
+6. Submit a pull request
 
 ## License
 
 MIT License - Copyright (c) 2025 Goncharenko Anton aka alienxs2
 
 See [LICENSE](LICENSE) file for details.
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/alienxs2/zapomni/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/alienxs2/zapomni/discussions)
+
+## Acknowledgments
+
+Built with:
+- [FalkorDB](https://www.falkordb.com/) - Unified graph and vector database
+- [Ollama](https://ollama.com/) - Local LLM runtime
+- [MCP](https://modelcontextprotocol.io/) - Model Context Protocol

@@ -51,6 +51,8 @@ def sample_vector_results():
     return [
         SearchResult(
             memory_id="mem1",
+            content="Python programming tutorial",  # Required field
+            relevance_score=0.95,  # Required field
             chunk_id="chunk1",
             text="Python programming tutorial",
             similarity_score=0.95,
@@ -61,6 +63,8 @@ def sample_vector_results():
         ),
         SearchResult(
             memory_id="mem2",
+            content="Machine learning with Python",  # Required field
+            relevance_score=0.85,  # Required field
             chunk_id="chunk2",
             text="Machine learning with Python",
             similarity_score=0.85,
@@ -71,6 +75,8 @@ def sample_vector_results():
         ),
         SearchResult(
             memory_id="mem3",
+            content="Data science fundamentals",  # Required field
+            relevance_score=0.75,  # Required field
             chunk_id="chunk3",
             text="Data science fundamentals",
             similarity_score=0.75,
@@ -327,6 +333,8 @@ class TestDeduplication:
         # Create duplicate results with different scores
         result_high = SearchResult(
             memory_id="mem1",
+            content="Test",  # Required field
+            relevance_score=0.9,  # Required field
             chunk_id="chunk1",
             text="Test",
             similarity_score=0.9,
@@ -399,6 +407,8 @@ class TestRRFScoring:
         vector_results = [
             SearchResult(
                 memory_id=f"mem{i}",
+                content=f"Text {i}",  # Required field
+                relevance_score=1.0 - (i * 0.1),  # Required field
                 chunk_id=f"chunk{i}",
                 text=f"Text {i}",
                 similarity_score=1.0 - (i * 0.1),
@@ -435,6 +445,8 @@ class TestRRFScoring:
 
         vector_result = SearchResult(
             memory_id="mem1",
+            content="Test",  # Required field
+            relevance_score=0.9,  # Required field
             chunk_id="chunk1",
             text="Test",
             similarity_score=0.9,

@@ -98,7 +98,8 @@ class TestGraphBuilderBuildGraph:
     @pytest.fixture
     def setup(self):
         """Setup mock dependencies."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False  # Default to Phase 1 (SpaCy only)
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
         return builder, extractor, db_client
@@ -138,6 +139,7 @@ class TestGraphBuilderBuildGraph:
 
         # Mock extractor to return no entities
         extractor.extract_entities.return_value = []
+        extractor.extract_entities_async = AsyncMock(return_value=[])
 
         memories = [{"text": "Some text with no entities"}]
 
@@ -160,6 +162,7 @@ class TestGraphBuilderBuildGraph:
             Entity(name="Google", type="ORG", description="Tech company", confidence=0.95),
         ]
         extractor.extract_entities.return_value = entities
+        extractor.extract_entities_async = AsyncMock(return_value=entities)
 
         # Mock db_client to return entity IDs
         db_client.add_entity.side_effect = [
@@ -185,6 +188,7 @@ class TestGraphBuilderBuildGraph:
             Entity(name="Python", type="TECHNOLOGY", description="", confidence=0.85),
         ]
         extractor.extract_entities.return_value = entities
+        extractor.extract_entities_async = AsyncMock(return_value=entities)
 
         db_client.add_entity.return_value = str(uuid.uuid4())
 
@@ -193,16 +197,20 @@ class TestGraphBuilderBuildGraph:
         result = await builder.build_graph(memories)
 
         assert result["entities_created"] == 1
-        assert extractor.extract_entities.called
+        # Code uses extract_entities_async if available
+        assert extractor.extract_entities_async.called
 
     @pytest.mark.asyncio
     async def test_build_graph_extraction_error(self, setup):
         """Test that ExtractionError is propagated."""
         builder, extractor, db_client = setup
 
-        extractor.extract_entities.side_effect = ExtractionError(
-            message="Extraction failed",
-            error_code="EXTR_001",
+        # Code uses extract_entities_async if available
+        extractor.extract_entities_async = AsyncMock(
+            side_effect=ExtractionError(
+                message="Extraction failed",
+                error_code="EXTR_001",
+            )
         )
 
         memories = [{"text": "Some text"}]
@@ -219,6 +227,7 @@ class TestGraphBuilderBuildGraph:
             Entity(name="Python", type="TECHNOLOGY", description="", confidence=0.85),
         ]
         extractor.extract_entities.return_value = entities
+        extractor.extract_entities_async = AsyncMock(return_value=entities)
         db_client.add_entity.return_value = str(uuid.uuid4())
 
         memories = [{"text": "ignored"}]
@@ -226,8 +235,8 @@ class TestGraphBuilderBuildGraph:
 
         await builder.build_graph(memories, text=explicit_text)
 
-        # Verify explicit text was used
-        extractor.extract_entities.assert_called_with(explicit_text)
+        # Verify explicit text was used (code uses extract_entities_async if available)
+        extractor.extract_entities_async.assert_called_with(explicit_text)
 
 
 # ============================================================================
@@ -241,7 +250,8 @@ class TestGraphBuilderAddEntityNodes:
     @pytest.fixture
     def setup(self):
         """Setup mock dependencies."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False  # Default to Phase 1 (SpaCy only)
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
         return builder, extractor, db_client
@@ -366,14 +376,15 @@ class TestGraphBuilderAddRelationships:
     @pytest.fixture
     def setup(self):
         """Setup mock dependencies."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False  # Default to Phase 1 (SpaCy only)
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
         return builder, extractor, db_client
 
     @pytest.mark.asyncio
     async def test_add_relationships_not_implemented(self, setup):
-        """Test that add_relationships raises NotImplementedError (Phase 2)."""
+        """Test that add_relationships returns 0 when LLM is disabled (Phase 1)."""
         builder, _, _ = setup
 
         entities = [
@@ -381,8 +392,9 @@ class TestGraphBuilderAddRelationships:
             Entity(name="Google", type="ORG", description="", confidence=0.85),
         ]
 
-        with pytest.raises(NotImplementedError, match="Phase 2"):
-            await builder.add_relationships(entities, "Some text")
+        # When LLM is disabled (enable_llm_refinement=False), returns 0 instead of raising
+        result = await builder.add_relationships(entities, "Some text")
+        assert result == 0
 
     @pytest.mark.asyncio
     async def test_add_relationships_empty_entities_raises(self, setup):
@@ -551,7 +563,8 @@ class TestGraphBuilderIntegration:
     @pytest.mark.asyncio
     async def test_full_pipeline_with_mocks(self):
         """Test complete pipeline: build_graph -> add_entity_nodes."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
 
@@ -562,6 +575,7 @@ class TestGraphBuilderIntegration:
             Entity(name="Google", type="ORG", description="Company", confidence=0.95),
         ]
         extractor.extract_entities.return_value = entities
+        extractor.extract_entities_async = AsyncMock(return_value=entities)
         db_client.add_entity.side_effect = [
             "ent-1",
             "ent-2",
@@ -579,7 +593,8 @@ class TestGraphBuilderIntegration:
     @pytest.mark.asyncio
     async def test_cache_persistence_across_calls(self):
         """Test that entity cache persists across calls."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
 
@@ -588,6 +603,7 @@ class TestGraphBuilderIntegration:
             Entity(name="Python", type="TECHNOLOGY", description="", confidence=0.85),
         ]
         extractor.extract_entities.return_value = entities1
+        extractor.extract_entities_async = AsyncMock(return_value=entities1)
         db_client.add_entity.return_value = "ent-1"
 
         await builder.add_entity_nodes(entities1)
@@ -608,7 +624,8 @@ class TestGraphBuilderIntegration:
     @pytest.mark.asyncio
     async def test_error_recovery(self):
         """Test recovery from partial failures."""
-        extractor = AsyncMock(spec=EntityExtractor)
+        extractor = MagicMock(spec=EntityExtractor)
+        extractor.enable_llm_refinement = False
         db_client = AsyncMock(spec=FalkorDBClient)
         builder = GraphBuilder(extractor, db_client)
 

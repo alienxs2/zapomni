@@ -243,19 +243,19 @@ class ZapomniSettings(BaseSettings):
     # ========================================
 
     enable_hybrid_search: bool = Field(
-        default=False, description="Enable BM25 + vector hybrid search (Phase 2)"
+        default=True, description="Enable BM25 + vector hybrid search"
     )
 
     enable_knowledge_graph: bool = Field(
-        default=False, description="Enable entity extraction and knowledge graph (Phase 2)"
+        default=True, description="Enable entity extraction and knowledge graph"
     )
 
     enable_code_indexing: bool = Field(
-        default=False, description="Enable AST-based code indexing (Phase 3)"
+        default=True, description="Enable AST-based code indexing"
     )
 
     enable_semantic_cache: bool = Field(
-        default=False, description="Enable semantic embedding cache (Phase 2)"
+        default=False, description="Enable semantic embedding cache (requires Redis)"
     )
 
     # ========================================

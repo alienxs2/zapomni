@@ -374,6 +374,8 @@ class HybridSearch:
                 if pseudo_chunk_id not in rrf_scores:
                     pseudo_result = SearchResult(
                         memory_id=f"bm25_mem_{bm25_dict.get('index', rank)}",
+                        content=text,  # Required field
+                        relevance_score=0.0,  # Required field, will be set to RRF score
                         chunk_id=pseudo_chunk_id,
                         text=text,
                         similarity_score=0.0,  # Will be set to RRF score
@@ -393,6 +395,8 @@ class HybridSearch:
             # Create new SearchResult with RRF score
             merged_result = SearchResult(
                 memory_id=result.memory_id,
+                content=result.text or result.content,  # Required field
+                relevance_score=rrf_scores[chunk_id],  # Required field - use RRF score
                 chunk_id=result.chunk_id,
                 text=result.text,
                 similarity_score=rrf_scores[chunk_id],  # Replace with RRF score

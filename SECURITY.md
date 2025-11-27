@@ -4,10 +4,12 @@
 
 We take security seriously at Zapomni. This table shows which versions of the project are currently supported with security updates:
 
-| Version | Supported          | Status      |
-| ------- | ------------------ | ----------- |
-| 0.1.x   | :white_check_mark: | Active      |
-| < 0.1   | :x:                | Development |
+| Version | Supported          | Status      | Release Date |
+| ------- | ------------------ | ----------- | ------------ |
+| 0.1.x   | :white_check_mark: | Active      | 2025-11-24   |
+| < 0.1   | :x:                | Development | -            |
+
+Current stable release: **v0.1.0** (Initial Public Release with 18 MCP tools and 2019 comprehensive tests)
 
 ## Local-First Security Model
 
@@ -170,4 +172,4 @@ This security policy is inspired by:
 
 **Thank you for helping keep Zapomni and its users safe!**
 
-Last updated: 2025-11-24
+Last updated: 2025-11-26

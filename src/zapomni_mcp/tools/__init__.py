@@ -35,9 +35,13 @@ class MCPTool(Protocol):
 
 from .add_memory import AddMemoryTool
 from .build_graph import BuildGraphTool
+from .clear_all import ClearAllTool
+from .delete_memory import DeleteMemoryTool
+from .export_graph import ExportGraphTool
 from .get_related import GetRelatedTool
 from .get_stats import GetStatsTool
 from .graph_status import GraphStatusTool
+from .index_codebase import IndexCodebaseTool
 from .prune_memory import PruneMemoryTool
 from .search_memory import SearchMemoryTool
 from .set_model import SetModelTool
@@ -59,6 +63,10 @@ __all__ = [
     "GraphStatusTool",
     "PruneMemoryTool",
     "SetModelTool",
+    "ClearAllTool",
+    "DeleteMemoryTool",
+    "ExportGraphTool",
+    "IndexCodebaseTool",
     # Workspace tools
     "CreateWorkspaceTool",
     "ListWorkspacesTool",

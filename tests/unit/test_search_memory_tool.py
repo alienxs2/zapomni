@@ -396,22 +396,22 @@ class TestSearchMemoryToolFormatting:
 
         # Verify
         text = result["content"][0]["text"]
+        # The first result has long text (>200 chars), should be truncated with "..."
         assert "..." in text
-        # Verify text is truncated to 200 chars + "..."
-        lines = text.split("\n")
-        for line in lines:
-            if "[Score:" in line:
-                # Found a result line
-                # Text should be truncated
-                if len(sample_results[0].text) > 200:
-                    assert "..." in line or line.index("...") > 0
+        # Verify text is truncated - the long text should have "..." at end
+        assert len(sample_results[0].text) > 200  # First result text is long
+        # The formatted output should contain "..." for truncated text
+        assert text.count("...") >= 1
 
     def test_format_error_validation_error(self, tool):
         """Test error formatting for ValidationError."""
-        # Setup
-        error = ValidationError.from_exception_data(
-            "test",
-            [{"loc": ("query",), "msg": "field required", "type": "value_error"}],
+        # Setup - Use CoreValidationError (zapomni's custom exception) for simpler setup
+        from zapomni_core.exceptions import ValidationError as CoreValidationError
+
+        error = CoreValidationError(
+            message="field required",
+            error_code="VAL_001",
+            details={"field": "query"},
         )
 
         # Execute

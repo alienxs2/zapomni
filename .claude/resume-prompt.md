@@ -1,161 +1,285 @@
-# Zapomni MCP - Resume Prompt
+# Zapomni Project - Project Manager Handoff
 
-## Проект
-**Zapomni** — local-first MCP сервер памяти для AI агентов.
-- **Репозиторий:** https://github.com/alienxs2/zapomni
-- **Путь:** `/home/dev/zapomni`
-- **Стек:** Python 3.12, FalkorDB (граф + векторы), Ollama (embeddings), SpaCy (NER)
+**Last Updated**: 2025-11-27
+**Current PM**: AI Assistant (transitioning to new PM)
+**Project Status**: PHASE 1 Complete ✅ - Ready for PHASE 2 (Documentation Polish)
 
-## Архитектура
+---
+
+## 📊 PROJECT OVERVIEW
+
+**Project**: Zapomni - Local-first MCP memory server for AI agents
+- **Repository**: https://github.com/alienxs2/zapomni
+- **Location**: `/home/dev/zapomni`
+- **Version**: v0.2.1 (2025-11-27)
+- **Status**: 9/10 - Production-ready, all tests passing
+
+**Key Stats**:
+- **Code**: 80 Python files, ~28,500 lines
+- **Tests**: 1,858 passed, 6 skipped (~35 seconds runtime)
+- **Coverage**: 74-89% (module-dependent)
+- **MCP Tools**: 18 total (all registered and operational)
+- **Documentation**: 11 public files, professionally structured
+
+---
+
+## 🎯 CURRENT STATUS (PHASE COMPLETION)
+
+### ✅ PHASE 0: DEEP AUDIT - COMPLETE
+**Duration**: ~7 hours (4 experts, parallel execution)
+**Deliverables**:
+- T0.1: MCP Tools Audit (18 tools analyzed)
+- T0.2: Architecture Audit (4 layers validated)
+- T0.3: Tests Analysis (2,019 tests reviewed)
+- T0.4: Configuration Audit (41 env vars checked)
+- T0.7: Summary Report (top-10 critical issues)
+
+**Location**: `.project-management/reports/T0.*_Report.md`
+
+### ✅ DOCUMENTATION MIGRATION - COMPLETE
+**Duration**: ~7.5 hours (4 agents: haiku + sonnet)
+**Deliverables**:
+- DOC-1: Cleanup (deleted 7.2 MB old docs, restructured)
+- DOC-2: Created docs/ (5 files: ARCHITECTURE, API, CONFIGURATION, CLI, DEVELOPMENT)
+- DOC-3: Updated README.md (350 lines, fixed all discrepancies)
+- DOC-4: Updated meta files (CHANGELOG, CONTRIBUTING, SECURITY)
+
+**Result**: 11 clean public files, minimal and professional
+
+### ✅ PHASE 1: CRITICAL FIXES - COMPLETE
+**Duration**: ~6 hours (2025-11-27)
+**Completed Tasks**:
+- T1.1: ✅ Registered 4 tools in `__init__.py` (delete_memory, clear_all, export_graph, index_codebase)
+- T1.2: ✅ Enabled feature flags in `.env.example` (ENABLE_HYBRID_SEARCH, ENABLE_KNOWLEDGE_GRAPH, ENABLE_CODE_INDEXING)
+- T1.5: ✅ Unified ports to 6381 across codebase
+- T1.3: ✅ Fixed 95+ failing tests across 12 files
+- T1.6: ✅ Full test suite validation - 1,858 passed, 6 skipped
+
+---
+
+## ✅ RESOLVED ISSUES (PHASE 1 Complete)
+
+### 1. ✅ 4 MCP Tools Now Registered
+**Tools**: delete_memory, clear_all, export_graph, index_codebase
+**Fixed**: Added imports to `src/zapomni_mcp/tools/__init__.py`
+
+### 2. ✅ All Tests Passing
+**Result**: 1,858 passed, 6 skipped, 4 warnings
+**Fixed**: 95+ tests across 12 files (test_set_model_tool, test_mcp_server, test_models, test_config, test_search*, etc.)
+
+### 3. ✅ Feature Flags Enabled by Default
+**Flags**: ENABLE_HYBRID_SEARCH=true, ENABLE_KNOWLEDGE_GRAPH=true, ENABLE_CODE_INDEXING=true
+**Fixed**: Updated `.env.example`
+
+### 4. ✅ Ports Unified to 6381
+**Fixed**: All FalkorDB port defaults now 6381 across codebase
+
+---
+
+## 📁 DOCUMENTATION STRUCTURE (NEW - Post Migration)
+
+### Public Documentation (11 files, in Git):
 ```
-zapomni_mcp/        # MCP сервер (entry point: python -m zapomni_mcp)
-├── server.py       # MCPServer class
-├── tools/          # add_memory, search_memory, build_graph, etc.
-└── __main__.py     # Инициализация (SpaCy НЕ грузится здесь!)
-
-zapomni_core/       # Бизнес-логика
-├── memory_processor.py    # Главный оркестратор + LAZY LOADING
-├── chunking/              # SemanticChunker
-├── embeddings/            # OllamaEmbedder
-├── extractors/            # EntityExtractor (SpaCy NER)
-├── graph/                 # GraphBuilder
-└── search/                # VectorSearch, HybridSearch
-
-zapomni_db/         # Database layer
-├── falkordb_client.py     # FalkorDB операции
-├── cypher_query_builder.py # Генерация Cypher запросов
-├── schema_manager.py      # Индексы и схема
-└── models.py              # Pydantic модели
+/
+├── README.md                    (350 lines) - Main entry point
+├── docs/
+│   ├── ARCHITECTURE.md          (670 lines) - 4 layers, diagrams
+│   ├── API.md                   (1,154 lines) - All 18 MCP tools
+│   ├── CONFIGURATION.md         (727 lines) - All 41 env vars
+│   ├── CLI.md                   (580 lines) - Git Hooks guide
+│   └── DEVELOPMENT.md           (899 lines) - Testing, setup
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── SECURITY.md
+└── LICENSE
 ```
 
-## Текущий статус (2025-11-25)
-- **MCP подключается:** ✅ быстро (~0.3 сек благодаря lazy loading)
-- **add_memory:** ✅ работает (без загрузки SpaCy)
-- **search_memory:** ✅ работает (без загрузки SpaCy)
-- **build_graph:** ✅ работает (SpaCy грузится лениво при первом вызове)
-- **get_stats, graph_status, export_graph, delete_memory:** ✅
-- **get_related, clear_all:** ✅
-
-## Ключевое: Ленивая загрузка SpaCy
-```python
-# memory_processor.py использует @property для lazy loading:
-
-@property
-def extractor(self):
-    if self._extractor is None:
-        # SpaCy загружается ТОЛЬКО здесь, при первом доступе
-        spacy_model = spacy.load("en_core_web_sm")
-        self._extractor = EntityExtractor(spacy_model=spacy_model)
-    return self._extractor
-
-@property
-def graph_builder(self):
-    if self._graph_builder is None:
-        self._graph_builder = GraphBuilder(
-            entity_extractor=self.extractor,  # триггерит загрузку SpaCy
-            db_client=self.db_client,
-        )
-    return self._graph_builder
+### Working Artifacts (NOT in Git, .gitignore):
+```
+.project-management/
+├── plans/MASTER_PLAN.md         - Overall project roadmap
+├── templates/TASK_TEMPLATE.md   - Template for expert tasks
+├── tasks/                       - Task assignments (T0.*, T1.*, DOC-*)
+└── reports/                     - Expert reports and audits
 ```
 
-**Важно:** В коде проверять `self._extractor` (не `self.extractor`!) чтобы не триггерить загрузку.
+**Principle**: "Less is more" - Keep 11 public files, hide PM artifacts
 
-## Конфигурация
+---
+
+## 🗺️ PROJECT PLAN (MASTER_PLAN.md)
+
+**Location**: `.project-management/plans/MASTER_PLAN.md`
+
+**Structure**:
+- PHASE 0: Deep Audit ✅ COMPLETE
+- PHASE 1: Critical Fixes ✅ COMPLETE (6 tasks, 2025-11-27)
+- PHASE 2: Documentation Updates 🔵 NEXT (10 tasks)
+- PHASE 3: Roadmap & Planning 🔴 Blocked (6 tasks)
+- PHASE 4: Killer Features ⏸️ Optional (9 tasks)
+- PHASE 5: Final Validation 🔴 Blocked (8 tasks)
+
+**Next Steps**: PHASE 2 - Documentation polish and updates
+
+---
+
+## 🎯 HOW TO CONTINUE (Instructions for New PM)
+
+### Step 1: Read Key Documents (30 minutes)
 ```bash
-# ~/.claude.json — MCP сервер
-"zapomni": {
-  "command": "/home/dev/zapomni/.venv/bin/python",
-  "args": ["-m", "zapomni_mcp"],
-  "env": {
-    "FALKORDB_HOST": "localhost",
-    "FALKORDB_PORT": "6381",
-    "OLLAMA_BASE_URL": "http://localhost:11434"
-  }
-}
+cd /home/dev/zapomni
+
+# Read overall plan
+cat .project-management/plans/MASTER_PLAN.md
+
+# Read audit summary
+cat .project-management/reports/T0.7_AUDIT_SUMMARY_REPORT.md
+
+# Read architecture
+cat docs/ARCHITECTURE.md
 ```
 
-## Docker сервисы
+### Step 2: Understand Task Delegation System
+- **Template**: `.project-management/templates/TASK_TEMPLATE.md`
+- **Process**: Create task → Agree model with owner → Delegate to agent → Get report
+- **Models**:
+  - `haiku` for simple tasks (<1h, file operations)
+  - `sonnet` for complex tasks (code, documentation)
+  - Never `opus` (too expensive)
+
+### Step 3: Execute PHASE 2 (Next)
+
+**PHASE 1 COMPLETE** - All critical fixes done (2025-11-27):
+- ✅ T1.1-T1.6 all completed
+- ✅ 1,858 tests passing
+
+**PHASE 2 Tasks** (Documentation Updates):
 ```bash
-docker ps | grep -E "falkor|ollama"
-# zapomni_falkordb — порт 6381
-# ollama — порт 11434
+# Review and update documentation for accuracy
+# Ensure all 18 MCP tools documented in docs/API.md
+# Update configuration examples
 ```
 
-## Workflow разработки
-1. **Редактирую** файлы через Edit/Write
-2. **Тестирую** через Bash (`.venv/bin/python -c "..."`) или MCP tools
-3. **Коммичу** с описательным сообщением + Co-Authored-By
-4. **Пушу** в GitHub (`git push origin main`)
-5. **Пользователь перезапускает** Claude Code для подхвата изменений MCP
+### Step 4: After Each Task - Update Docs
+Agents should automatically update relevant documentation:
+- Tool registration (T1.1) → Update docs/API.md
+- Feature flags (T1.2) → Update docs/CONFIGURATION.md
+- Tests fixed (T1.3) → Update docs/DEVELOPMENT.md
 
-## Стиль коммитов
-```
-type(scope): краткое описание
-
-- детали изменения 1
-- детали изменения 2
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-Типы: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`
-
-## Важные особенности FalkorDB
-- **Vector search:** `db.idx.vector.queryNodes(label, attribute, k, vecf32(vector))`
-- **Возвращает DISTANCE** (0=идентично), не similarity — нужна конверсия
-- **CREATE INDEX:** без имени! `CREATE INDEX FOR (n:Label) ON (n.prop)`
-- **Порт:** 6381 (не стандартный 6379)
-
-## Полезные команды
+### Step 5: Validate and Continue
 ```bash
-# Проверить Docker сервисы
-docker ps | grep -E "falkor|ollama"
-
-# Проверить FalkorDB
-docker exec zapomni_falkordb redis-cli -p 6379 GRAPH.QUERY zapomni_memory "MATCH (n) RETURN labels(n)[0], count(n)"
-
-# Запустить MCP сервер вручную
-cd /home/dev/zapomni && .venv/bin/python -m zapomni_mcp
-
-# Тест компонентов напрямую
-.venv/bin/python -c "
-from zapomni_core.logging_service import LoggingService
-LoggingService.configure_logging(level='WARNING')
-# ... твой код
-"
-
-# Проверить статус git
-git status && git log --oneline -5
+pytest tests/  # All green
+git status     # Documentation updated
+# Move to PHASE 2
 ```
 
-## Последние коммиты
-- `cfc84cb0` — **perf: Lazy loading для SpaCy/EntityExtractor**
-- `e7fbb332` — docs: Resume prompt
-- `791ee000` — fix: SpaCy model для EntityExtractor
-- `a4a11c5b` — fix: EntityExtractor + tags/source storage
-- `16be5b44` — fix: Schema init + SearchResult mapping
+---
 
-## Известные особенности
-- **Lazy loading** — SpaCy грузится только при build_graph, не при старте
-- **FalkorDB SHOW INDEXES** — не поддерживается, используем try/except
-- **Editable install** — изменения применяются сразу, но нужен перезапуск MCP
+## 💡 KEY DISCOVERIES (Hidden Value)
 
-## MCP Tools (все работают)
-| Tool | Описание | Загружает SpaCy? |
-|------|----------|------------------|
-| `add_memory` | Добавить память | Нет |
-| `search_memory` | Поиск по памяти | Нет |
-| `build_graph` | Построить граф знаний | Да (лениво) |
-| `get_stats` | Статистика системы | Нет |
-| `graph_status` | Статус графа | Нет |
-| `export_graph` | Экспорт графа | Нет |
-| `delete_memory` | Удалить память | Нет |
-| `get_related` | Связанные сущности | Нет |
-| `clear_all` | Очистить всё | Нет |
+### 🎁 Git Hooks Already Implemented!
+**Location**: `src/zapomni_cli/`
+- `install_hooks.py` - Git hooks installer
+- `hooks/post-commit` - Auto-reindex on commit
+- `hooks/post-merge` - Auto-reindex on merge
+- `hooks/post-checkout` - Auto-reindex on branch switch
 
-## Начало работы
+**Status**: Fully working, now documented in docs/CLI.md
+**This is a "Killer Feature"** - automatic code re-indexing!
+
+---
+
+## 📚 ESSENTIAL READING FOR NEW PM
+
+**Must Read** (in order):
+1. `.project-management/reports/T0.7_AUDIT_SUMMARY_REPORT.md` (15 min)
+2. `.project-management/plans/MASTER_PLAN.md` (30 min)
+3. `docs/ARCHITECTURE.md` (20 min)
+
+**Reference**:
+- `docs/API.md` - All 18 MCP tools
+- `docs/DEVELOPMENT.md` - Testing and setup
+- Individual audit reports (T0.1-T0.4)
+
+---
+
+## 🛠️ PM WORKFLOW
+
+### Task Execution Process:
+1. **Identify next task** from MASTER_PLAN.md
+2. **Choose agent model**: haiku (simple) vs sonnet (complex)
+3. **Agree model with owner** (always confirm before delegating!)
+4. **Delegate via Task tool**:
+   ```
+   subagent_type: general-purpose
+   model: haiku/sonnet
+   prompt: {detailed instructions}
+   ```
+5. **Receive report** from agent
+6. **Update MASTER_PLAN.md** status
+7. **Update documentation** if code changed
+8. **Continue** to next task
+
+### Parallelization:
+- **Independent tasks** → Parallel (multiple Task calls in ONE message)
+- **Dependent tasks** → Sequential (wait for results)
+
+**Example**: T1.1, T1.2, T1.5 are independent → 3 Task calls in one message
+
+---
+
+## 🚨 IMPORTANT RULES
+
+### What NOT to Do:
+- ❌ Don't create new documentation files (11 files maximum!)
+- ❌ Don't use opus model (too expensive)
+- ❌ Don't skip model agreement with owner
+- ❌ Don't forget to update docs after code changes
+
+### What TO Do:
+- ✅ Always agree model before delegating
+- ✅ Update documentation after each change
+- ✅ Keep .project-management/ current
+- ✅ Run tests after code changes
+- ✅ Follow "less is more" principle
+
+---
+
+## 📞 QUICK START FOR NEW PM
+
+**First 5 minutes**:
+```bash
+cd /home/dev/zapomni
+cat .project-management/reports/T0.7_AUDIT_SUMMARY_REPORT.md  # Read summary
+cat .project-management/plans/MASTER_PLAN.md | head -100      # Read plan
 ```
-Продолжаем работу над Zapomni MCP (/home/dev/zapomni).
-Прочитай .claude/resume-prompt.md для контекста.
-```
+
+**Next action**:
+Say to owner: "Ready to start PHASE 1. I recommend parallel execution of T1.1, T1.2, T1.5 using haiku agents. May I proceed?"
+
+**After approval**:
+Delegate 3 tasks in ONE message (parallel execution)
+
+---
+
+## 🎓 SUMMARY
+
+**You are inheriting**:
+- ✅ Quality codebase (28,500 lines, well-architected)
+- ✅ All tests passing (1,858 passed, 6 skipped)
+- ✅ Clean documentation (11 files, current)
+- ✅ Clear roadmap (46 tasks planned)
+- ✅ All critical issues resolved (PHASE 1 complete)
+
+**Your mission**:
+1. ~~Execute PHASE 1 (fixes)~~ ✅ COMPLETE (2025-11-27)
+2. Execute PHASE 2 (docs polish) → ~15-20 hours
+3. Execute PHASE 5 (validation) → ~8-12 hours
+4. (Optional) PHASE 4 (killer features) → ~40-80 hours
+
+**Success = All tests green ✅ + Documentation accurate + Project release-ready**
+
+---
+
+**Welcome aboard! PHASE 1 complete - Continue with PHASE 2. Good luck! 🚀**

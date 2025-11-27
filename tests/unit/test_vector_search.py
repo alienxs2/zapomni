@@ -73,6 +73,8 @@ class TestVectorSearchSearch:
         mock_results = [
             SearchResult(
                 memory_id="mem-1",
+                content="Python is a programming language",  # Required field
+                relevance_score=0.95,  # Required field
                 chunk_id="chunk-1",
                 text="Python is a programming language",
                 similarity_score=0.95,
@@ -175,6 +177,8 @@ class TestVectorSearchSearch:
         mock_results = [
             SearchResult(
                 memory_id="mem-1",
+                content="Result 1",  # Required field
+                relevance_score=0.95,  # Required field
                 chunk_id="chunk-1",
                 text="Result 1",
                 similarity_score=0.95,
@@ -185,6 +189,8 @@ class TestVectorSearchSearch:
             ),
             SearchResult(
                 memory_id="mem-2",
+                content="Result 2",  # Required field
+                relevance_score=0.85,  # Required field
                 chunk_id="chunk-2",
                 text="Result 2",
                 similarity_score=0.85,
@@ -195,6 +201,8 @@ class TestVectorSearchSearch:
             ),
             SearchResult(
                 memory_id="mem-3",
+                content="Result 3",  # Required field
+                relevance_score=0.75,  # Required field
                 chunk_id="chunk-3",
                 text="Result 3",
                 similarity_score=0.75,
@@ -291,6 +299,8 @@ class TestVectorSearchResultFormatting:
         expected_results = [
             SearchResult(
                 memory_id="mem-1",
+                content="Test",  # Required field
+                relevance_score=0.95,  # Required field
                 chunk_id="chunk-1",
                 text="Test",
                 similarity_score=0.95,

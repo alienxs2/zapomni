@@ -20,6 +20,8 @@ This project adheres to the Contributor Covenant Code of Conduct. By participati
 
 ## Development Setup
 
+For detailed setup instructions, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 ### Prerequisites
 
 - **Python 3.10+**
@@ -71,6 +73,15 @@ pytest tests/unit -v
 # Run code quality checks
 pre-commit run --all-files
 ```
+
+### Understanding the Codebase
+
+Before diving into development, familiarize yourself with the project structure:
+
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design, data flow, and component relationships
+- **[API.md](docs/API.md)** - Complete MCP tools reference and API documentation
+- **[CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration options and environment variables
+- **[CLI.md](docs/CLI.md)** - Command-line interface reference
 
 ## Branching Strategy
 
@@ -421,7 +432,7 @@ def _process_chunk():
 
 ## Testing Requirements
 
-All contributions must include appropriate tests with **80%+ code coverage**.
+All contributions must include appropriate tests with **80%+ code coverage**. Zapomni has a comprehensive test suite with 2019+ tests covering unit, integration, and end-to-end scenarios.
 
 ### Test Structure
 
@@ -433,6 +444,8 @@ tests/
 ```
 
 ### Running Tests
+
+For comprehensive testing guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ```bash
 # All tests

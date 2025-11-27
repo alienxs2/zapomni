@@ -82,7 +82,7 @@ def test_config_manager_defaults():
 
     # Test FalkorDB defaults
     assert config.falkordb_host == "localhost"
-    assert config.falkordb_port == 6379
+    assert config.falkordb_port == 6381
     assert config.graph_name == "zapomni_memory"
 
     # Test Ollama defaults
@@ -114,7 +114,7 @@ def test_config_manager_computed_properties():
     conn_str = config.falkordb_connection_string
     assert conn_str.startswith("redis://")
     assert "localhost" in conn_str
-    assert "6379" in conn_str
+    assert "6381" in conn_str
 
 
 def test_module_all_export():

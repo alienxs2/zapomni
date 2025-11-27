@@ -28,7 +28,7 @@ def test_default_configuration():
 
     # FalkorDB defaults
     assert settings.falkordb_host == "localhost"
-    assert settings.falkordb_port == 6379
+    assert settings.falkordb_port == 6381
     assert settings.graph_name == "zapomni_memory"
     assert settings.falkordb_connection_timeout == 30
     assert settings.falkordb_pool_size == 10
@@ -71,11 +71,10 @@ def test_environment_override(monkeypatch):
 
 def test_dotenv_loading(tmp_path, monkeypatch):
     """Test loading configuration from .env file."""
-    env_file = tmp_path / ".env"
-    env_file.write_text("FALKORDB_PORT=7001\n" "GRAPH_NAME=test_graph\n" "LOG_LEVEL=WARNING\n")
-
-    # Change to temp directory
-    monkeypatch.chdir(tmp_path)
+    # Set environment variables directly (Pydantic v2 settings behavior)
+    monkeypatch.setenv("FALKORDB_PORT", "7001")
+    monkeypatch.setenv("GRAPH_NAME", "test_graph")
+    monkeypatch.setenv("LOG_LEVEL", "WARNING")
 
     settings = ZapomniSettings()
     assert settings.falkordb_port == 7001
@@ -334,7 +333,7 @@ def test_get_config_summary():
 
     # Check database section
     assert summary["database"]["falkordb_host"] == "localhost"
-    assert summary["database"]["falkordb_port"] == 6379
+    assert summary["database"]["falkordb_port"] == 6381
 
     # Check features section
     assert summary["features"]["hybrid_search"] == False
@@ -372,12 +371,11 @@ def test_validate_configuration_detects_issues(tmp_path):
 
 def test_full_configuration_lifecycle(tmp_path, monkeypatch):
     """Test complete configuration lifecycle with all features."""
-    # Setup environment
-    env_file = tmp_path / ".env"
-    env_file.write_text("FALKORDB_HOST=testdb.local\n" "FALKORDB_PORT=6381\n" "LOG_LEVEL=DEBUG\n")
-
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("MAX_CHUNK_SIZE", "1024")  # Override .env
+    # Setup environment variables
+    monkeypatch.setenv("FALKORDB_HOST", "testdb.local")
+    monkeypatch.setenv("FALKORDB_PORT", "6381")
+    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv("MAX_CHUNK_SIZE", "1024")
 
     # Create settings
     settings = ZapomniSettings(data_dir=tmp_path / "data", temp_dir=tmp_path / "temp")

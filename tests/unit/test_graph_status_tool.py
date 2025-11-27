@@ -106,7 +106,7 @@ class TestGraphStatusToolExecute:
     def mock_processor(self, mock_db_client):
         """Create a mock MemoryProcessor with database client."""
         processor = Mock(spec=MemoryProcessor)
-        processor._db_client = mock_db_client
+        processor.db_client = mock_db_client
         return processor
 
     @pytest.fixture
@@ -209,7 +209,7 @@ class TestGraphStatusToolExecute:
     async def test_execute_with_no_db_client(self, mock_processor):
         """Test execution when database client is not initialized."""
         # Setup
-        mock_processor._db_client = None
+        mock_processor.db_client = None
         tool = GraphStatusTool(memory_processor=mock_processor)
         arguments = {}
 
@@ -557,7 +557,7 @@ class TestGraphStatusToolEntityTypes:
     def mock_processor(self, mock_db_client):
         """Create a mock processor with database client."""
         processor = Mock(spec=MemoryProcessor)
-        processor._db_client = mock_db_client
+        processor.db_client = mock_db_client
         return processor
 
     @pytest.fixture
@@ -608,7 +608,7 @@ class TestGraphStatusToolEntityTypes:
     async def test_get_entity_types_no_db_client(self, mock_processor):
         """Test entity type extraction when db client is None."""
         # Setup
-        mock_processor._db_client = None
+        mock_processor.db_client = None
         tool = GraphStatusTool(memory_processor=mock_processor)
 
         # Execute
@@ -649,7 +649,7 @@ class TestGraphStatusToolEdgeCases:
         mock_db_client._execute_cypher = AsyncMock(
             return_value=QueryResult(rows=[], row_count=0, execution_time_ms=0)
         )
-        mock_processor._db_client = mock_db_client
+        mock_processor.db_client = mock_db_client
 
         # Execute - should not crash
         result = await tool.execute({})

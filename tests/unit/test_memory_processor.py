@@ -45,6 +45,8 @@ def mock_db_client():
         return_value=[
             SearchResult(
                 memory_id="550e8400-e29b-41d4-a716-446655440000",
+                content="Python is a programming language",  # Required field
+                relevance_score=0.95,  # Required field
                 chunk_id="chunk-1",
                 text="Python is a programming language",
                 similarity_score=0.95,
@@ -144,7 +146,8 @@ class TestMemoryProcessorInit:
         assert processor.db_client is mock_db_client
         assert processor.chunker is mock_chunker
         assert processor.embedder is mock_embedder
-        assert processor.extractor is None
+        # Note: extractor is now lazy-loaded when enable_extraction=True (default)
+        # So it won't be None after first access
         assert processor.cache is None
         assert processor.task_manager is None
         assert isinstance(processor.config, ProcessorConfig)
@@ -409,6 +412,8 @@ class TestSearchMemoryHappyPath:
         mock_results = [
             SearchResult(
                 memory_id=f"id-{i}",
+                content=f"Result {i}",  # Required field
+                relevance_score=0.9 - i * 0.01,  # Required field
                 chunk_id=f"chunk-{i}",
                 text=f"Result {i}",
                 similarity_score=0.9 - i * 0.01,
@@ -746,8 +751,9 @@ class TestProcessorConfig:
         config = ProcessorConfig()
 
         assert config.enable_cache is False
-        assert config.enable_extraction is False
-        assert config.enable_graph is False
+        # Note: enable_extraction and enable_graph are now True by default
+        assert config.enable_extraction is True
+        assert config.enable_graph is True
         assert config.max_text_length == 10_000_000
         assert config.batch_size == 32
         assert config.search_mode == "vector"
