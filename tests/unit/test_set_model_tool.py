@@ -45,9 +45,10 @@ class TestSetModelTool:
         assert config.llm_model == "llama3:latest"
         assert config.llm_model != initial_model
 
-        # Check result
-        assert result["success"] is True
-        assert "llama3:latest" in result["result"]
+        # Check result (MCP format)
+        assert result["isError"] is False
+        assert len(result["content"]) == 1
+        assert "llama3:latest" in result["content"][0]["text"]
 
     @pytest.mark.asyncio
     async def test_execute_empty_model_name(self):
@@ -62,10 +63,10 @@ class TestSetModelTool:
         # Model should not change
         assert config.llm_model == initial_model
 
-        # Should return error
-        assert result["success"] is False
-        assert "Error" in result["result"]
-        assert "empty" in result["result"]
+        # Should return error (MCP format)
+        assert result["isError"] is True
+        assert len(result["content"]) == 1
+        assert "empty" in result["content"][0]["text"]
 
     @pytest.mark.asyncio
     async def test_execute_whitespace_model_name(self):
@@ -80,9 +81,9 @@ class TestSetModelTool:
         # Model should not change
         assert config.llm_model == initial_model
 
-        # Should return error
-        assert result["success"] is False
-        assert "Error" in result["result"]
+        # Should return error (MCP format)
+        assert result["isError"] is True
+        assert len(result["content"]) == 1
 
     @pytest.mark.asyncio
     async def test_execute_returns_confirmation_message(self):
@@ -90,8 +91,8 @@ class TestSetModelTool:
         tool = SetModelTool()
         result = await tool.execute({"model_name": "mistral:latest"})
 
-        assert result["success"] is True
-        message = result["result"]
+        assert result["isError"] is False
+        message = result["content"][0]["text"]
 
         # Should mention both old and new model
         assert "qwen2.5:latest" in message  # Old default model
@@ -99,10 +100,6 @@ class TestSetModelTool:
 
         # Should mention what the model is used for
         assert "entity" in message.lower() or "refinement" in message.lower()
-
-        # Should include model fields
-        assert result["old_model"] == "qwen2.5:latest"
-        assert result["new_model"] == "mistral:latest"
 
     @pytest.mark.asyncio
     async def test_execute_with_various_model_formats(self):
@@ -121,10 +118,10 @@ class TestSetModelTool:
         for model in test_models:
             result = await tool.execute({"model_name": model})
 
-            # Should succeed and update config
+            # Should succeed and update config (MCP format)
             assert config.llm_model == model
-            assert result["success"] is True
-            assert model in result["result"]
+            assert result["isError"] is False
+            assert model in result["content"][0]["text"]
 
 
 class TestSetModelToolIntegration:
@@ -164,7 +161,7 @@ class TestSetModelToolIntegration:
             result = await tool.execute({"model_name": model})
 
             assert config.llm_model == model
-            assert result["success"] is True
+            assert result["isError"] is False
 
         # Final model should be the last one
         assert config.llm_model == "model3:latest"

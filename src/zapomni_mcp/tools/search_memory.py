@@ -8,6 +8,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+import time
 from typing import Any, Dict, Optional
 
 import structlog
@@ -168,6 +169,7 @@ class SearchMemoryTool:
         """
         request_id = id(arguments)  # Simple request ID for logging
         log = self.logger.bind(request_id=request_id)
+        start_time = time.time()
 
         try:
             # Step 1: Validate input
@@ -191,33 +193,49 @@ class SearchMemoryTool:
             )
 
             # Step 3: Format response
-            log.info("search_completed", result_count=len(results))
-            return self._format_response(results)
+            processing_time_ms = (time.time() - start_time) * 1000
+            log.info(
+                "search_completed",
+                result_count=len(results),
+                processing_time_ms=processing_time_ms,
+            )
+            response = self._format_response(results)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except (ValidationError, CoreValidationError) as e:
             # Input validation failed
+            processing_time_ms = (time.time() - start_time) * 1000
             log.warning("validation_error", error=str(e))
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except (SearchError, EmbeddingError, DatabaseError) as e:
             # Search or processing error
+            processing_time_ms = (time.time() - start_time) * 1000
             log.error(
                 "search_error",
                 error_type=type(e).__name__,
                 error=str(e),
                 exc_info=True,
             )
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except Exception as e:
             # Unexpected error
+            processing_time_ms = (time.time() - start_time) * 1000
             log.error(
                 "unexpected_error",
                 error_type=type(e).__name__,
                 error=str(e),
                 exc_info=True,
             )
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
     def _validate_input(self, arguments: Dict[str, Any]) -> SearchMemoryRequest:
         """

@@ -1,4 +1,4 @@
-.PHONY: test e2e docker-up docker-down server lint clean help
+.PHONY: test e2e docker-up docker-down server lint clean help load-test load-test-ui load-test-light
 
 # Variables
 PYTHON := python3
@@ -41,3 +41,18 @@ coverage: ## Run tests with coverage
 	$(PYTEST) tests/unit/ --cov=src --cov-report=html --cov-report=term
 
 all: lint test ## Run lint and tests
+
+# Load Testing
+load-test: ## Run load test (50 users, 5 min)
+	@echo "Starting load test (50 users, 5 min)..."
+	locust -f tests/load/locustfile.py --host=http://$(HOST):$(PORT) \
+		--headless -u 50 -r 10 --run-time 5m
+
+load-test-ui: ## Run Locust with Web UI at http://localhost:8089
+	@echo "Starting Locust Web UI at http://localhost:8089..."
+	locust -f tests/load/locustfile.py --host=http://$(HOST):$(PORT)
+
+load-test-light: ## Light load test (10 users, 1 min)
+	@echo "Light load test (10 users, 1 min)..."
+	locust -f tests/load/locustfile.py --host=http://$(HOST):$(PORT) \
+		--headless -u 10 -r 5 --run-time 1m

@@ -74,8 +74,10 @@ class SetModelTool:
         if not model_name:
             logger.warning("set_model_empty_name")
             return {
-                "success": False,
-                "result": "Error: model_name cannot be empty",
+                "content": [
+                    {"type": "text", "text": "Error: model_name cannot be empty"}
+                ],
+                "isError": True,
             }
 
         # Get RuntimeConfig singleton
@@ -102,8 +104,6 @@ class SetModelTool:
         )
 
         return {
-            "success": True,
-            "result": result_text,
-            "old_model": old_model,
-            "new_model": model_name,
+            "content": [{"type": "text", "text": result_text}],
+            "isError": False,
         }

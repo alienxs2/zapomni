@@ -8,6 +8,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+import time
 from typing import Any, Dict, Tuple
 
 import structlog
@@ -168,6 +169,7 @@ class AddMemoryTool:
         """
         request_id = id(arguments)  # Simple request ID for logging
         log = self.logger.bind(request_id=request_id)
+        start_time = time.time()
 
         try:
             # Step 1: Validate and extract arguments
@@ -192,36 +194,49 @@ class AddMemoryTool:
             text_preview = text[:100] + "..." if len(text) > 100 else text
 
             # Step 4: Format success response
+            processing_time_ms = (time.time() - start_time) * 1000
             log.info(
                 "memory_added_successfully",
                 memory_id=memory_id,
+                processing_time_ms=processing_time_ms,
             )
-            return self._format_success(memory_id, text_preview)
+            response = self._format_success(memory_id, text_preview)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except (ValidationError, CoreValidationError) as e:
             # Input validation failed
+            processing_time_ms = (time.time() - start_time) * 1000
             log.warning("validation_error", error=str(e))
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except (EmbeddingError, ProcessingError, DatabaseError) as e:
             # Core processing error
+            processing_time_ms = (time.time() - start_time) * 1000
             log.error(
                 "processing_error",
                 error_type=type(e).__name__,
                 error=str(e),
                 exc_info=True,
             )
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
         except Exception as e:
             # Unexpected error
+            processing_time_ms = (time.time() - start_time) * 1000
             log.error(
                 "unexpected_error",
                 error_type=type(e).__name__,
                 error=str(e),
                 exc_info=True,
             )
-            return self._format_error(e)
+            response = self._format_error(e)
+            response["processing_time_ms"] = processing_time_ms
+            return response
 
     def _validate_arguments(
         self,
