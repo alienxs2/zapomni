@@ -31,7 +31,7 @@ def test_default_configuration():
     assert settings.falkordb_port == 6381
     assert settings.graph_name == "zapomni_memory"
     assert settings.falkordb_connection_timeout == 30
-    assert settings.falkordb_pool_size == 10
+    assert settings.falkordb_pool_size == 20  # Increased for SSE concurrency
 
     # Ollama defaults
     assert settings.ollama_base_url == "http://localhost:11434"
@@ -47,11 +47,11 @@ def test_default_configuration():
     assert settings.log_level == "INFO"
     assert settings.log_format == "json"
 
-    # Feature flags defaults (all disabled)
-    assert settings.enable_hybrid_search == False
-    assert settings.enable_knowledge_graph == False
-    assert settings.enable_code_indexing == False
-    assert settings.enable_semantic_cache == False
+    # Feature flags defaults (core features enabled by default)
+    assert settings.enable_hybrid_search == True
+    assert settings.enable_knowledge_graph == True
+    assert settings.enable_code_indexing == True
+    assert settings.enable_semantic_cache == False  # Requires Redis, disabled by default
 
 
 def test_environment_override(monkeypatch):
@@ -335,9 +335,9 @@ def test_get_config_summary():
     assert summary["database"]["falkordb_host"] == "localhost"
     assert summary["database"]["falkordb_port"] == 6381
 
-    # Check features section
-    assert summary["features"]["hybrid_search"] == False
-    assert summary["features"]["knowledge_graph"] == False
+    # Check features section (core features enabled by default)
+    assert summary["features"]["hybrid_search"] == True
+    assert summary["features"]["knowledge_graph"] == True
 
 
 def test_validate_configuration_success(tmp_path):

@@ -1,0 +1,12 @@
+The Zapomni MCP Server is an advanced memory management system that enables Large Language Models to maintain persistent, context-aware memories of conversations and interactions.
+
+This sample text is used for testing memory operations, including indexing, retrieval, and semantic search capabilities.
+
+Key features include:
+- Long-term memory storage
+- Semantic understanding of content
+- Efficient retrieval mechanisms
+- Integration with knowledge graphs
+- Support for multi-modal data
+
+This text demonstrates the basic structure and content patterns used in end-to-end testing of the memory system.

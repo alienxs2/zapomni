@@ -30,11 +30,10 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.routing import Route
+from starlette.routing import Route, Mount
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from zapomni_mcp.config import SSEConfig
-from zapomni_mcp.session_manager import SessionManager, generate_session_id
 
 if TYPE_CHECKING:
     from zapomni_mcp.server import MCPServer
@@ -163,7 +162,7 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
     This factory function creates a fully configured Starlette application
     with SSE endpoints for MCP communication. The application includes:
     - GET /sse: SSE connection establishment endpoint
-    - POST /messages/{session_id}: Message handling endpoint
+    - POST /messages: Message handling endpoint
     - GET /health: Health check endpoint for monitoring
     - CORS middleware for cross-origin requests
 
@@ -177,22 +176,23 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
     # Track startup time for uptime calculation
     startup_time = time.time()
 
-    session_manager = SessionManager(heartbeat_interval=config.heartbeat_interval)
     bound_logger = logger.bind(component="SSETransport")
 
-    # Store session_manager reference on mcp_server for shutdown cleanup
-    mcp_server._session_manager = session_manager
+    # Create a single shared SSE transport for all sessions
+    # The SDK will manage multiple sessions internally using UUID-based session IDs
+    # Use /messages/ (with trailing slash) to match the Mount route
+    sse_transport = SseServerTransport("/messages/")
 
     async def handle_sse(request: Request) -> Response:
         """
         Handle SSE connection establishment.
 
         This endpoint:
-        1. Creates a new SseServerTransport with a unique session endpoint
-        2. Registers the session with SessionManager
+        1. Uses the shared SseServerTransport to establish SSE connection
+        2. The SDK creates a UUID session_id internally and manages it
         3. Connects the SSE stream to the MCP server
         4. Runs the MCP server with the SSE streams
-        5. Cleans up the session when the connection closes
+        5. Cleans up when the connection closes
 
         Args:
             request: Starlette request object
@@ -200,31 +200,17 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
         Returns:
             SSE response stream
         """
-        # Generate unique session ID
-        session_id = generate_session_id()
-
         # Get client IP for logging
         client_ip = request.client.host if request.client else "unknown"
 
         bound_logger.info(
             "SSE connection requested",
-            session_id=session_id,
             client_ip=client_ip,
-        )
-
-        # Create SSE transport with session-specific endpoint
-        sse_transport = SseServerTransport(f"/messages/{session_id}")
-
-        # Register session with manager and start heartbeat
-        await session_manager.create_session(
-            session_id=session_id,
-            transport=sse_transport,
-            client_ip=client_ip,
-            start_heartbeat=True,
         )
 
         try:
             # Connect SSE and run MCP server
+            # The SDK will create a UUID session_id internally
             async with sse_transport.connect_sse(
                 request.scope,
                 request.receive,
@@ -232,29 +218,9 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             ) as streams:
                 read_stream, write_stream = streams
 
-                # Create heartbeat sender that sends SSE notification through write_stream
-                async def heartbeat_sender() -> None:
-                    """Send heartbeat notification through SSE stream."""
-                    # Create a JSON-RPC notification for heartbeat
-                    # Using 'notifications/heartbeat' as the method name
-                    # This follows MCP notification naming convention
-                    heartbeat_notification = JSONRPCNotification(
-                        jsonrpc="2.0",
-                        method="notifications/heartbeat",
-                        params={"timestamp": time.time()},
-                    )
-                    heartbeat_message = SessionMessage(
-                        message=JSONRPCMessage(heartbeat_notification)
-                    )
-                    await write_stream.send(heartbeat_message)
-
-                # Register the heartbeat sender with the session
-                session_manager.set_heartbeat_sender(session_id, heartbeat_sender)
-
                 bound_logger.info(
                     "SSE connection established",
-                    session_id=session_id,
-                    active_sessions=session_manager.active_session_count,
+                    client_ip=client_ip,
                 )
 
                 # Run the MCP server with the SSE streams
@@ -267,93 +233,22 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
         except Exception as e:
             bound_logger.error(
                 "SSE connection error",
-                session_id=session_id,
+                client_ip=client_ip,
                 error=str(e),
                 error_type=type(e).__name__,
             )
             raise
 
         finally:
-            # Clean up session
-            await session_manager.remove_session(session_id)
             bound_logger.info(
                 "SSE connection closed",
-                session_id=session_id,
-                remaining_sessions=session_manager.active_session_count,
+                client_ip=client_ip,
             )
 
         # Return empty response - SSE streams are handled above
         return Response()
 
-    async def handle_messages(request: Request) -> Response:
-        """
-        Handle POST messages to session.
-
-        This endpoint:
-        1. Extracts session_id from the path
-        2. Looks up the transport via SessionManager
-        3. Forwards the message to the transport
-        4. Returns 202 Accepted on success
-
-        Args:
-            request: Starlette request object with session_id path parameter
-
-        Returns:
-            JSON response with status or error
-        """
-        session_id = request.path_params.get("session_id", "")
-
-        if not session_id:
-            return Response(
-                content='{"error": "Session ID required"}',
-                status_code=400,
-                media_type="application/json",
-            )
-
-        # Look up session
-        session = session_manager.get_session(session_id)
-        if not session:
-            bound_logger.debug(
-                "Session not found",
-                session_id=session_id,
-            )
-            return Response(
-                content='{"error": "Session not found"}',
-                status_code=404,
-                media_type="application/json",
-            )
-
-        # Update activity and increment request count
-        session_manager.increment_request_count(session_id)
-
-        try:
-            # Forward to transport for processing
-            # Note: handle_post_message reads the body from receive internally
-            await session.transport.handle_post_message(
-                scope=request.scope,
-                receive=request.receive,
-                send=request._send,
-            )
-
-            return Response(
-                content='{"status": "accepted"}',
-                status_code=202,
-                media_type="application/json",
-            )
-
-        except Exception as e:
-            session_manager.increment_error_count(session_id)
-            bound_logger.error(
-                "Message handling error",
-                session_id=session_id,
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            return Response(
-                content=f'{{"error": "Internal server error: {str(e)}"}}',
-                status_code=500,
-                media_type="application/json",
-            )
+    # No wrapper needed - we'll pass the SDK's handler directly to the route
 
     async def handle_health(request: Request) -> Response:
         """
@@ -364,28 +259,17 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             - status: "healthy" or "unhealthy"
             - version: Server version
             - transport: Transport type (sse)
-            - active_connections: Number of active SSE sessions
             - uptime_seconds: Server uptime in seconds
-            - metrics: Connection metrics (total, peak, errors)
             - database_pool: Connection pool statistics (if available)
         """
         try:
-            metrics = session_manager.get_metrics()
             uptime_seconds = time.time() - startup_time
 
             health_data = {
                 "status": "healthy",
                 "version": __version__,
                 "transport": "sse",
-                "active_connections": session_manager.active_session_count,
                 "uptime_seconds": round(uptime_seconds, 2),
-                "metrics": {
-                    "total_connections_created": metrics.total_connections_created,
-                    "total_connections_closed": metrics.total_connections_closed,
-                    "peak_connections": metrics.peak_connections,
-                    "total_requests_processed": metrics.total_requests_processed,
-                    "total_errors": metrics.total_errors,
-                },
             }
 
             # Add database pool statistics if available
@@ -414,7 +298,6 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             bound_logger.debug(
                 "Health check",
                 status="healthy",
-                active_connections=health_data["active_connections"],
             )
 
             return Response(
@@ -549,11 +432,15 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             )
 
     # Define routes
+    # Note: We handle /messages with two routes - one for trailing slash, one without
+    # Both delegate to the SDK's ASGI handler
     routes = [
         Route("/", endpoint=handle_dashboard, methods=["GET"]),
         Route("/api/graph", endpoint=handle_graph_api, methods=["GET"]),
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
-        Route("/messages/{session_id}", endpoint=handle_messages, methods=["POST"]),
+        # Mount the SDK handler at /messages/  (with trailing slash)
+        # This avoids redirect issues while still using the SDK's ASGI app
+        Mount("/messages/", app=sse_transport.handle_post_message),
         Route("/health", endpoint=handle_health, methods=["GET"]),
     ]
 
@@ -563,7 +450,7 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
         port=config.port,
         cors_origins=config.cors_origins,
         dns_rebinding_protection=config.dns_rebinding_protection,
-        routes=["/sse", "/messages/{session_id}", "/health"],
+        routes=["/sse", "/messages", "/health"],
     )
 
     return Starlette(routes=routes, middleware=middleware)
