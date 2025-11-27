@@ -1,8 +1,8 @@
 # Zapomni Project - Project Manager Handoff
 
 **Last Updated**: 2025-11-27
-**Project Status**: PHASE 5 COMPLETE (T5.1: E2E Testing - 115 tests)
-**Version**: v0.2.2
+**Project Status**: PHASE 5 COMPLETE - Ready for v0.3.0
+**Version**: v0.2.2 → v0.3.0-rc
 
 ---
 
@@ -12,16 +12,25 @@
 ```bash
 cd /home/dev/zapomni
 git status                    # Должен быть чистый
-pytest tests/unit/ -q         # 1853 passed, 11 skipped
+make test                     # Unit: 1853 passed, 11 skipped
 ```
 
-### Шаг 2: Изучи ключевые файлы
-1. `ROADMAP.md` - текущий статус и план развития
-2. `docs/dashboard.html` - интерактивный дашборд (открой в браузере)
-3. `.claude/plans/parallel-frolicking-babbage.md` - детальный план E2E тестов
+### Шаг 2: Запусти E2E тесты (опционально)
+```bash
+make docker-up                # Запусти FalkorDB + Redis
+make server &                 # Запусти MCP сервер в фоне
+sleep 10
+make e2e                      # E2E: 115 passed
+```
 
 ### Шаг 3: Текущая задача
-**T5.1: E2E Testing** - инфраструктура готова, нужно написать тесты
+**СЛЕДУЮЩИЙ ЭТАП**: v0.3.0 Release - Performance & Stability
+
+Возможные задачи:
+1. Performance benchmarking (latency, throughput)
+2. Load testing с Locust
+3. Memory optimization для больших графов
+4. Security audit
 
 ---
 
@@ -75,14 +84,13 @@ pytest tests/unit/ -q         # 1853 passed, 11 skipped
 ### Как запустить E2E тесты
 ```bash
 # С помощью Makefile (рекомендуется)
-make test-e2e              # Запуск всех E2E тестов
+make docker-up             # Запустить Docker сервисы
+make server &              # Запустить MCP сервер в фоне
+sleep 10                   # Подождать запуска
+make e2e                   # Запустить E2E тесты
 
 # Или вручную
-# 1. Запустить сервер
-source .venv/bin/activate
-python -m zapomni_mcp --host 127.0.0.1 --port 8000
-
-# 2. В другом терминале - запустить тесты
+python -m zapomni_mcp --host 127.0.0.1 --port 8000 &
 pytest tests/e2e/ -v
 ```
 
@@ -116,23 +124,25 @@ tests/e2e/
 
 ## БЫСТРЫЙ СТАРТ ДЛЯ НОВОГО PM
 
-### Следующие шаги (после T5.1)
+### Следующие шаги (v0.3.0)
 
-1. **v0.3.0 Release Candidate**:
-   - Performance benchmarking
-   - Load testing (Locust)
-   - Memory optimization
+1. **Performance & Stability**:
+   - Benchmarking (search latency < 200ms P95)
+   - Load testing с Locust (8+ concurrent users)
+   - Memory optimization для 100K+ memories
 
 2. **Запустить тесты**:
 ```bash
-make test-unit     # Unit тесты (~35 sec)
-make test-e2e      # E2E тесты (требует запущенный сервер)
-make test-all      # Все тесты
+make test          # Unit тесты (~35 sec)
+make docker-up     # Docker сервисы
+make server &      # MCP сервер в фоне
+make e2e           # E2E тесты
 ```
 
 3. **Проверить CI/CD**:
 ```bash
-gh workflow view tests.yml
+gh workflow list
+gh run list --limit 5
 ```
 
 ---
@@ -168,25 +178,25 @@ REDIS_ENABLED=true           # Redis для кеширования
 ## БЫСТРЫЕ КОМАНДЫ
 
 ```bash
-# Тесты (через Makefile)
-make test-unit                     # Unit тесты (~35 sec)
-make test-e2e                      # E2E тесты (с автозапуском сервера)
-make test-all                      # Все тесты
+# Makefile targets (рекомендуется)
+make help                          # Показать все команды
+make test                          # Unit тесты (~35 sec)
+make e2e                           # E2E тесты (требует сервер)
+make server                        # Запустить MCP сервер
+make docker-up                     # Запустить FalkorDB + Redis
+make docker-down                   # Остановить Docker
+make lint                          # Проверка кода
+make format                        # Форматирование кода
+make coverage                      # Тесты с coverage
+make clean                         # Очистка кэша
 
-# Тесты (напрямую)
-pytest tests/unit/ -q              # Unit тесты (~35 sec)
-pytest tests/e2e/ -v               # E2E тесты (требует запущенный сервер)
-
-# Сервер
-python -m zapomni_mcp --host 127.0.0.1 --port 8000
-
-# Docker сервисы
-docker-compose up -d               # Запустить FalkorDB + Redis
-docker-compose ps                  # Статус
+# Полный E2E цикл
+make docker-up && make server &
+sleep 10 && make e2e
 
 # Git
 git log --oneline -10              # Последние коммиты
-git diff --stat                    # Изменения
+git push origin main               # Отправить изменения
 ```
 
 ---
