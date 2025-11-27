@@ -55,6 +55,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "workspace: mark test as using workspace isolation",
     )
+    config.addinivalue_line(
+        "markers",
+        "workflow: mark test as workflow integration test",
+    )
 
 
 # =============================================================================
