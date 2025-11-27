@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zapomni Project Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --border-color: #30363d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 1rem;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .status-stable {
+            color: var(--accent-green);
+        }
+
+        .status-beta {
+            color: var(--accent-yellow);
+        }
+
+        .status-planned {
+            color: var(--text-secondary);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-top: 1rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.65rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-blue);
+        }
+
+        .timeline-item.done::before {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .timeline-item.active::before {
+            background: var(--accent-yellow);
+            border-color: var(--accent-yellow);
+            box-shadow: 0 0 10px var(--accent-yellow);
+        }
+
+        .timeline-version {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .timeline-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .timeline-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .tool-item {
+            background: var(--bg-tertiary);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .tool-item.core {
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .tool-item.graph {
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .tool-item.code {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .tool-item.system {
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .tool-item.workspace {
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .kpi-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 2rem;
+            color: var(--text-secondary);
+        }
+
+        footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Zapomni</h1>
+            <p>Local-first MCP memory server for AI agents</p>
+            <span class="version-badge">v0.2.2 Alpha</span>
+        </header>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value">17</div>
+                <div class="kpi-label">MCP Tools</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">1,858</div>
+                <div class="kpi-label">Tests Passed</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">~29K</div>
+                <div class="kpi-label">Lines of Code</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">80%</div>
+                <div class="kpi-label">Avg Coverage</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Test Results</h2>
+                <div class="chart-container">
+                    <canvas id="testsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Code Coverage by Layer</h2>
+                <div class="chart-container">
+                    <canvas id="coverageChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Feature Status</h2>
+                <div class="metric">
+                    <span class="metric-label">Memory Operations</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hybrid Search</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Knowledge Graph</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Code Indexing</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Semantic Cache</span>
+                    <span class="metric-value status-beta">Beta</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Git Hooks</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Workspaces</span>
+                    <span class="metric-value status-stable">Stable</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Development Roadmap</h2>
+                <div class="timeline">
+                    <div class="timeline-item done">
+                        <div class="timeline-version">v0.1.0</div>
+                        <div class="timeline-date">2025-11-24</div>
+                        <div class="timeline-desc">Initial release</div>
+                    </div>
+                    <div class="timeline-item done">
+                        <div class="timeline-version">v0.2.x</div>
+                        <div class="timeline-date">2025-11-27</div>
+                        <div class="timeline-desc">Foundation complete</div>
+                    </div>
+                    <div class="timeline-item active">
+                        <div class="timeline-version">v0.3.0</div>
+                        <div class="timeline-date">Q1 2025</div>
+                        <div class="timeline-desc">Performance & Stability</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-version">v0.4.0</div>
+                        <div class="timeline-date">Q2 2025</div>
+                        <div class="timeline-desc">Extended Formats</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-version">v1.0.0</div>
+                        <div class="timeline-date">Q4 2025</div>
+                        <div class="timeline-desc">Stable Release</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>MCP Tools (17 Total)</h2>
+            <div class="tools-grid">
+                <div class="tool-item core">add_memory</div>
+                <div class="tool-item core">search_memory</div>
+                <div class="tool-item core">delete_memory</div>
+                <div class="tool-item core">clear_all</div>
+                <div class="tool-item graph">build_graph</div>
+                <div class="tool-item graph">get_related</div>
+                <div class="tool-item graph">graph_status</div>
+                <div class="tool-item graph">export_graph</div>
+                <div class="tool-item code">index_codebase</div>
+                <div class="tool-item system">get_stats</div>
+                <div class="tool-item system">prune_memory</div>
+                <div class="tool-item system">set_model</div>
+                <div class="tool-item workspace">create_workspace</div>
+                <div class="tool-item workspace">list_workspaces</div>
+                <div class="tool-item workspace">set_current_workspace</div>
+                <div class="tool-item workspace">get_current_workspace</div>
+                <div class="tool-item workspace">delete_workspace</div>
+            </div>
+            <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-secondary);">
+                <span><span style="color: var(--accent-blue);">|</span> Memory</span>
+                <span><span style="color: var(--accent-purple);">|</span> Graph</span>
+                <span><span style="color: var(--accent-green);">|</span> Code</span>
+                <span><span style="color: var(--accent-yellow);">|</span> System</span>
+                <span><span style="color: var(--accent-red);">|</span> Workspace</span>
+            </div>
+        </div>
+
+        <div class="grid" style="margin-top: 1.5rem;">
+            <div class="card">
+                <h2>Codebase Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="codebaseChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Performance Targets</h2>
+                <div class="metric">
+                    <span class="metric-label">Search Latency (P95)</span>
+                    <span class="metric-value">&lt; 500ms</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 50%"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Target: &lt; 200ms</div>
+
+                <div class="metric" style="margin-top: 1rem;">
+                    <span class="metric-label">Memory Capacity</span>
+                    <span class="metric-value">10K+</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 10%"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Target: 100K+</div>
+
+                <div class="metric" style="margin-top: 1rem;">
+                    <span class="metric-label">Concurrent Users</span>
+                    <span class="metric-value">4</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 50%"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Target: 8+</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                <a href="https://github.com/alienxs2/zapomni">GitHub</a> |
+                <a href="https://github.com/alienxs2/zapomni/issues">Issues</a> |
+                <a href="https://github.com/alienxs2/zapomni/discussions">Discussions</a>
+            </p>
+            <p style="margin-top: 0.5rem;">Last updated: 2025-11-27</p>
+        </footer>
+    </div>
+
+    <script>
+        // Test Results Chart
+        const testsCtx = document.getElementById('testsChart').getContext('2d');
+        new Chart(testsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Passed', 'Skipped'],
+                datasets: [{
+                    data: [1858, 6],
+                    backgroundColor: ['#3fb950', '#d29922'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#c9d1d9' }
+                    }
+                }
+            }
+        });
+
+        // Coverage Chart
+        const coverageCtx = document.getElementById('coverageChart').getContext('2d');
+        new Chart(coverageCtx, {
+            type: 'bar',
+            data: {
+                labels: ['MCP Layer', 'Core Layer', 'DB Layer'],
+                datasets: [{
+                    label: 'Coverage %',
+                    data: [74, 87, 71],
+                    backgroundColor: ['#58a6ff', '#a371f7', '#3fb950'],
+                    borderWidth: 0,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        max: 100,
+                        grid: { color: '#30363d' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#c9d1d9' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Codebase Distribution Chart
+        const codebaseCtx = document.getElementById('codebaseChart').getContext('2d');
+        new Chart(codebaseCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Core Layer (59%)', 'MCP Layer (28%)', 'DB Layer (13%)'],
+                datasets: [{
+                    data: [16695, 7851, 3829],
+                    backgroundColor: ['#a371f7', '#58a6ff', '#3fb950'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#c9d1d9' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

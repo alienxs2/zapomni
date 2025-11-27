@@ -6,17 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-### Planned
-
-#### Phase 4+: Advanced Features (Q3+ 2025)
-- Multi-language embeddings support
-- Additional document formats (video transcripts, audio)
-- Performance optimization (query caching, index tuning)
-- HTTP/SSE transport alternatives
-- Configuration profiles (dev/staging/prod)
-- Secrets management integration
-- Real-time collaboration features
-- Advanced analytics dashboard
+See [ROADMAP.md](ROADMAP.md) for planned features and future versions.
 
 ## [0.2.2] - 2025-11-27
 
@@ -323,29 +313,7 @@ This is the first public release of Zapomni, establishing the core foundation fo
 
 ### Roadmap
 
-#### Phase 2: Enhanced Search (Q4 2025)
-- [ ] BM25 keyword search implementation
-- [ ] Hybrid search with reciprocal rank fusion
-- [ ] SpaCy NER for entity extraction
-- [ ] LLM-based entity enhancement
-- [ ] Knowledge graph construction from entities
-- [ ] Semantic caching with Redis
-- [ ] Graph traversal queries
-
-#### Phase 3: Code Intelligence (Q1 2026)
-- [ ] Code repository indexing
-- [ ] AST-based code chunking
-- [ ] Function/class entity extraction
-- [ ] Call graph analysis
-- [ ] Code-specific search
-
-#### Phase 4+: Advanced Features (Future)
-- [ ] Multi-language support
-- [ ] Document format expansion (PDF, Markdown, Office)
-- [ ] Performance optimization
-- [ ] HTTP/SSE transport alternatives
-- [ ] Configuration profiles
-- [ ] Secrets management integration
+See [ROADMAP.md](ROADMAP.md) for the complete project roadmap.
 
 ### Contributors
 

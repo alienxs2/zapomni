@@ -308,7 +308,7 @@ For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOP
 
 ## Project Status
 
-**Current Version**: v0.1.0 (Development)
+**Current Version**: v0.2.2 (Alpha)
 
 **What's Working**:
 - Core memory operations (add, search, statistics)
