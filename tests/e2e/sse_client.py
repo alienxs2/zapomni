@@ -481,9 +481,11 @@ class MCPSSEClient:
         result = data.get("result", {})
         content = result.get("content", [])
 
-        # Check if content indicates an error (e.g., {"type": "text", "text": "Error: ..."})
-        is_error = False
-        if content:
+        # Check isError field from MCP CallToolResult (per MCP spec)
+        is_error = result.get("isError", False)
+
+        # Fallback: also check if content indicates an error (e.g., {"type": "text", "text": "Error: ..."})
+        if not is_error and content:
             for item in content:
                 if item.get("type") == "text":
                     text = item.get("text", "")

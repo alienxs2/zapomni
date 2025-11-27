@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional
 import structlog
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from zapomni_core.exceptions import ValidationError
 from zapomni_core.workspace_manager import WorkspaceManager
@@ -351,30 +351,40 @@ class MCPServer:
             for tool in self._tools.values():
 
                 @self._server.call_tool()
-                async def handle_call_tool(name: str, arguments: dict) -> list:
+                async def handle_call_tool(name: str, arguments: dict) -> CallToolResult:
                     """Handle tool call from MCP client."""
                     self._request_count += 1
 
                     try:
                         if name not in self._tools:
                             self._error_count += 1
-                            return [
-                                {
-                                    "type": "text",
-                                    "text": f"Error: Unknown tool '{name}'",
-                                }
-                            ]
+                            return CallToolResult(
+                                content=[TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                                isError=True,
+                            )
 
                         # Execute tool
                         result = await self._tools[name].execute(arguments)
 
-                        # Return content from result
-                        return result.get("content", [])
+                        # Extract content and isError from result
+                        content_data = result.get("content", [])
+                        is_error = result.get("isError", False)
+
+                        # Convert content dicts to TextContent objects
+                        content = []
+                        for item in content_data:
+                            if item.get("type") == "text":
+                                content.append(TextContent(type="text", text=item.get("text", "")))
+
+                        return CallToolResult(content=content, isError=is_error)
 
                     except Exception as e:
                         self._error_count += 1
                         self._logger.error("Tool execution error", tool=name, error=str(e))
-                        return [{"type": "text", "text": f"Error: {str(e)}"}]
+                        return CallToolResult(
+                            content=[TextContent(type="text", text=f"Error: {str(e)}")],
+                            isError=True,
+                        )
 
                 @self._server.list_tools()
                 async def handle_list_tools() -> list[Tool]:
@@ -462,30 +472,40 @@ class MCPServer:
 
         # Register tools with MCP server (same as stdio mode)
         @self._server.call_tool()
-        async def handle_call_tool(name: str, arguments: dict) -> list:
+        async def handle_call_tool(name: str, arguments: dict) -> CallToolResult:
             """Handle tool call from MCP client."""
             self._request_count += 1
 
             try:
                 if name not in self._tools:
                     self._error_count += 1
-                    return [
-                        {
-                            "type": "text",
-                            "text": f"Error: Unknown tool '{name}'",
-                        }
-                    ]
+                    return CallToolResult(
+                        content=[TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                        isError=True,
+                    )
 
                 # Execute tool
                 result = await self._tools[name].execute(arguments)
 
-                # Return content from result
-                return result.get("content", [])
+                # Extract content and isError from result
+                content_data = result.get("content", [])
+                is_error = result.get("isError", False)
+
+                # Convert content dicts to TextContent objects
+                content = []
+                for item in content_data:
+                    if item.get("type") == "text":
+                        content.append(TextContent(type="text", text=item.get("text", "")))
+
+                return CallToolResult(content=content, isError=is_error)
 
             except Exception as e:
                 self._error_count += 1
                 self._logger.error("Tool execution error", tool=name, error=str(e))
-                return [{"type": "text", "text": f"Error: {str(e)}"}]
+                return CallToolResult(
+                    content=[TextContent(type="text", text=f"Error: {str(e)}")],
+                    isError=True,
+                )
 
         @self._server.list_tools()
         async def handle_list_tools() -> list[Tool]:

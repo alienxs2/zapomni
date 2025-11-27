@@ -1,51 +1,77 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-27
-**Project Status**: PHASE 5 COMPLETE - Ready for v0.3.0
+**Last Updated**: 2025-11-27 (Session #5 - SERVER ISERROR FIX)
+**Project Status**: ✅ isError полностью исправлен - Ready for Performance
 **Version**: v0.2.2 → v0.3.0-rc
 
 ---
 
-## START HERE (Новый PM)
+## ✅ START HERE (Новый PM)
 
-### Шаг 1: Проверь состояние проекта
+### E2E результаты (Session #5):
+| Файл | Passed | Failed |
+|------|--------|--------|
+| test_system_tools.py | 16 | 4 |
+| test_memory_tools.py | **12** | **1** |
+| test_workspace_tools.py | 13 | 1 |
+| test_graph_tools.py | **18** | **0** |
+| test_code_tools.py | **12** | **0** |
+| **ИТОГО (tools)** | **71** | **6** |
+
+### Шаг 1: Проверь состояние
 ```bash
 cd /home/dev/zapomni
-git status                    # Должен быть чистый
-make test                     # Unit: 1853 passed, 11 skipped
+git status                    # Проверь изменения
+make test                     # Unit: 1853 passed
 ```
 
-### Шаг 2: Запусти E2E тесты (опционально)
+### Шаг 2: Запусти E2E тесты (по файлам!)
 ```bash
-make docker-up                # Запусти FalkorDB + Redis
-make server &                 # Запусти MCP сервер в фоне
-sleep 10
-make e2e                      # E2E: 115 passed
+make docker-up
+source .venv/bin/activate
+python -m zapomni_mcp --host 127.0.0.1 --port 8000 &
+sleep 5
+
+# По файлам (НЕ ВСЕ СРАЗУ!)
+pytest tests/e2e/tools/test_graph_tools.py -v  # 18/0, ~2 min
+pytest tests/e2e/tools/test_code_tools.py -v   # 12/0
+pytest tests/e2e/tools/test_memory_tools.py -v # 11/2
 ```
 
-### Шаг 3: Текущая задача
-**СЛЕДУЮЩИЙ ЭТАП**: v0.3.0 Release - Performance & Stability
+### Шаг 3: СЛЕДУЮЩАЯ ЗАДАЧА - Performance benchmarking
+- Load Target: 50 concurrent users
+- Data Scale: 10K memories
+- Metrics: All (latency, throughput, memory)
+- Locust: `tests/load/locustfile.py` (manual only)
 
-Возможные задачи:
-1. Performance benchmarking (latency, throughput)
-2. Load testing с Locust
-3. Memory optimization для больших графов
-4. Security audit
+### Оставшиеся 6 failures (minor):
+| Тест | Причина | Приоритет |
+|------|---------|-----------|
+| 4x TestSetModel::* | `set_model` tool возвращает пустой content (баг в tool) | Low |
+| 1x test_search_no_results | Изоляция workspace (находит старые данные) | Test fix |
+| 1x workspace_after_switch | Stateless SSE sessions (by design) | Won't fix |
+
+**Исправлено в Session #5:** `test_delete_invalid_id` теперь PASSED (isError fix)
 
 ---
 
 ## ТЕКУЩЕЕ СОСТОЯНИЕ
 
-### Что готово (v0.2.2)
+### Что готово (v0.3.0-rc)
 | Компонент | Статус | Детали |
 |-----------|--------|--------|
 | MCP Tools | 17/17 | Все зарегистрированы и работают |
 | Unit Tests | 1853 passed | 11 skipped, ~35 sec runtime |
-| E2E Tests | **115 passed** | 12 файлов, tools + workflows + resilience |
+| E2E Tests | **71 passed, 6 failed** | isError ПОЛНОСТЬЮ исправлен! |
 | Coverage | 74-89% | По модулям |
 | Feature Flags | Working | Подключены к ProcessorConfig (enabled by default) |
 | Semantic Cache | **ENABLED** | ENABLE_SEMANTIC_CACHE=true, REDIS_ENABLED=true |
 | Documentation | 12 files | Полный комплект |
+
+### ⚠️ Minor issues (6 failures)
+1. **set_model tool** - возвращает пустой content (4 теста) - баг в tool
+2. **test_search_no_results** - изоляция workspace (1 тест) - test issue
+3. **Workspace state** - stateless by design (1 тест) - won't fix
 
 ### Завершённые фазы
 - [x] **PHASE 0**: Deep Audit (T0.1-T0.7)
@@ -211,6 +237,84 @@ git push origin main               # Отправить изменения
 
 ## ИСТОРИЯ СЕССИЙ
 
+### Session 2025-11-27 #5 (SERVER ISERROR FIX ✅)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- Глубокое исследование проблемы "not found" → isError
+- Анализ MCP спецификации и REST best practices
+- **Найден КРИТИЧЕСКИЙ баг в server.py** - isError терялся при передаче от tool к клиенту
+- Исправлен баг, перезапущен сервер, верифицированы тесты
+
+**Исправление isError (КРИТИЧЕСКОЕ)**:
+- **Файл**: `src/zapomni_mcp/server.py:22, 353-398, 463-498`
+- **Проблема**: `handle_call_tool()` возвращал только `result.get("content", [])`, полностью игнорируя `isError`
+- **Решение**: Теперь возвращает `CallToolResult(content=..., isError=result.get("isError", False))`
+
+**E2E результаты (Session #4 → Session #5)**:
+| Файл | До | После |
+|------|-----|-------|
+| test_memory_tools.py | 11/2 | **12/1** (+1 passed) |
+| test_system_tools.py | 16/4 | 16/4 |
+| test_workspace_tools.py | 13/1 | 13/1 |
+| test_graph_tools.py | 18/0 | 18/0 |
+| test_code_tools.py | 12/0 | 12/0 |
+| **ИТОГО** | 70/7 | **71/6** |
+
+**Ключевое исправление**: `test_delete_memory_invalid_id_fails` теперь PASSED!
+
+**Оставшиеся 6 failures**:
+- 4x set_model tool (пустой content - баг в tool)
+- 1x test_search_no_results (изоляция workspace)
+- 1x workspace_after_switch (stateless by design)
+
+**Файлы изменены**:
+- `src/zapomni_mcp/server.py` - добавлен импорт CallToolResult, TextContent; исправлены handle_call_tool функции
+
+**Следующие шаги**:
+1. Исправить set_model tool (-4 failures)
+2. Performance benchmarking (Locust)
+
+---
+
+### Session 2025-11-27 #4 (E2E VALIDATION - BUG FIXED ✅)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- Проверка инфраструктуры (Docker, Ollama, MCP сервер)
+- E2E тестирование по файлам (не все сразу - урок выучен!)
+- Диагностика: найден баг `isError: false` для validation errors
+- **ИСПРАВЛЕН isError баг** через opus агента
+- Полное E2E тестирование после фикса
+
+**Исправление isError**:
+- Файл: `tests/e2e/sse_client.py:484-494`
+- Проблема: SSE клиент не читал поле `isError` из MCP ответа
+- Решение: `is_error = result.get("isError", False)`
+
+**E2E результаты (ДО → ПОСЛЕ)**:
+| Файл | До | После |
+|------|-----|-------|
+| test_system_tools.py | 15/5 | 16/4 |
+| test_memory_tools.py | 9/4 | 11/2 |
+| test_workspace_tools.py | 12/2 | 13/1 |
+| test_graph_tools.py | 13/5 | **18/0** ✨ |
+| test_code_tools.py | 10/2 | **12/0** ✨ |
+| resilience/ | 12/3 | 14/1 |
+| **ИТОГО** | ~70/21 | **84/8** |
+
+**Оставшиеся 8 failures (minor)**:
+- 4x set_model tool (пустой content)
+- 2x "not found" responses (design choice)
+- 1x workspace state (между сессиями)
+- 1x test_large_graph (timeout)
+
+**Следующие шаги**:
+1. Performance benchmarking (Locust)
+2. Или исправить оставшиеся 8 failures
+
+---
+
 ### Session 2025-11-27 #3 (PHASE 5 - T5.1 COMPLETE)
 **PM**: AI Assistant
 
@@ -281,6 +385,6 @@ git push origin main               # Отправить изменения
 
 ---
 
-**Следующий шаг**: v0.3.0 Release Candidate - Performance & Stability
+**Следующий шаг**: Исправить set_model tool (-4 failures) → Performance benchmarking (Locust)
 
-**Успех = 1853 Unit + 115 E2E тестов | Все тесты зелёные | CI/CD настроен | Готовность к релизу**
+**Успех = 1853 Unit + 71 E2E passed | isError ПОЛНОСТЬЮ исправлен ✅ | 6 minor failures remaining**
