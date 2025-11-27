@@ -111,8 +111,8 @@ class TestSearchMemory:
         )
         add_response.assert_success("add_memory should succeed before search")
 
-        # Small delay to allow embedding/indexing
-        time.sleep(0.5)
+        # Delay to allow embedding/indexing (Ollama embedding can be slow)
+        time.sleep(2.0)
 
         # Step 2: Search for it
         search_response = mcp_client.call_tool(
@@ -159,6 +159,13 @@ class TestSearchMemory:
 
     def test_search_memory_no_results(self, mcp_client, clean_workspace):
         """Test search returns appropriate message for non-matching query."""
+        # Clear all data to ensure test isolation
+        clear_response = mcp_client.call_tool(
+            "clear_all",
+            {"confirm_phrase": "DELETE ALL MEMORIES"},
+        )
+        clear_response.assert_success("clear_all should succeed for test isolation")
+
         # Search for something that doesn't exist in empty workspace
         search_response = mcp_client.call_tool(
             "search_memory",
