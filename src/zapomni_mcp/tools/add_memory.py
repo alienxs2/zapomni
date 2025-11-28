@@ -58,6 +58,7 @@ class AddMemoryTool:
         description: Human-readable tool description
         input_schema: JSON Schema for input validation
         memory_processor: MemoryProcessor instance for processing
+        mcp_server: Optional MCPServer instance for workspace resolution
         logger: Structured logger for operations
     """
 
@@ -117,13 +118,20 @@ class AddMemoryTool:
         "additionalProperties": False,
     }
 
-    def __init__(self, memory_processor: MemoryProcessor) -> None:
+    def __init__(
+        self,
+        memory_processor: MemoryProcessor,
+        mcp_server: Any = None,
+    ) -> None:
         """
         Initialize AddMemoryTool with MemoryProcessor.
 
         Args:
             memory_processor: MemoryProcessor instance for processing memories.
                 Must be initialized and connected to database.
+            mcp_server: Optional MCPServer instance for workspace resolution.
+                If provided, tool will use resolve_workspace_id() to get
+                current session workspace when workspace_id not in arguments.
 
         Raises:
             TypeError: If memory_processor is not a MemoryProcessor instance
@@ -131,7 +139,7 @@ class AddMemoryTool:
 
         Example:
             >>> processor = MemoryProcessor(...)
-            >>> tool = AddMemoryTool(memory_processor=processor)
+            >>> tool = AddMemoryTool(memory_processor=processor, mcp_server=server)
         """
         if not isinstance(memory_processor, MemoryProcessor):
             raise TypeError(
@@ -139,6 +147,7 @@ class AddMemoryTool:
             )
 
         self.memory_processor = memory_processor
+        self.mcp_server = mcp_server
         self.logger = logger.bind(tool=self.name)
 
         self.logger.info("add_memory_tool_initialized")
@@ -176,8 +185,14 @@ class AddMemoryTool:
             log.info("validating_arguments")
             text, metadata = self._validate_arguments(arguments)
 
-            # Step 2: Process memory via processor
+            # Step 2: Resolve workspace_id
             workspace_id = arguments.get("workspace_id")
+            if workspace_id is None and self.mcp_server is not None:
+                # Use session workspace from mcp_server
+                workspace_id = self.mcp_server.resolve_workspace_id()
+                log.debug("resolved_workspace_id", workspace_id=workspace_id)
+
+            # Step 3: Process memory via processor
             log.info(
                 "processing_memory",
                 text_length=len(text),
@@ -190,10 +205,10 @@ class AddMemoryTool:
                 workspace_id=workspace_id,
             )
 
-            # Step 3: Get preview of text for response
+            # Step 4: Get preview of text for response
             text_preview = text[:100] + "..." if len(text) > 100 else text
 
-            # Step 4: Format success response
+            # Step 5: Format success response
             processing_time_ms = (time.time() - start_time) * 1000
             log.info(
                 "memory_added_successfully",

@@ -256,9 +256,9 @@ class MCPServer:
 
         # Instantiate all standard tools with MemoryProcessor
         tools = [
-            # Phase 1: Core tools
-            AddMemoryTool(memory_processor=memory_processor),
-            SearchMemoryTool(memory_processor=memory_processor),
+            # Phase 1: Core tools (with mcp_server for workspace resolution)
+            AddMemoryTool(memory_processor=memory_processor, mcp_server=self),
+            SearchMemoryTool(memory_processor=memory_processor, mcp_server=self),
             # GetStatsTool gets mcp_server reference for dynamic session_manager access in SSE mode
             GetStatsTool(memory_processor=memory_processor, mcp_server=self),
             # Phase 2: Enhanced Search Tools

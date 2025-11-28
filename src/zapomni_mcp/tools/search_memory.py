@@ -49,6 +49,7 @@ class SearchMemoryTool:
         description: Human-readable tool description
         input_schema: JSON Schema for input validation
         memory_processor: MemoryProcessor instance for searching
+        mcp_server: Optional MCPServer instance for workspace resolution
         logger: Structured logger for operations
     """
 
@@ -118,20 +119,27 @@ class SearchMemoryTool:
         "required": ["query"],
     }
 
-    def __init__(self, memory_processor: MemoryProcessor) -> None:
+    def __init__(
+        self,
+        memory_processor: MemoryProcessor,
+        mcp_server: Any = None,
+    ) -> None:
         """
         Initialize SearchMemoryTool with MemoryProcessor.
 
         Args:
             memory_processor: MemoryProcessor instance for executing searches.
                 Must be initialized and connected to database.
+            mcp_server: Optional MCPServer instance for workspace resolution.
+                If provided, tool will use resolve_workspace_id() to get
+                current session workspace when workspace_id not in arguments.
 
         Raises:
             TypeError: If memory_processor is not a MemoryProcessor instance
 
         Example:
             >>> processor = MemoryProcessor(...)
-            >>> tool = SearchMemoryTool(memory_processor=processor)
+            >>> tool = SearchMemoryTool(memory_processor=processor, mcp_server=server)
         """
         if not isinstance(memory_processor, MemoryProcessor):
             raise TypeError(
@@ -139,6 +147,7 @@ class SearchMemoryTool:
             )
 
         self.memory_processor = memory_processor
+        self.mcp_server = mcp_server
         self.logger = logger.bind(tool=self.name)
 
         self.logger.info("search_memory_tool_initialized")
@@ -176,8 +185,14 @@ class SearchMemoryTool:
             log.info("validating_arguments")
             request = self._validate_input(arguments)
 
-            # Step 2: Execute search
+            # Step 2: Resolve workspace_id
             workspace_id = arguments.get("workspace_id")
+            if workspace_id is None and self.mcp_server is not None:
+                # Use session workspace from mcp_server
+                workspace_id = self.mcp_server.resolve_workspace_id()
+                log.debug("resolved_workspace_id", workspace_id=workspace_id)
+
+            # Step 3: Execute search
             log.info(
                 "executing_search",
                 query_length=len(request.query),
@@ -192,7 +207,7 @@ class SearchMemoryTool:
                 workspace_id=workspace_id,
             )
 
-            # Step 3: Format response
+            # Step 4: Format response
             processing_time_ms = (time.time() - start_time) * 1000
             log.info(
                 "search_completed",
