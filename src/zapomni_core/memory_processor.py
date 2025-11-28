@@ -1387,6 +1387,34 @@ class MemoryProcessor:
                     details={"filter_key": key, "valid_keys": list(valid_filter_keys)},
                 )
 
+    def _parse_filter_date(self, date_str: str) -> datetime:
+        """
+        Parse date string from filter and normalize to UTC timezone-aware datetime.
+
+        Handles both timezone-aware and timezone-naive ISO 8601 date strings.
+        If the input is naive (no timezone), assumes UTC.
+
+        Args:
+            date_str: ISO 8601 date string (e.g., "2025-11-01", "2025-11-01T12:00:00",
+                     "2025-11-01T12:00:00Z", "2025-11-01T12:00:00+00:00")
+
+        Returns:
+            datetime: UTC timezone-aware datetime
+
+        Examples:
+            - "2025-11-01" -> datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc)
+            - "2025-11-01T12:00:00Z" -> datetime(2025, 11, 1, 12, 0, 0, tzinfo=timezone.utc)
+        """
+        # Handle 'Z' suffix which fromisoformat doesn't support directly
+        normalized_str = date_str.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized_str)
+
+        # If naive (no timezone info), assume UTC
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+
+        return parsed
+
     def _apply_filters(
         self, results: List[SearchResultItem], filters: Dict[str, Any]
     ) -> List[SearchResultItem]:
@@ -1406,10 +1434,10 @@ class MemoryProcessor:
         # Filter by date range
         if "date_from" in filters or "date_to" in filters:
             if "date_from" in filters:
-                date_from = datetime.fromisoformat(filters["date_from"])
+                date_from = self._parse_filter_date(filters["date_from"])
                 filtered = [r for r in filtered if r.timestamp >= date_from]
             if "date_to" in filters:
-                date_to = datetime.fromisoformat(filters["date_to"])
+                date_to = self._parse_filter_date(filters["date_to"])
                 filtered = [r for r in filtered if r.timestamp <= date_to]
 
         return filtered
