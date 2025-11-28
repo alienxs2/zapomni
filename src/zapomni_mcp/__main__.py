@@ -50,6 +50,7 @@ from zapomni_core.chunking import SemanticChunker
 # Now safe to import other zapomni modules (after logging is configured)
 from zapomni_core.config import ZapomniSettings
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
+from zapomni_core.embeddings.embedding_cache import EmbeddingCache
 
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
 from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
@@ -236,20 +237,70 @@ async def main(args: argparse.Namespace) -> None:
             model_name=settings.ollama_embedding_model,
         )
 
-        # STAGE 5: Initialize MemoryProcessor
+        # STAGE 5: Initialize EmbeddingCache (if Redis enabled)
+        # Redis caching significantly improves performance for repeated embeddings
+        embedding_cache = None
+        redis_enabled = settings.redis_enabled or os.getenv("REDIS_ENABLED", "false").lower() == "true"
+        enable_semantic_cache = os.getenv("ENABLE_SEMANTIC_CACHE", "true").lower() == "true"
+
+        if redis_enabled and enable_semantic_cache:
+            logger.info(
+                "Initializing Redis-backed EmbeddingCache",
+                redis_host=settings.redis_host,
+                redis_port=settings.redis_port,
+                ttl_seconds=settings.redis_ttl_seconds,
+            )
+            try:
+                from redis.asyncio import Redis as AsyncRedis
+
+                redis_client = AsyncRedis(
+                    host=settings.redis_host,
+                    port=settings.redis_port,
+                    decode_responses=False,  # We handle JSON encoding ourselves
+                )
+                # Test connection
+                await redis_client.ping()
+                logger.info("Redis connection successful")
+
+                embedding_cache = EmbeddingCache(
+                    redis_client=redis_client,
+                    ttl_seconds=settings.redis_ttl_seconds,
+                    embedding_dimensions=settings.vector_dimensions,
+                )
+                logger.info("EmbeddingCache initialized with Redis backend")
+            except Exception as e:
+                logger.warning(
+                    "Redis connection failed, using in-memory cache only",
+                    error=str(e),
+                )
+                # Create cache without Redis (in-memory only)
+                embedding_cache = EmbeddingCache(
+                    redis_client=None,
+                    ttl_seconds=3600,  # 1 hour for in-memory
+                    embedding_dimensions=settings.vector_dimensions,
+                )
+        elif enable_semantic_cache:
+            # No Redis, but cache enabled - use in-memory only
+            logger.info("Initializing in-memory EmbeddingCache (Redis disabled)")
+            embedding_cache = EmbeddingCache(
+                redis_client=None,
+                ttl_seconds=3600,
+                embedding_dimensions=settings.vector_dimensions,
+            )
+
+        # STAGE 6: Initialize MemoryProcessor
         # Note: EntityExtractor and GraphBuilder are loaded LAZILY on first use
         # This speeds up MCP server startup significantly (~3 sec faster)
         logger.info("Initializing MemoryProcessor (SpaCy/EntityExtractor loaded lazily)")
 
-        # Read feature flags from environment (all enabled by default except semantic cache)
+        # Read feature flags from environment (all enabled by default, semantic cache enabled by default now)
         enable_hybrid_search = os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true"
         enable_knowledge_graph = os.getenv("ENABLE_KNOWLEDGE_GRAPH", "true").lower() == "true"
         enable_code_indexing = os.getenv("ENABLE_CODE_INDEXING", "true").lower() == "true"
-        enable_semantic_cache = os.getenv("ENABLE_SEMANTIC_CACHE", "false").lower() == "true"
 
         # Create ProcessorConfig with feature flags
         processor_config = ProcessorConfig(
-            enable_cache=enable_semantic_cache,
+            enable_cache=enable_semantic_cache and embedding_cache is not None,
             enable_extraction=enable_knowledge_graph,
             enable_graph=enable_knowledge_graph,
             enable_llm_refinement=True,
@@ -261,7 +312,8 @@ async def main(args: argparse.Namespace) -> None:
             hybrid_search=enable_hybrid_search,
             knowledge_graph=enable_knowledge_graph,
             code_indexing=enable_code_indexing,
-            semantic_cache=enable_semantic_cache,
+            semantic_cache=processor_config.enable_cache,
+            redis_enabled=redis_enabled,
             search_mode=processor_config.search_mode,
         )
 
@@ -270,9 +322,10 @@ async def main(args: argparse.Namespace) -> None:
             chunker=chunker,
             embedder=embedder,
             extractor=None,  # Lazy loading - SpaCy loads on first build_graph call
+            cache=embedding_cache,  # Pass the cache
             config=processor_config,
         )
-        logger.info("MemoryProcessor initialized")
+        logger.info("MemoryProcessor initialized", cache_enabled=processor_config.enable_cache)
 
         # Attach code_indexer if code indexing is enabled
         if enable_code_indexing:

@@ -53,7 +53,7 @@ class ProcessorConfig:
         llm_model: Ollama LLM model for entity refinement (default: qwen2.5:latest)
     """
 
-    enable_cache: bool = False
+    enable_cache: bool = True  # Enabled by default for performance
     enable_extraction: bool = True  # Phase 2: Entity extraction enabled
     enable_graph: bool = True  # Phase 2: Graph building enabled
     enable_llm_refinement: bool = False  # Phase 2: LLM refinement (off by default)
@@ -652,9 +652,23 @@ class MemoryProcessor:
                 self._validate_search_filters(filters)
             log.debug("search_input_validated")
 
-            # Generate query embedding
+            # Generate query embedding (with cache if enabled)
             log.debug("generating_query_embedding")
-            query_embedding = await self.embedder.embed_text(query)
+            query_embedding = None
+
+            # Check cache first
+            if self.config.enable_cache and self.cache is not None:
+                query_embedding = await self.cache.get(query)
+                if query_embedding is not None:
+                    log.debug("query_embedding_cache_hit")
+
+            # Generate if not cached
+            if query_embedding is None:
+                query_embedding = await self.embedder.embed_text(query)
+                # Store in cache for future queries
+                if self.config.enable_cache and self.cache is not None:
+                    await self.cache.set(query, query_embedding)
+
             log.debug("query_embedding_generated", embedding_dim=len(query_embedding))
 
             # Execute search based on mode
@@ -1141,10 +1155,10 @@ class MemoryProcessor:
 
     async def _generate_embeddings(self, chunks: List[Chunk]) -> List[List[float]]:
         """
-        Generate embeddings for chunks using OllamaEmbedder (private helper).
+        Generate embeddings for chunks using OllamaEmbedder with caching.
 
-        Checks cache first (if enabled), generates embeddings for cache misses,
-        stores in cache (if enabled).
+        Uses batch API for efficiency. Checks cache first (if enabled),
+        generates embeddings only for cache misses, stores results in cache.
 
         Args:
             chunks: List of Chunk objects
@@ -1161,17 +1175,51 @@ class MemoryProcessor:
         chunk_texts = [chunk.text for chunk in chunks]
 
         try:
-            # Generate embeddings in batches
-            embeddings: List[List[float]] = []
+            # If cache is enabled, check for cached embeddings first
+            if self.config.enable_cache and self.cache is not None:
+                embeddings: List[List[float]] = []
+                texts_to_embed: List[str] = []
+                cache_indices: List[int] = []  # Track which indices need embedding
 
-            for i in range(0, len(chunk_texts), self.config.batch_size):
-                batch = chunk_texts[i : i + self.config.batch_size]
-                batch_embeddings = await asyncio.gather(
-                    *[self.embedder.embed_text(text) for text in batch]
+                # Check cache for each text
+                for i, text in enumerate(chunk_texts):
+                    cached = await self.cache.get(text)
+                    if cached is not None:
+                        embeddings.append(cached)
+                        self.logger.debug("embedding_cache_hit", index=i)
+                    else:
+                        embeddings.append([])  # Placeholder
+                        texts_to_embed.append(text)
+                        cache_indices.append(i)
+
+                # Generate embeddings only for cache misses
+                if texts_to_embed:
+                    self.logger.info(
+                        "generating_embeddings_for_cache_misses",
+                        total=len(chunk_texts),
+                        cache_hits=len(chunk_texts) - len(texts_to_embed),
+                        cache_misses=len(texts_to_embed),
+                    )
+                    # Use batch API for efficiency
+                    new_embeddings = await self.embedder.embed_batch(
+                        texts_to_embed, batch_size=self.config.batch_size
+                    )
+
+                    # Fill in the embeddings and cache them
+                    for idx, (text, embedding) in enumerate(zip(texts_to_embed, new_embeddings)):
+                        original_idx = cache_indices[idx]
+                        embeddings[original_idx] = embedding
+                        # Store in cache
+                        await self.cache.set(text, embedding)
+
+                return embeddings
+
+            else:
+                # No cache - use batch API directly
+                embeddings = await self.embedder.embed_batch(
+                    chunk_texts, batch_size=self.config.batch_size
                 )
-                embeddings.extend(batch_embeddings)
-
-            return embeddings
+                return embeddings
 
         except EmbeddingError:
             raise

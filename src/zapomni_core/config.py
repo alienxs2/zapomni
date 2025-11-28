@@ -255,7 +255,7 @@ class ZapomniSettings(BaseSettings):
     )
 
     enable_semantic_cache: bool = Field(
-        default=False, description="Enable semantic embedding cache (requires Redis)"
+        default=True, description="Enable semantic embedding cache (Redis + in-memory fallback)"
     )
 
     # ========================================

@@ -248,34 +248,32 @@ class OllamaEmbedder:
 
     async def embed_batch(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
         """
-        Generate embeddings for multiple texts efficiently.
+        Generate embeddings for multiple texts efficiently using Ollama batch API.
 
-        Processes texts in batches for optimal performance. Uses asyncio.gather
-        for concurrent API calls (up to batch_size concurrent).
+        Uses Ollama's /api/embed endpoint which accepts multiple texts in a single
+        HTTP request, significantly reducing latency compared to individual calls.
 
         Algorithm:
         1. Validate inputs (all non-empty, batch_size valid)
         2. Split texts into batches of size batch_size
-        3. For each batch:
-            a. Launch concurrent embed_text() calls (asyncio.gather)
-            b. Collect results
+        3. For each batch: call /api/embed with all texts
         4. Flatten batches into single list
         5. Return embeddings
 
         Args:
             texts: List of input texts (max 1000 texts per call recommended)
-            batch_size: Concurrent requests (default: 32, max recommended: 64)
+            batch_size: Texts per batch request (default: 32, max recommended: 64)
 
         Returns:
             List[List[float]]: List of 768-dimensional embeddings (same order as inputs)
 
         Raises:
             ValidationError: If any text is empty or batch_size invalid
-            EmbeddingError: If > 50% of texts fail to embed
+            EmbeddingError: If batch embedding fails
 
         Performance Target:
-            - 32 texts: < 1000ms (P95)
-            - Throughput: ~200 texts/sec with batch_size=32
+            - 32 texts: < 500ms (P95) with batch API
+            - Throughput: ~500+ texts/sec with batch_size=32
 
         Example:
             ```python
@@ -319,55 +317,157 @@ class OllamaEmbedder:
                     details={"index": i},
                 )
 
-        # Process texts in batches
+        # Process texts in batches using batch API
         embeddings: List[List[float]] = []
-        failures = 0
 
-        # Split into batches
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
 
-            # Process batch concurrently
-            tasks = [self.embed_text(text) for text in batch]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Collect results and track failures
-            for j, result in enumerate(results):
-                if isinstance(result, Exception):
-                    failures += 1
-                    logger.warning(
-                        "batch_embedding_failed",
-                        index=i + j,
-                        error=str(result),
-                        text_preview=batch[j][:50],
-                    )
-                    # Re-raise the exception to fail the batch
-                    raise EmbeddingError(
-                        message=f"Failed to embed text at index {i + j}: {str(result)}",
-                        error_code="EMB_001",
-                        details={"index": i + j, "error": str(result)},
-                        original_exception=result,
-                    )
-                else:
-                    embeddings.append(result)
-
-        # Check failure rate
-        failure_rate = failures / len(texts) if texts else 0
-        if failure_rate > 0.5:
-            raise EmbeddingError(
-                message=f"Failed to embed batch: {failures}/{len(texts)} texts failed (>{failure_rate:.0%})",
-                error_code="EMB_001",
-                details={"failures": failures, "total": len(texts)},
-            )
+            try:
+                # Use batch API for efficiency
+                batch_embeddings = await self._call_ollama_batch(batch)
+                embeddings.extend(batch_embeddings)
+            except Exception as e:
+                logger.warning(
+                    "batch_api_failed_fallback_to_individual",
+                    batch_index=i,
+                    batch_size=len(batch),
+                    error=str(e),
+                )
+                # Fallback to individual calls if batch API fails
+                for j, text in enumerate(batch):
+                    try:
+                        embedding = await self.embed_text(text)
+                        embeddings.append(embedding)
+                    except Exception as inner_e:
+                        raise EmbeddingError(
+                            message=f"Failed to embed text at index {i + j}: {str(inner_e)}",
+                            error_code="EMB_001",
+                            details={"index": i + j, "error": str(inner_e)},
+                            original_exception=inner_e,
+                        )
 
         logger.info(
             "batch_embeddings_generated",
             total=len(texts),
-            failures=failures,
             batch_size=batch_size,
+            api="batch",
         )
 
         return embeddings
+
+    async def _call_ollama_batch(self, texts: List[str], retry_count: int = 0) -> List[List[float]]:
+        """
+        Internal method: Call Ollama batch API /api/embed with retry logic.
+
+        Uses the newer /api/embed endpoint which accepts multiple texts in one request.
+        This is significantly faster than making individual /api/embeddings calls.
+
+        Args:
+            texts: List of texts to embed (max ~100 recommended per call)
+            retry_count: Current retry attempt (internal)
+
+        Returns:
+            List[List[float]]: List of 768-dimensional embeddings
+
+        Raises:
+            EmbeddingError: If all retries exhausted or API returns error
+            TimeoutError: If request exceeds timeout
+
+        Private method, not exposed in public API.
+        """
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/api/embed",
+                json={"model": self.model_name, "input": texts},
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if "embeddings" not in data:
+                    raise EmbeddingError(
+                        message="Invalid Ollama batch response: missing 'embeddings' field",
+                        error_code="EMB_001",
+                        details={"response_keys": list(data.keys())},
+                    )
+
+                embeddings = data["embeddings"]
+
+                # Validate all embeddings
+                for i, emb in enumerate(embeddings):
+                    if len(emb) != self.dimensions:
+                        raise EmbeddingError(
+                            message=f"Invalid embedding dimensions at index {i}: expected {self.dimensions}, got {len(emb)}",
+                            error_code="EMB_003",
+                            details={"index": i, "expected": self.dimensions, "got": len(emb)},
+                        )
+
+                return embeddings
+
+            elif response.status_code == 404:
+                # Model not found or batch API not supported - will fallback
+                raise EmbeddingError(
+                    message=f"Model '{self.model_name}' not found or batch API not supported. Run: ollama pull {self.model_name}",
+                    error_code="EMB_004",
+                    details={"model": self.model_name, "status_code": 404},
+                )
+
+            else:
+                raise EmbeddingError(
+                    message=f"Ollama batch API error: {response.status_code}",
+                    error_code="EMB_001",
+                    details={"status_code": response.status_code, "response": response.text[:500]},
+                )
+
+        except httpx.TimeoutException as e:
+            if retry_count < self.max_retries:
+                wait_time = 2**retry_count
+                logger.warning(
+                    "ollama_batch_timeout_retry",
+                    retry=retry_count + 1,
+                    max_retries=self.max_retries,
+                    wait_time=wait_time,
+                    batch_size=len(texts),
+                )
+                await asyncio.sleep(wait_time)
+                return await self._call_ollama_batch(texts, retry_count + 1)
+            else:
+                raise TimeoutError(
+                    message=f"Ollama batch request timed out after {self.max_retries} retries",
+                    error_code="TIMEOUT_002",
+                    details={"retries": retry_count, "batch_size": len(texts)},
+                    original_exception=e,
+                )
+
+        except (httpx.ConnectError, httpx.NetworkError) as e:
+            if retry_count < self.max_retries:
+                wait_time = 2**retry_count
+                logger.warning(
+                    "ollama_batch_connection_retry",
+                    retry=retry_count + 1,
+                    max_retries=self.max_retries,
+                    wait_time=wait_time,
+                )
+                await asyncio.sleep(wait_time)
+                return await self._call_ollama_batch(texts, retry_count + 1)
+            else:
+                raise EmbeddingError(
+                    message=f"Ollama batch connection failed after {self.max_retries} retries: {str(e)}",
+                    error_code="EMB_001",
+                    details={"retries": retry_count, "error": str(e)},
+                    original_exception=e,
+                )
+
+        except EmbeddingError:
+            raise
+
+        except Exception as e:
+            raise EmbeddingError(
+                message=f"Unexpected error calling Ollama batch API: {str(e)}",
+                error_code="EMB_001",
+                details={"error": str(e), "batch_size": len(texts)},
+                original_exception=e,
+            )
 
     def get_dimensions(self) -> int:
         """

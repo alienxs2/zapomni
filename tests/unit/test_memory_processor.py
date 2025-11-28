@@ -100,6 +100,8 @@ def mock_embedder():
     """Mock OllamaEmbedder."""
     embedder = AsyncMock()
     embedder.embed_text = AsyncMock(return_value=[0.1] * 768)  # 768-dimensional embedding
+    # embed_batch returns a list of embeddings (one per input text)
+    embedder.embed_batch = AsyncMock(side_effect=lambda texts, **kwargs: [[0.1] * 768 for _ in texts])
     return embedder
 
 
@@ -305,8 +307,8 @@ class TestAddMemoryHappyPath:
         text = "Python is a programming language."
         await memory_processor.add_memory(text=text)
 
-        # Should be called once per chunk (2 chunks in mock)
-        assert mock_embedder.embed_text.call_count >= 1
+        # Should use batch API for efficiency
+        assert mock_embedder.embed_batch.call_count >= 1
 
 
 # ============================================================================
@@ -599,7 +601,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_add_memory_embedding_error(self, memory_processor, mock_embedder):
         """Test error handling when embedding generation fails."""
-        mock_embedder.embed_text = AsyncMock(
+        mock_embedder.embed_batch = AsyncMock(
             side_effect=EmbeddingError(
                 message="Ollama unavailable",
                 error_code="EMB_001",
@@ -733,7 +735,7 @@ class TestAddMemoryIntegration:
 
         # Verify all pipeline stages were executed
         assert mock_chunker.chunk_text.called
-        assert mock_embedder.embed_text.called
+        assert mock_embedder.embed_batch.called  # Uses batch API for efficiency
         assert mock_db_client.add_memory.called
         assert memory_id is not None
 
@@ -750,7 +752,7 @@ class TestProcessorConfig:
         """Test ProcessorConfig default values."""
         config = ProcessorConfig()
 
-        assert config.enable_cache is False
+        assert config.enable_cache is True  # Changed: cache enabled by default for performance
         # Note: enable_extraction and enable_graph are now True by default
         assert config.enable_extraction is True
         assert config.enable_graph is True

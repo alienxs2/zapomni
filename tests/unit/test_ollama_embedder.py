@@ -113,12 +113,23 @@ async def test_embed_text_success(mock_ollama_response, mock_httpx_client):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_embed_batch_success(mock_ollama_response, mock_httpx_client):
-    """Test successful batch embedding."""
-    # Setup mock response
-    mock_response = AsyncMock()
-    mock_response.status_code = 200
-    mock_response.json = Mock(return_value=mock_ollama_response)  # json() is sync
-    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+    """Test successful batch embedding using batch API."""
+    # Create mock responses for both batch API and single API
+    mock_embedding = [0.1] * 768
+
+    def create_response(url, **kwargs):
+        response = AsyncMock()
+        response.status_code = 200
+        if "/api/embed" in str(url) and "/api/embeddings" not in str(url):
+            # Batch API response
+            input_texts = kwargs.get("json", {}).get("input", [])
+            response.json = Mock(return_value={"embeddings": [mock_embedding] * len(input_texts)})
+        else:
+            # Single API response
+            response.json = Mock(return_value=mock_ollama_response)
+        return response
+
+    mock_httpx_client.post = AsyncMock(side_effect=create_response)
 
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
         embedder = OllamaEmbedder()
@@ -129,8 +140,8 @@ async def test_embed_batch_success(mock_ollama_response, mock_httpx_client):
         assert len(embeddings) == 3
         assert all(len(emb) == 768 for emb in embeddings)
         assert all(isinstance(emb, list) for emb in embeddings)
-        # Should be called 3 times (one per text)
-        assert mock_httpx_client.post.call_count == 3
+        # With batch API: 2 calls (batch[0:2] + batch[2:3])
+        assert mock_httpx_client.post.call_count == 2
 
 
 # === Error Tests ===
@@ -383,11 +394,22 @@ async def test_embed_batch_single_text(mock_ollama_response, mock_httpx_client):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_embed_batch_size_larger_than_texts(mock_ollama_response, mock_httpx_client):
-    """Test embed_batch when batch_size > number of texts."""
-    mock_response = AsyncMock()
-    mock_response.status_code = 200
-    mock_response.json = Mock(return_value=mock_ollama_response)  # json() is sync
-    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+    """Test embed_batch when batch_size > number of texts using batch API."""
+    mock_embedding = [0.1] * 768
+
+    def create_response(url, **kwargs):
+        response = AsyncMock()
+        response.status_code = 200
+        if "/api/embed" in str(url) and "/api/embeddings" not in str(url):
+            # Batch API response
+            input_texts = kwargs.get("json", {}).get("input", [])
+            response.json = Mock(return_value={"embeddings": [mock_embedding] * len(input_texts)})
+        else:
+            # Single API response
+            response.json = Mock(return_value=mock_ollama_response)
+        return response
+
+    mock_httpx_client.post = AsyncMock(side_effect=create_response)
 
     with patch("httpx.AsyncClient", return_value=mock_httpx_client):
         embedder = OllamaEmbedder()
@@ -395,7 +417,8 @@ async def test_embed_batch_size_larger_than_texts(mock_ollama_response, mock_htt
         embeddings = await embedder.embed_batch(texts, batch_size=32)
 
         assert len(embeddings) == 2
-        assert mock_httpx_client.post.call_count == 2
+        # With batch API: 1 call for all texts (batch_size > len(texts))
+        assert mock_httpx_client.post.call_count == 1
 
 
 @pytest.mark.unit
