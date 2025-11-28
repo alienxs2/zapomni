@@ -1,13 +1,25 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-28 (Session #10 - FINAL HANDOFF)
-**Project Status**: v0.4.0 Foundation **COMPLETE** — Phase 2 ready
-**Version**: v0.3.1 (released) | v0.4.0 Foundation (merged to main)
+**Last Updated**: 2025-11-28 (Session #12 - PERFORMANCE FIX)
+**Project Status**: v0.4.0 Foundation COMPLETE | BUG-007 FIXED | 6 bugs remaining
+**Version**: v0.3.1 (released) | v0.4.0 Foundation (merged)
 **Branch**: `main`
 
 ---
 
 ## START HERE (Новый PM)
+
+### Что было сделано в Session #12:
+
+1. **FIXED: BUG-007 (Issue #13) - Performance 7-45x медленнее**
+   - Добавлен Ollama batch API `/api/embed`
+   - Интегрирован EmbeddingCache (Redis + in-memory fallback)
+   - Включён semantic cache по умолчанию
+   - Ожидаемое улучшение: -60-90% latency
+
+### Предыдущие сессии:
+- **Session #11**: Найдено 7 багов, создан roadmap v0.5-v1.0, 19 issues
+- **Session #10**: v0.4.0 Foundation complete, Tree-sitter 41 languages
 
 ### Текущее состояние:
 ```
@@ -15,6 +27,7 @@ Branch: main
 Unit tests: 2089 passed, 11 skipped
 E2E tests: 88 passed, 1 xfailed
 Tree-sitter: Foundation COMPLETE (41 languages, 221 tests)
+Known bugs: 6 (2 critical/high, 4 medium/low) - BUG-007 FIXED!
 ```
 
 ### Шаг 1: Проверь состояние
@@ -23,151 +36,110 @@ cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
 make test                     # Unit: ~2089 passed
+gh issue list --milestone "v0.5.0 - Solid Foundation"
 ```
 
-### Шаг 2: Проверь Tree-sitter модуль
-```bash
-python -c "
-from zapomni_core.treesitter import ParserFactory, LanguageParserRegistry
-ParserFactory.initialize()
-registry = LanguageParserRegistry()
-print(f'Languages: {len(registry.list_registered_languages())}')
-print(f'Extractors: {registry.list_registered_extractors()}')
-"
-# Ожидаемый результат: Languages: 41, Extractors: ['generic']
+### Шаг 2: Прочитай отчёты
 ```
-
----
-
-## ЗАДАЧИ ДЛЯ НОВОГО PM (GitHub Issues)
-
-### v0.4.0 Phase 2 — Roadmap
-
-| # | Issue | Приоритет | Сложность | Оценка |
-|---|-------|-----------|-----------|--------|
-| 1 | [#8 - Интеграция index_codebase](https://github.com/alienxs2/zapomni/issues/8) | **HIGH** | Medium | 1-2 часа |
-| 2 | [#9 - PythonExtractor](https://github.com/alienxs2/zapomni/issues/9) | Medium | Medium | 1 час |
-| 3 | [#10 - TypeScriptExtractor](https://github.com/alienxs2/zapomni/issues/10) | Medium | Medium | 1 час |
-| 4 | [#11 - E2E тесты AST](https://github.com/alienxs2/zapomni/issues/11) | Medium | Easy | 30 мин |
-| 5 | Release v0.4.0 | - | Easy | 15 мин |
-
-**Общая оценка: ~4-5 часов работы**
-
-### Порядок выполнения:
-
-```
-#8 (index_codebase) → #9 (Python) → #10 (TypeScript) → #11 (E2E) → Release
-```
-
-### Детали задач:
-
-**Issue #8: Интеграция index_codebase** (Приоритет 1)
-```
-Файл: src/zapomni_mcp/tools/index_codebase.py
-- Заменить текущую реализацию на Tree-sitter
-- Hybrid гранулярность: файл + top-level элементы
-- Обновить тесты
-```
-
-**Issue #9: PythonExtractor**
-```
-Файл: src/zapomni_core/treesitter/extractors/python.py
-- Docstrings extraction
-- Decorators parsing
-- Type hints extraction
-- ~25 unit tests
-```
-
-**Issue #10: TypeScriptExtractor**
-```
-Файл: src/zapomni_core/treesitter/extractors/typescript.py
-- Interfaces, type aliases
-- Export statements
-- JSDoc comments
-- ~20 unit tests
-```
-
-**Issue #11: E2E тесты**
-```
-Файл: tests/e2e/tools/test_index_codebase_ast.py
-- Python/TypeScript indexing
-- Hybrid granularity
-- Search by function/class name
-- ~10 E2E tests
+/home/dev/zapomi_anal/
+├── ZAPOMNI_PRODUCT_ANALYSIS_REPORT.md   # Полный анализ + конкуренты
+├── ZAPOMNI_ROADMAP_POST_BUGFIX.md       # Детальный roadmap v0.5-v1.0
+├── test_results_summary.json            # 7 багов с root cause
+└── issues/                              # Детальное описание каждого бага
 ```
 
 ---
 
-## v0.4.0 Foundation — ЧТО УЖЕ ГОТОВО
+## ТЕКУЩИЕ ПРИОРИТЕТЫ
 
-### Структура модуля:
-```
-src/zapomni_core/treesitter/        # +2671 lines, 41 languages
-├── __init__.py                     # 29 exports
-├── models.py                       # ExtractedCode, ASTNodeLocation, CodeElementType, ParameterInfo, ParseResult
-├── exceptions.py                   # TreeSitterError, LanguageNotSupportedError, ParseError, ExtractorNotFoundError
-├── config.py                       # 42 languages, 73 extensions
-├── parser/
-│   ├── base.py                     # BaseLanguageParser ABC
-│   ├── registry.py                 # LanguageParserRegistry (Singleton)
-│   └── factory.py                  # ParserFactory, UniversalLanguageParser
-└── extractors/
-    ├── base.py                     # BaseCodeExtractor ABC
-    └── generic.py                  # GenericExtractor (28 func types, 27 class types)
-```
+### ✅ FIXED - Session #12
 
-### Тесты:
-```
-tests/unit/treesitter/              # +2310 lines, 221 tests
-├── conftest.py                     # Fixtures (Python, JS, Rust trees)
-├── test_models.py                  # 37 tests
-├── test_exceptions.py              # 28 tests
-├── test_config.py                  # 27 tests
-├── parser/
-│   ├── test_base.py               # 20 tests
-│   ├── test_registry.py           # 22 tests
-│   └── test_factory.py            # 32 tests
-└── extractors/
-    ├── test_base_extractor.py     # 15 tests
-    └── test_generic.py            # 40 tests
-```
+| Issue | Bug | Severity | Описание | Status |
+|-------|-----|----------|----------|--------|
+| #13 | BUG-007 | HIGH | **Performance 7-45x медленнее** | ✅ FIXED |
 
-### Архитектурные решения:
-| Аспект | Решение |
-|--------|---------|
-| Интеграция | Полная замена index_codebase (Breaking Change) |
-| Гранулярность | Hybrid (файл + top-level отдельно) |
-| Паттерны | Registry + Factory для расширяемости |
-| Fallback | GenericExtractor для всех 41 языка |
+### P0 - Критические баги (СНАЧАЛА ЭТО!)
 
-### Зависимости:
-```toml
-"tree-sitter>=0.25.0"
-"tree-sitter-language-pack>=0.13.0"
-```
+| Issue | Bug | Severity | Описание | Estimate |
+|-------|-----|----------|----------|----------|
+| #12 | BUG-005 | CRITICAL | Workspace isolation сломана | 4-8 часов |
+| #14 | BUG-002 | HIGH | Code indexing не работает | 3-5 часов |
 
-**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5) (DONE)
-**PR**: [#7](https://github.com/alienxs2/zapomni/pull/7) (MERGED)
+### P1 - Важные баги
+
+| Issue | Bug | Severity | Описание | Estimate |
+|-------|-----|----------|----------|----------|
+| #15 | BUG-003 | MEDIUM | AST = 0 functions/classes | 2-4 часа |
+| #16 | BUG-004 | HIGH | Workspace state не сохраняется | 2-4 часа |
+
+### P2-P3 - Могут подождать
+
+| Issue | Bug | Severity | Estimate |
+|-------|-----|----------|----------|
+| #17 | BUG-001 | MEDIUM | 30 мин |
+| #18 | BUG-006 | LOW | 2-4 часа |
 
 ---
 
-## ТЕКУЩЕЕ СОСТОЯНИЕ ПРОЕКТА
+## ROADMAP v0.5 → v1.0
 
-| Компонент | Статус | Детали |
-|-----------|--------|--------|
-| MCP Tools | 17/17 | Все зарегистрированы и работают |
-| Unit Tests | **2089 passed** | 11 skipped, ~38 sec runtime |
-| E2E Tests | **88 passed, 1 xfailed** | Все критичные тесты проходят |
-| Coverage | 74-89% | По модулям |
-| **Tree-sitter** | **DONE** | Foundation Phase complete |
-| **index_codebase** | **NEEDS UPDATE** | Issue #8 |
+### GitHub Milestones (уже созданы)
 
-### xfailed тест (by design)
-- **test_get_current_workspace_after_switch** - SSE sessions stateless
+| # | Milestone | Issues | Duration |
+|---|-----------|--------|----------|
+| 1 | [v0.5.0 - Solid Foundation](https://github.com/alienxs2/zapomni/milestone/1) | #19, #20, #21 | 3-4 нед |
+| 2 | [v0.6.0 - Code Intelligence](https://github.com/alienxs2/zapomni/milestone/2) | #22, #23, #24 | 4-5 нед |
+| 3 | [v0.7.0 - Search Excellence](https://github.com/alienxs2/zapomni/milestone/3) | #25, #26 | 3-4 нед |
+| 4 | [v0.8.0 - Knowledge Graph 2.0](https://github.com/alienxs2/zapomni/milestone/4) | #27 | 4-5 нед |
+| 5 | [v0.9.0 - Scale & Performance](https://github.com/alienxs2/zapomni/milestone/5) | #28 | 3-4 нед |
+| 6 | [v1.0.0 - Production Ready](https://github.com/alienxs2/zapomni/milestone/6) | #29, #30 | 4-5 нед |
 
-### Завершённые фазы
-- [x] v0.1.0 - v0.3.1 releases
-- [x] v0.4.0 Foundation (Tree-sitter F1-F10)
+**Общий срок до v1.0: ~5-6 месяцев**
+
+---
+
+## КОНКУРЕНТНОЕ ПОЗИЦИОНИРОВАНИЕ
+
+### Zapomni vs Топ конкуренты
+
+| Feature | Zapomni | Mem0 | Zep | Cognee |
+|---------|---------|------|-----|--------|
+| Code Intelligence | **41 lang** | No | No | ~10 lang |
+| 100% Local | **Yes** | No | No | Partial |
+| Tree-sitter AST | **Yes** | No | No | No |
+| Knowledge Graph | Yes | Yes | Yes | Yes |
+| Temporal Model | No | No | **Yes** | No |
+| Stars | ~100 | 43.6k | 23.8k | 9.3k |
+
+### Уникальное позиционирование
+
+> **"The AI memory that truly understands your code"**
+> - 41 language AST support (уникально!)
+> - 100% local-first (privacy)
+> - Tree-sitter deep parsing
+
+---
+
+## ПОРЯДОК РАБОТЫ
+
+### Рекомендуемый порядок после этой сессии:
+
+1. **Fix #13 (Performance)** - Без этого продукт непригоден
+   - Embedding caching в Redis
+   - Ollama batch API `/api/embed`
+
+2. **Fix #12 (Workspace isolation)** - Основная функциональность
+   - Inject mcp_server в tools
+   - resolve_workspace_id() когда не указан
+
+3. **Fix #14, #15 (Code indexing)** - Наш differentiator
+   - Integrate Tree-sitter
+   - Real functions_found/classes_found
+
+4. **Start v0.5.0 issues** (#19, #20, #21)
+   - PythonExtractor
+   - TypeScriptExtractor
+   - Full Tree-sitter integration
 
 ---
 
@@ -175,71 +147,61 @@ tests/unit/treesitter/              # +2310 lines, 221 tests
 
 ```bash
 # Тесты
-make test                          # Unit тесты (~38 sec)
-make e2e                           # E2E тесты (требует сервер)
+make test                          # Unit тесты
+make e2e                           # E2E тесты
+
+# GitHub
+gh issue list                      # Все issues
+gh issue list --milestone "v0.5.0 - Solid Foundation"
+gh milestone list                  # Не работает, используй API
+gh api repos/alienxs2/zapomni/milestones | jq '.[] | {number, title}'
 
 # Сервер
-make docker-up                     # Запустить FalkorDB + Redis
-make server                        # Запустить MCP сервер
-
-# Перед E2E тестами
-docker exec zapomni_falkordb redis-cli FLUSHALL
-
-# GitHub Issues
-gh issue list                      # Список issues
-gh issue view 8                    # Посмотреть issue #8
+make docker-up                     # FalkorDB + Redis
+make server                        # MCP сервер
 ```
 
 ---
 
-## ВАЖНЫЕ ПРАВИЛА
+## ВАЖНЫЕ ФАЙЛЫ
 
-### НЕ делай:
-- Не создавай новые .md файлы без согласования
-- Не пропускай тесты после изменений кода
-- **Не забывай FLUSHALL перед E2E тестами!**
+```
+/home/dev/zapomni/
+├── src/zapomni_core/treesitter/   # Tree-sitter модуль (ГОТОВ)
+├── src/zapomni_mcp/tools/         # MCP tools (17 штук)
+└── tests/                         # 2089+ тестов
 
-### Делай:
-- Обновляй документацию после изменений
-- Запускай тесты: `pytest tests/unit/ -q`
-- Обновляй этот файл после каждой сессии
-- Закрывай issues после выполнения
+/home/dev/zapomi_anal/
+├── ZAPOMNI_PRODUCT_ANALYSIS_REPORT.md
+├── ZAPOMNI_ROADMAP_POST_BUGFIX.md
+├── test_results_summary.json
+└── issues/BUG-*.md
+```
 
 ---
 
 ## ИСТОРИЯ СЕССИЙ
 
-### Session 2025-11-28 #10 (FINAL HANDOFF)
+### Session 2025-11-28 #11 (STRATEGIC PLANNING)
 **PM**: AI Assistant (Claude Opus 4.5)
 
 **Выполнено**:
-- **F10: 221 unit тестов** для treesitter модуля
-- **PR #7 merged** в main
-- **Создано 4 GitHub issues** для Phase 2:
-  - #8 - Интеграция index_codebase
-  - #9 - PythonExtractor
-  - #10 - TypeScriptExtractor
-  - #11 - E2E тесты AST
-- **Документация обновлена** для передачи
+- Глубокое тестирование: найдено 7 багов
+- Исследование 43+ конкурентов
+- Создание Product Analysis Report
+- Создание Roadmap v0.5-v1.0
+- 7 bug issues (#12-18)
+- 6 milestones
+- 12 feature issues (#19-30)
 
-**Статистика**:
-| Метрика | Значение |
-|---------|----------|
-| Unit tests | 2089 passed |
-| Treesitter tests | +221 новых |
-| GitHub Issues | 4 созданы для Phase 2 |
+**Артефакты**:
+- `/home/dev/zapomi_anal/ZAPOMNI_PRODUCT_ANALYSIS_REPORT.md`
+- `/home/dev/zapomi_anal/ZAPOMNI_ROADMAP_POST_BUGFIX.md`
 
----
-
-### Previous Sessions (#1-#9)
-- Session #9: v0.4.0 Foundation (F1-F9)
-- Session #8: v0.3.1 (Issue #2 fix)
-- Session #7: v0.3.0 RELEASE
-- Session #6: Performance Benchmarking
-- Session #5: Server isError Fix
-- Session #4: E2E Validation
-- Session #3: 115 E2E tests
-- Session #1-2: E2E Infrastructure
+### Session 2025-11-28 #10 (Previous)
+- v0.4.0 Foundation complete
+- 221 Tree-sitter tests
+- PR #7 merged
 
 ---
 
@@ -247,31 +209,9 @@ gh issue view 8                    # Посмотреть issue #8
 
 - **Repository**: https://github.com/alienxs2/zapomni
 - **Issues**: https://github.com/alienxs2/zapomni/issues
+- **Milestones**: https://github.com/alienxs2/zapomni/milestones
 - **Owner**: Goncharenko Anton (alienxs2)
 
 ---
 
-## Release Checklist (v0.4.0)
-
-После завершения Phase 2:
-```bash
-# 1. Убедиться что все тесты проходят
-make test && make e2e
-
-# 2. Обновить версию
-# pyproject.toml → version = "0.4.0"
-
-# 3. Обновить CHANGELOG.md
-
-# 4. Создать тег и push
-git add -A && git commit -m "chore: Release v0.4.0"
-git tag v0.4.0
-git push origin main --tags
-
-# 5. Закрыть issues #8, #9, #10, #11
-gh issue close 8 9 10 11
-```
-
----
-
-**Успех = 2089 Unit + 88 E2E passed | 4 Issues ready for Phase 2 | Tree-sitter Foundation COMPLETE**
+**Успех = Fix 7 bugs → v0.5.0 → v0.6.0 → ... → v1.0 Launch**
