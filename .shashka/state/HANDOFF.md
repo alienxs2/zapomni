@@ -4,83 +4,103 @@
 **Next Session**: #18
 **Focus**: v0.6.0 - Code Intelligence
 
+---
+
 ## For Next AI Agent / PM
 
-### Session #17 - v0.5.0 COMPLETE!
+### v0.5.0 COMPLETE!
+
+All 3 issues for v0.5.0 milestone are done:
+
+| Issue | Title | Status | Tests |
+|-------|-------|--------|-------|
+| #19 | PythonExtractor | **COMPLETE** | 58 |
+| #20 | TypeScriptExtractor | **COMPLETE** | 60 |
+| #21 | Tree-sitter Integration | **COMPLETE** | 10 |
+
+**Total Tests**: 2252 unit + 10 integration = 2262+ passing
+
+---
+
+## What Was Done in Session #17
 
 **Issue #21 (Tree-sitter Integration) COMPLETE:**
-- Integrated PythonExtractor and TypeScriptExtractor into index_codebase MCP tool
-- Modified `_parse_file_ast()` to use `LanguageParserRegistry`
-- Python files now use PythonExtractor (docstrings, decorators, type hints)
-- TypeScript/JS files now use TypeScriptExtractor (JSDoc, interfaces, enums)
-- Other languages fall back to GenericExtractor
-- 10 new integration tests added
-- All 2252 unit tests + 10 integration tests passing
 
-### v0.5.0 Progress - COMPLETE!
+1. Modified `src/zapomni_mcp/tools/index_codebase.py`:
+   - Changed import to trigger extractor auto-registration
+   - Added `LanguageParserRegistry` integration
+   - Python files use `PythonExtractor` (docstrings, decorators, type hints)
+   - TypeScript/JS files use `TypeScriptExtractor` (JSDoc, interfaces, enums)
+   - Other languages fall back to `GenericExtractor`
 
-| Issue | Status | Tests | Notes |
-|-------|--------|-------|-------|
-| #19 | **COMPLETE** | 58 | PythonExtractor |
-| #20 | **COMPLETE** | 60 | TypeScriptExtractor |
-| #21 | **COMPLETE** | 10 | Tree-sitter Integration |
+2. Created `tests/integration/test_index_codebase_extractors.py`:
+   - 10 integration tests for extractor selection
+   - All tests passing
 
-### Next Milestone: v0.6.0 - Code Intelligence
+3. Commit: `8798590c feat(treesitter): Integrate language-specific extractors into index_codebase (Issue #21)`
 
-Refer to GitHub issues for v0.6.0 features.
+---
 
-### What Was Done in Session #16
-
-- [x] **TypeScriptExtractor implemented** - Full AST support (~1100 lines)
-- [x] **60 tests written** - All passing
-- [x] **Documentation updated** - CHANGELOG, SNAPSHOT
-- [x] **SHASHKA state updated** - All state files
-- [x] **Config updated** - typescript/javascript in LANGUAGES_WITH_EXTRACTORS
-
-### TypeScriptExtractor Features (for reference)
-
-```typescript
-// Implemented features:
-- extract_functions() with:
-  - function_declaration, generator_function_declaration
-  - arrow functions (name from variable_declarator)
-  - JSDoc comments (/** ... */)
-  - async/generator detection
-
-- extract_classes() with:
-  - class_declaration, abstract_class_declaration
-  - extends/implements heritage
-  - method extraction with access modifiers
-  - decorators support
-
-- extract_interfaces() - TypeScript interfaces
-- extract_types() - Type aliases
-- extract_enums() - Regular and const enums
-
-// Method features:
-  - access modifiers (public/private/protected)
-  - static/abstract modifiers
-  - getters/setters
-  - decorators (Angular, NestJS, etc.)
-```
-
-### Quick Commands
+## Quick Start for Next Session
 
 ```bash
-# Run tests
-make test                          # All unit tests
-pytest tests/unit/treesitter/     # Tree-sitter only
+cd /home/dev/zapomni
+git pull origin main
+source .venv/bin/activate
 
-# Check issues
-gh issue view 20                   # View Issue #20
-gh issue list --state open         # All open issues
+# Verify tests pass
+make test                              # 2252 unit tests
+pytest tests/integration/ -v           # 10 integration tests
 
-# Start server
-make docker-up                     # FalkorDB + Redis
-make server                        # MCP server
+# Check open issues for v0.6.0
+gh issue list --state open
+
+# Start services
+make docker-up                         # FalkorDB + Redis
+make server                            # MCP server
 ```
 
-### SHASHKA Commands Available
+---
+
+## Project Architecture
+
+```
+zapomni/
+├── src/
+│   ├── zapomni_core/
+│   │   ├── treesitter/           # Tree-sitter module (41 languages)
+│   │   │   ├── extractors/       # Language extractors
+│   │   │   │   ├── base.py       # BaseCodeExtractor ABC
+│   │   │   │   ├── generic.py    # GenericExtractor (165+ langs)
+│   │   │   │   ├── python.py     # PythonExtractor (58 tests)
+│   │   │   │   └── typescript.py # TypeScriptExtractor (60 tests)
+│   │   │   └── parser/
+│   │   │       └── registry.py   # LanguageParserRegistry (singleton)
+│   │   └── memory_processor.py
+│   ├── zapomni_mcp/
+│   │   └── tools/
+│   │       └── index_codebase.py # MCP tool (uses extractors)
+│   └── zapomni_db/
+└── tests/
+    ├── unit/                      # 2252 tests
+    └── integration/               # 10 tests (new)
+```
+
+---
+
+## SHASHKA System
+
+```
+.shashka/
+├── state/
+│   ├── HANDOFF.md        # This file - session handoff
+│   └── SNAPSHOT.md       # Project snapshot
+├── log/
+│   └── 2025-11-28-session-17.md  # Session #17 log
+└── config.yaml           # Project config
+```
+
+### Claude Slash Commands
 
 | Command | Description |
 |---------|-------------|
@@ -90,20 +110,42 @@ make server                        # MCP server
 | `/test` | Testing guidance |
 | `/handoff` | Session handoff |
 
-### Session History
+---
+
+## Roadmap
+
+| Milestone | Focus | Status |
+|-----------|-------|--------|
+| Bug Fixing | 7 bugs | **COMPLETE** |
+| v0.5.0 | Solid Foundation | **COMPLETE** |
+| v0.6.0 | Code Intelligence | Next |
+| v0.7.0 | Search Excellence | Planned |
+| v0.8.0 | Knowledge Graph 2.0 | Planned |
+| v0.9.0 | Scale & Performance | Planned |
+| v1.0.0 | Production Ready | Target |
+
+---
+
+## Session History
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#16** | 2025-11-28 | Issue #20 | **TypeScriptExtractor COMPLETE** |
+| **#17** | 2025-11-28 | Issue #21 | **Tree-sitter Integration COMPLETE, v0.5.0 DONE!** |
+| #16 | 2025-11-28 | Issue #20 | TypeScriptExtractor COMPLETE |
 | #15 | 2025-11-28 | Issue #19 | PythonExtractor COMPLETE |
-| #14 | 2025-11-28 | Issues #12-18 | All bugs fixed, SHASHKA setup |
+| #14 | 2025-11-28 | Bugs #12-18 | All bugs fixed, SHASHKA setup |
 | #13 | 2025-11-28 | Issue #12 | PR #31 created |
 | #12 | 2025-11-28 | Issue #13 | Performance fix |
 | #11 | 2025-11-28 | Analysis | 7 bugs found, roadmap |
 
-### Success Criteria for Next Session
+---
 
-- [ ] Issue #21 started (Tree-sitter Integration)
-- [ ] Extractors integrated into index_codebase
-- [ ] All existing tests still passing
-- [ ] Documentation updated
+## Contacts
+
+- **Repository**: https://github.com/alienxs2/zapomni
+- **Issues**: https://github.com/alienxs2/zapomni/issues
+- **Owner**: Goncharenko Anton (alienxs2)
+
+---
+
+**Good luck with v0.6.0!**
