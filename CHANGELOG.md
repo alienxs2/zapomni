@@ -6,7 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-See [ROADMAP.md](ROADMAP.md) for planned features and future versions.
+### v0.4.0 Foundation - Tree-sitter AST Integration (In Progress)
+
+**Issue:** [#5](https://github.com/alienxs2/zapomni/issues/5)
+
+**Added:**
+- **Tree-sitter integration** for AST parsing of 41+ programming languages
+- New module: `src/zapomni_core/treesitter/`
+  - `models.py` - Pydantic models: `ExtractedCode`, `ASTNodeLocation`, `CodeElementType`, `ParameterInfo`, `ParseResult`
+  - `exceptions.py` - Exception hierarchy: `TreeSitterError`, `LanguageNotSupportedError`, `ParseError`, `ExtractorNotFoundError`
+  - `config.py` - Language mappings for 42 languages (73 file extensions)
+  - `parser/base.py` - `BaseLanguageParser` ABC
+  - `parser/registry.py` - `LanguageParserRegistry` (Singleton pattern)
+  - `parser/factory.py` - `ParserFactory` with lazy initialization, `UniversalLanguageParser`
+  - `extractors/base.py` - `BaseCodeExtractor` ABC
+  - `extractors/generic.py` - `GenericExtractor` fallback (28 function types, 27 class types)
+
+**Dependencies:**
+- `tree-sitter>=0.25.0`
+- `tree-sitter-language-pack>=0.13.0`
+
+**Architecture Decisions:**
+- Full replacement of `index_codebase` (Breaking Change planned)
+- Hybrid granularity: file + top-level elements stored separately
+- Registry + Factory patterns for extensibility
+- GenericExtractor as universal fallback
+
+**Statistics:**
+- 11 new files created
+- 41 languages registered (makefile not available in pack)
+- 55 AST node types supported for extraction
+
+See [ROADMAP.md](ROADMAP.md) for full v0.4.0 plan.
 
 ## [0.3.1] - 2025-11-28
 

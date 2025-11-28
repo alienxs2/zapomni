@@ -30,6 +30,10 @@ dependencies = [
     "falkordb>=1.2.0",
     "redis>=5.0.0",
 
+    # Code Parsing (Tree-sitter)
+    "tree-sitter>=0.25.0",
+    "tree-sitter-language-pack>=0.13.0",
+
     # SSE Transport
     "uvicorn[standard]>=0.30.0",
     "starlette>=0.38.0",

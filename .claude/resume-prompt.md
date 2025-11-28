@@ -1,51 +1,122 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-28 (Session #8 - v0.3.1 RELEASED)
-**Project Status**: v0.3.1 Released - Issue #2 Fixed
-**Version**: v0.3.1
+**Last Updated**: 2025-11-28 (Session #9 - v0.4.0 Foundation COMPLETED)
+**Project Status**: v0.4.0 Foundation Phase DONE — Unit тесты pending
+**Version**: v0.3.1 (released) | v0.4.0 Foundation (branch ready)
+**Branch**: `feature/v0.4.0-treesitter-foundation`
 
 ---
 
 ## START HERE (Новый PM)
 
-### E2E результаты (Session #8):
-| Метрика | Значение |
-|---------|----------|
-| Unit tests | **1868 passed** (+15 новых) |
-| E2E tests | **88 passed, 1 xfailed** |
-| Total | **~1957 тестов** |
+### Что сделано в Session #9:
+| Задача | Статус | Детали |
+|--------|--------|--------|
+| F1-F9 Foundation | ✅ **DONE** | 11 файлов, +2671 строк |
+| F10 Unit тесты | ⏳ **PENDING** | ~115 тестов запланировано |
+| F11 Документация | ✅ **DONE** | CHANGELOG, ROADMAP, resume-prompt |
+| Git commit & push | ✅ **DONE** | Branch на GitHub |
 
-### Performance Baseline:
-| Tool | P50 | P95 | Target |
-|------|-----|-----|--------|
-| search_memory | 126ms | 155ms | < 200ms |
-| add_memory | 127ms | 192ms | < 500ms |
-| build_graph | 10s | 17s | N/A (LLM) |
-| index_codebase | 9ms | 10ms | < 100ms |
+### Текущее состояние:
+```
+Branch: feature/v0.4.0-treesitter-foundation
+Commit: 8cb49013 feat(treesitter): Add Tree-sitter AST integration foundation
+Files:  15 changed, +2671 insertions
+```
 
 ### Шаг 1: Проверь состояние
 ```bash
 cd /home/dev/zapomni
-git status                    # Проверь изменения
-git log --oneline -5          # Последние коммиты
-make test                     # Unit: 1853 passed
+git branch                    # Должен быть feature/v0.4.0-treesitter-foundation
+git log --oneline -3          # Последние коммиты
+source .venv/bin/activate
+make test                     # Unit: ~1848 passed
 ```
 
-### Шаг 2: Запусти E2E тесты
+### Шаг 2: Проверь Tree-sitter модуль
 ```bash
-make docker-up
-# ВАЖНО: Очистить базу перед тестами!
-docker exec zapomni_falkordb redis-cli FLUSHALL
-make server &
-sleep 10
-make e2e                      # 88 passed, 1 xfailed
+python -c "
+from zapomni_core.treesitter import ParserFactory, LanguageParserRegistry
+ParserFactory.initialize()
+registry = LanguageParserRegistry()
+print(f'Languages: {len(registry.list_registered_languages())}')
+print(f'Extractors: {registry.list_registered_extractors()}')
+"
+# Ожидаемый результат: Languages: 41, Extractors: ['generic']
 ```
 
-### Шаг 3: СЛЕДУЮЩИЕ ЗАДАЧИ (v0.4.0)
-1. **Tree-sitter интеграция** - AST парсинг для 165+ языков
-2. **Load testing**: `make load-test`
-3. **Multi-modal support** - изображения, PDF
-4. **Streaming responses** - для больших результатов
+### Шаг 3: СЛЕДУЮЩИЕ ЗАДАЧИ
+
+**Приоритет 1: F10 — Unit тесты (~115)**
+```
+tests/unit/treesitter/
+├── test_models.py              (~20 tests)
+├── test_exceptions.py          (~10 tests)
+├── test_config.py              (~10 tests)
+├── parser/
+│   ├── test_base.py            (~10 tests)
+│   ├── test_registry.py        (~15 tests)
+│   └── test_factory.py         (~15 tests)
+└── extractors/
+    ├── test_base_extractor.py  (~10 tests)
+    └── test_generic.py         (~25 tests)
+```
+
+**Приоритет 2: Создать PR**
+```bash
+gh pr create --title "feat(treesitter): v0.4.0 Foundation Phase" --base main
+```
+
+**Приоритет 3: Интеграция с index_codebase**
+- Заменить текущую реализацию на Tree-sitter
+- Hybrid гранулярность (файл + top-level элементы)
+
+---
+
+## v0.4.0 Foundation — ЧТО РЕАЛИЗОВАНО
+
+### Архитектурные решения:
+| Аспект | Решение |
+|--------|---------|
+| Интеграция | Полная замена index_codebase (Breaking Change) |
+| Гранулярность | Hybrid (файл + top-level отдельно) |
+| Паттерны | Registry + Factory для расширяемости |
+| Fallback | GenericExtractor для всех 41 языка |
+
+### Структура модуля:
+```
+src/zapomni_core/treesitter/        # +2671 lines
+├── __init__.py                     # 29 exports
+├── models.py                       # ExtractedCode, ASTNodeLocation, CodeElementType, ParameterInfo, ParseResult
+├── exceptions.py                   # TreeSitterError, LanguageNotSupportedError, ParseError, ExtractorNotFoundError
+├── config.py                       # 42 languages, 73 extensions
+├── parser/
+│   ├── base.py                     # BaseLanguageParser ABC
+│   ├── registry.py                 # LanguageParserRegistry (Singleton)
+│   └── factory.py                  # ParserFactory, UniversalLanguageParser
+└── extractors/
+    ├── base.py                     # BaseCodeExtractor ABC
+    └── generic.py                  # GenericExtractor (28 func types, 27 class types)
+```
+
+### Статистика:
+| Метрика | Значение |
+|---------|----------|
+| Языков поддерживается | 41 (makefile недоступен в pack) |
+| File extensions | 73 |
+| Function node types | 28 |
+| Class node types | 27 |
+| Новых файлов | 11 |
+| Строк кода | +2671 |
+
+### Зависимости добавлены:
+```toml
+"tree-sitter>=0.25.0"
+"tree-sitter-language-pack>=0.13.0"
+```
+
+**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
+**Plan**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
 
 ---
 
@@ -141,6 +212,65 @@ REDIS_ENABLED=true           # Redis для кеширования
 ---
 
 ## ИСТОРИЯ СЕССИЙ
+
+### Session 2025-11-28 #9 (v0.4.0 Foundation - IMPLEMENTED)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- Создан Issue #5 для v0.4.0 Tree-sitter Integration
+- **РЕАЛИЗОВАН Foundation Phase (F1-F9)**:
+  - F1: Добавлены зависимости tree-sitter в pyproject.toml
+  - F2: Создан models.py (5 Pydantic моделей)
+  - F3: Создан exceptions.py (4 исключения)
+  - F4: Создан config.py (42 языка, 73 расширения)
+  - F5: Создан parser/base.py (BaseLanguageParser ABC)
+  - F6: Создан parser/registry.py (LanguageParserRegistry Singleton)
+  - F7: Создан parser/factory.py (ParserFactory + UniversalLanguageParser)
+  - F8: Создан extractors/base.py (BaseCodeExtractor ABC)
+  - F9: Создан extractors/generic.py (GenericExtractor fallback)
+- Обновлена документация: ROADMAP.md, CHANGELOG.md
+
+**Статистика**:
+| Метрика | Значение |
+|---------|----------|
+| Новых файлов | 11 |
+| Языков поддерживается | 41 |
+| Node types для extraction | 55 |
+| Unit тесты | 1848 passed (существующие не сломаны) |
+
+**Архитектурные решения v0.4.0**:
+| Аспект | Решение |
+|--------|---------|
+| Интеграция | Полная замена index_codebase (Breaking Change) |
+| Гранулярность | Hybrid (файл + top-level отдельно) |
+| Паттерны | Registry + Factory для расширяемости |
+| Fallback | GenericExtractor для всех языков |
+
+**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
+**Plan**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
+
+**Структура нового модуля**:
+```
+src/zapomni_core/treesitter/
+├── __init__.py           # Public API (29 exports)
+├── models.py             # ExtractedCode, ASTNodeLocation, etc.
+├── exceptions.py         # TreeSitterError hierarchy
+├── config.py             # 42 languages, 73 extensions
+├── parser/
+│   ├── base.py           # BaseLanguageParser ABC
+│   ├── registry.py       # LanguageParserRegistry (Singleton)
+│   └── factory.py        # ParserFactory, UniversalLanguageParser
+└── extractors/
+    ├── base.py           # BaseCodeExtractor ABC
+    └── generic.py        # GenericExtractor (55 node types)
+```
+
+**Следующие шаги**:
+- [ ] F10: Unit тесты (~115 новых)
+- [ ] Интеграция с index_codebase tool
+- [ ] Python-specific extractor
+
+---
 
 ### Session 2025-11-28 #8 (v0.3.1 - Issue #2 FIX)
 **PM**: AI Assistant (Claude Opus 4.5)

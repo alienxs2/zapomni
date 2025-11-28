@@ -68,9 +68,10 @@ gantt
     section Released
     v0.1.0 Initial Release     :done, v01, 2025-11, 1d
     v0.2.x Foundation          :done, v02, 2025-11, 3d
+    v0.3.x Performance         :done, v03, 2025-11, 1d
+    section In Progress
+    v0.4.0 Tree-sitter AST     :active, v04, 2025-11, 2025-12
     section Planned
-    v0.3.0 Performance         :active, v03, 2025-01, 2025-03
-    v0.4.0 Extended Formats    :v04, 2025-04, 2025-05
     v0.5.0 Multi-language      :v05, 2025-05, 2025-06
     v0.6.0 Transports          :v06, 2025-07, 2025-09
     v1.0.0 Stable Release      :milestone, v10, 2025-10, 2025-12
@@ -93,21 +94,41 @@ gantt
 - Support 100K+ memories
 - Concurrent requests: 8+
 
-### v0.4.0 - Extended Formats
+### v0.4.0 - Tree-sitter AST Integration
 
-**Target**: Q2 2025
-**Focus**: Document processing expansion
+**Target**: Q4 2025 (Active Development)
+**Focus**: Advanced code intelligence with AST parsing
+**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
 
-**Planned**:
-- [ ] Markdown processing improvements
-- [ ] Excel/CSV support
-- [ ] Image OCR integration
-- [ ] Audio transcription support
-- [ ] Video transcript indexing
+**Architecture Decisions**:
+- Integration: Full replacement of `index_codebase` (Breaking Change)
+- Granularity: Hybrid (file + top-level elements separately)
+- Patterns: Registry + Factory for extensibility
+- Fallback: GenericExtractor for all 165+ languages
+
+**Foundation Phase (F1-F11)**:
+- [ ] F1: Add tree-sitter dependencies
+- [ ] F2: Create models.py (ExtractedCode, ASTNodeLocation, etc.)
+- [ ] F3: Create exceptions.py (TreeSitterError hierarchy)
+- [ ] F4: Create config.py (165+ language mappings)
+- [ ] F5: Create parser/base.py (BaseLanguageParser ABC)
+- [ ] F6: Create parser/registry.py (LanguageParserRegistry Singleton)
+- [ ] F7: Create parser/factory.py (ParserFactory with lazy init)
+- [ ] F8: Create extractors/base.py (BaseCodeExtractor ABC)
+- [ ] F9: Create extractors/generic.py (GenericExtractor fallback)
+- [ ] F10: Unit tests (~115 new tests)
+- [ ] F11: Documentation updates
+
+**Next Phases**:
+- [ ] Python extractor (semantic extraction)
+- [ ] JavaScript/TypeScript extractors
+- [ ] Integration with index_codebase tool
+- [ ] E2E tests for AST functionality
 
 **KPIs**:
-- 10+ supported formats
-- Processing speed < 1s per page
+- 165+ languages supported (via tree-sitter-language-pack)
+- Parse time < 100ms per file
+- ~115 new unit tests
 
 ### v0.5.0 - Multi-language & i18n
 
@@ -222,4 +243,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-**Last Updated**: 2025-11-27
+**Last Updated**: 2025-11-28
