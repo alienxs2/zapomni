@@ -39,7 +39,9 @@
 - 10 new integration tests
 - v0.5.0 milestone COMPLETE!
 
-**Commit:** Pending
+**Commits:**
+- `8798590c` - feat(treesitter): Integrate language-specific extractors
+- `bd68a56d` - docs: Prepare project for AI agent handoff
 
 ---
 
@@ -107,9 +109,9 @@ zapomni/
 
 ## Next Steps
 
-| Priority | Issue | Title | Description |
-|----------|-------|-------|-------------|
-| 1 | #21 | Tree-sitter Integration | Full integration into index_codebase |
+v0.5.0 complete! Next milestone: **v0.6.0 - Code Intelligence**
+
+Run `gh issue list --state open` to see available issues.
 
 ## Key Documents
 
