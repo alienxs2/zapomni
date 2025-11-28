@@ -1,36 +1,37 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-28 (Session #9 - v0.4.0 Foundation COMPLETED)
-**Project Status**: v0.4.0 Foundation Phase DONE — Unit тесты pending
-**Version**: v0.3.1 (released) | v0.4.0 Foundation (branch ready)
-**Branch**: `feature/v0.4.0-treesitter-foundation`
+**Last Updated**: 2025-11-28 (Session #10 - F10 COMPLETED + PR MERGED)
+**Project Status**: v0.4.0 Foundation Phase **COMPLETE** — Ready for Phase 2
+**Version**: v0.3.1 (released) | v0.4.0 Foundation (merged to main)
+**Branch**: `main`
 
 ---
 
 ## START HERE (Новый PM)
 
-### Что сделано в Session #9:
+### Что сделано в Session #10:
 | Задача | Статус | Детали |
 |--------|--------|--------|
-| F1-F9 Foundation | ✅ **DONE** | 11 файлов, +2671 строк |
-| F10 Unit тесты | ⏳ **PENDING** | ~115 тестов запланировано |
-| F11 Документация | ✅ **DONE** | CHANGELOG, ROADMAP, resume-prompt |
-| Git commit & push | ✅ **DONE** | Branch на GitHub |
+| F10 Unit тесты | ✅ **DONE** | 221 тестов, +2310 строк |
+| PR #7 создан | ✅ **DONE** | feat(treesitter): v0.4.0 Foundation |
+| PR #7 merged | ✅ **DONE** | Fast-forward в main |
+| Документация | ✅ **DONE** | CHANGELOG, resume-prompt обновлены |
 
 ### Текущее состояние:
 ```
-Branch: feature/v0.4.0-treesitter-foundation
-Commit: 8cb49013 feat(treesitter): Add Tree-sitter AST integration foundation
-Files:  15 changed, +2671 insertions
+Branch: main
+Commit: f03daf93 (merged from feature/v0.4.0-treesitter-foundation)
+Unit tests: 2089 passed, 11 skipped
+E2E tests: 88 passed, 1 xfailed
 ```
 
 ### Шаг 1: Проверь состояние
 ```bash
 cd /home/dev/zapomni
-git branch                    # Должен быть feature/v0.4.0-treesitter-foundation
-git log --oneline -3          # Последние коммиты
+git branch                    # Должен быть main
+git log --oneline -5          # Последние коммиты
 source .venv/bin/activate
-make test                     # Unit: ~1848 passed
+make test                     # Unit: ~2089 passed
 ```
 
 ### Шаг 2: Проверь Tree-sitter модуль
@@ -47,29 +48,28 @@ print(f'Extractors: {registry.list_registered_extractors()}')
 
 ### Шаг 3: СЛЕДУЮЩИЕ ЗАДАЧИ
 
-**Приоритет 1: F10 — Unit тесты (~115)**
+**Приоритет 1: v0.4.0 Phase 2 — Интеграция с index_codebase**
 ```
-tests/unit/treesitter/
-├── test_models.py              (~20 tests)
-├── test_exceptions.py          (~10 tests)
-├── test_config.py              (~10 tests)
-├── parser/
-│   ├── test_base.py            (~10 tests)
-│   ├── test_registry.py        (~15 tests)
-│   └── test_factory.py         (~15 tests)
-└── extractors/
-    ├── test_base_extractor.py  (~10 tests)
-    └── test_generic.py         (~25 tests)
+1. Заменить текущую реализацию index_codebase на Tree-sitter
+2. Hybrid гранулярность (файл + top-level элементы)
+3. Обновить тесты index_codebase
 ```
 
-**Приоритет 2: Создать PR**
+**Приоритет 2: Language-specific extractors**
+```
+src/zapomni_core/treesitter/extractors/
+├── python.py       # PythonExtractor
+├── typescript.py   # TypeScriptExtractor
+├── rust.py         # RustExtractor
+└── go.py           # GoExtractor
+```
+
+**Приоритет 3: Release v0.4.0**
 ```bash
-gh pr create --title "feat(treesitter): v0.4.0 Foundation Phase" --base main
+# После интеграции с index_codebase
+git tag v0.4.0
+git push origin v0.4.0
 ```
-
-**Приоритет 3: Интеграция с index_codebase**
-- Заменить текущую реализацию на Tree-sitter
-- Hybrid гранулярность (файл + top-level элементы)
 
 ---
 
@@ -99,6 +99,22 @@ src/zapomni_core/treesitter/        # +2671 lines
     └── generic.py                  # GenericExtractor (28 func types, 27 class types)
 ```
 
+### Тесты:
+```
+tests/unit/treesitter/              # +2310 lines, 221 tests
+├── conftest.py                     # Fixtures (Python, JS, Rust trees)
+├── test_models.py                  # 37 tests
+├── test_exceptions.py              # 28 tests
+├── test_config.py                  # 27 tests
+├── parser/
+│   ├── test_base.py               # 20 tests
+│   ├── test_registry.py           # 22 tests
+│   └── test_factory.py            # 32 tests
+└── extractors/
+    ├── test_base_extractor.py     # 15 tests
+    └── test_generic.py            # 40 tests
+```
+
 ### Статистика:
 | Метрика | Значение |
 |---------|----------|
@@ -106,8 +122,11 @@ src/zapomni_core/treesitter/        # +2671 lines
 | File extensions | 73 |
 | Function node types | 28 |
 | Class node types | 27 |
-| Новых файлов | 11 |
-| Строк кода | +2671 |
+| Новых файлов (source) | 11 |
+| Новых файлов (tests) | 12 |
+| Строк кода | +4981 |
+| Unit тестов (новых) | 221 |
+| Unit тестов (всего) | **2089 passed** |
 
 ### Зависимости добавлены:
 ```toml
@@ -116,24 +135,24 @@ src/zapomni_core/treesitter/        # +2671 lines
 ```
 
 **Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
-**Plan**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
+**PR**: [#7](https://github.com/alienxs2/zapomni/pull/7) (MERGED)
 
 ---
 
-## ТЕКУЩЕЕ СОСТОЯНИЕ (v0.3.1)
+## ТЕКУЩЕЕ СОСТОЯНИЕ (v0.3.1 + v0.4.0 Foundation)
 
 ### Что готово
 | Компонент | Статус | Детали |
 |-----------|--------|--------|
 | MCP Tools | 17/17 | Все зарегистрированы и работают |
-| Unit Tests | **1868 passed** | 11 skipped, ~37 sec runtime |
+| Unit Tests | **2089 passed** | 11 skipped, ~38 sec runtime |
 | E2E Tests | **88 passed, 1 xfailed** | Все критичные тесты проходят |
 | Coverage | 74-89% | По модулям |
 | Feature Flags | Working | Enabled by default |
-| **index_codebase** | **FIXED** | Теперь сохраняет содержимое файлов |
+| **index_codebase** | **FIXED** | Сохраняет содержимое файлов |
+| **Tree-sitter** | **DONE** | Foundation Phase complete |
 | Semantic Cache | **ENABLED** | Redis-backed |
 | Performance | **BASELINED** | search < 200ms, add < 500ms |
-| Release | **v0.3.1** | Issue #2 исправлен |
 
 ### xfailed тест (by design)
 - **test_get_current_workspace_after_switch** - SSE sessions stateless, workspace state не persist между подключениями
@@ -145,6 +164,8 @@ src/zapomni_core/treesitter/        # +2671 lines
 - [x] **PHASE 3**: Roadmap & Planning (T3.1-T3.6)
 - [x] **PHASE 5**: Final Validation (T5.1 - 115 E2E tests)
 - [x] **v0.3.0 RELEASE**
+- [x] **v0.3.1 RELEASE** (Issue #2 fix)
+- [x] **v0.4.0 Foundation** (Tree-sitter F1-F10)
 
 ---
 
@@ -153,7 +174,7 @@ src/zapomni_core/treesitter/        # +2671 lines
 ```bash
 # Makefile targets
 make help                          # Показать все команды
-make test                          # Unit тесты (~35 sec)
+make test                          # Unit тесты (~38 sec)
 make e2e                           # E2E тесты (требует сервер)
 make server                        # Запустить MCP сервер
 make docker-up                     # Запустить FalkorDB + Redis
@@ -213,6 +234,33 @@ REDIS_ENABLED=true           # Redis для кеширования
 
 ## ИСТОРИЯ СЕССИЙ
 
+### Session 2025-11-28 #10 (F10 Unit Tests + PR Merge)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- **F10: 221 unit тестов для treesitter модуля**:
+  - test_models.py - 37 tests
+  - test_exceptions.py - 28 tests
+  - test_config.py - 27 tests
+  - parser/test_base.py - 20 tests
+  - parser/test_registry.py - 22 tests
+  - parser/test_factory.py - 32 tests
+  - extractors/test_base_extractor.py - 15 tests
+  - extractors/test_generic.py - 40 tests
+- **PR #7 создан и merged** в main
+- **Документация обновлена**: CHANGELOG.md, resume-prompt.md
+
+**Статистика**:
+| Метрика | До | После |
+|---------|-----|-------|
+| Unit tests | 1868 | **2089** |
+| Новые тесты | - | **+221** |
+| Строк тестов | - | **+2310** |
+
+**PR**: [#7](https://github.com/alienxs2/zapomni/pull/7) (MERGED)
+
+---
+
 ### Session 2025-11-28 #9 (v0.4.0 Foundation - IMPLEMENTED)
 **PM**: AI Assistant (Claude Opus 4.5)
 
@@ -230,45 +278,7 @@ REDIS_ENABLED=true           # Redis для кеширования
   - F9: Создан extractors/generic.py (GenericExtractor fallback)
 - Обновлена документация: ROADMAP.md, CHANGELOG.md
 
-**Статистика**:
-| Метрика | Значение |
-|---------|----------|
-| Новых файлов | 11 |
-| Языков поддерживается | 41 |
-| Node types для extraction | 55 |
-| Unit тесты | 1848 passed (существующие не сломаны) |
-
-**Архитектурные решения v0.4.0**:
-| Аспект | Решение |
-|--------|---------|
-| Интеграция | Полная замена index_codebase (Breaking Change) |
-| Гранулярность | Hybrid (файл + top-level отдельно) |
-| Паттерны | Registry + Factory для расширяемости |
-| Fallback | GenericExtractor для всех языков |
-
 **Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
-**Plan**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
-
-**Структура нового модуля**:
-```
-src/zapomni_core/treesitter/
-├── __init__.py           # Public API (29 exports)
-├── models.py             # ExtractedCode, ASTNodeLocation, etc.
-├── exceptions.py         # TreeSitterError hierarchy
-├── config.py             # 42 languages, 73 extensions
-├── parser/
-│   ├── base.py           # BaseLanguageParser ABC
-│   ├── registry.py       # LanguageParserRegistry (Singleton)
-│   └── factory.py        # ParserFactory, UniversalLanguageParser
-└── extractors/
-    ├── base.py           # BaseCodeExtractor ABC
-    └── generic.py        # GenericExtractor (55 node types)
-```
-
-**Следующие шаги**:
-- [ ] F10: Unit тесты (~115 новых)
-- [ ] Интеграция с index_codebase tool
-- [ ] Python-specific extractor
 
 ---
 
@@ -278,110 +288,42 @@ src/zapomni_core/treesitter/
 **Выполнено**:
 - **ИСПРАВЛЕН Issue #2** - index_codebase теперь сохраняет содержимое файлов
 - Добавлен метод `_extension_to_language()` для определения языка по расширению
-- Улучшены metadata: добавлены поля `language` и `indexed_at`
-- Пустые файлы теперь пропускаются с логированием
 - Добавлено 15 новых unit тестов
-- Обновлена документация: ROADMAP.md, CHANGELOG.md, pyproject.toml
-
-**Файлы изменены**:
-- `src/zapomni_mcp/tools/index_codebase.py` - читает содержимое файлов
-- `tests/unit/test_index_codebase_tool.py` - +15 новых тестов
-- `ROADMAP.md` - v0.3.1
-- `CHANGELOG.md` - запись о v0.3.1
-- `pyproject.toml` - версия 0.3.1
-- `.claude/resume-prompt.md` - обновлён для v0.3.1
-
-**Unit тесты (Session #7 → Session #8)**:
-| Метрика | До | После |
-|---------|-----|-------|
-| passed | 1853 | **1868** |
-| новые тесты | - | **+15** |
 
 **Closes**: [Issue #2](https://github.com/alienxs2/zapomni/issues/2)
 
 ---
 
-### Session 2025-11-27 #7 (v0.3.0 RELEASE)
-**PM**: AI Assistant (Claude Opus 4.5)
-
-**Выполнено**:
-- Исправлен test_search_no_results - добавлен clear_all для изоляции
-- Помечен test_get_current_workspace_after_switch как xfail (by design)
-- Увеличен sleep в test_search_memory_finds_added (0.5s → 2.0s)
-- Обнаружена проблема с "грязной" базой FalkorDB - добавлена рекомендация FLUSHALL
-- **v0.3.0 Released**
-
-**Файлы изменены**:
-- `tests/e2e/tools/test_memory_tools.py` - +clear_all, +sleep 2.0s
-- `tests/e2e/tools/test_workspace_tools.py` - +@pytest.mark.xfail
-- `.claude/resume-prompt.md` - обновлён для v0.3.0
-
-**E2E результаты (Session #6 → Session #7)**:
-| Метрика | До | После |
-|---------|-----|-------|
-| passed | 87 | **88** |
-| failed | 2 | **0** |
-| xfailed | 0 | **1** |
-
-**Важное открытие**: E2E тесты могут падать из-за "грязных" данных в FalkorDB от предыдущих прогонов. Решение: `docker exec zapomni_falkordb redis-cli FLUSHALL` перед тестами.
-
----
-
-### Session 2025-11-27 #6 (PERFORMANCE BENCHMARKING)
-**PM**: AI Assistant (Claude Opus 4.5)
-
-**Выполнено**:
-- Исправлен set_model tool (MCP формат ответа) - 4 теста теперь PASSED
-- Добавлены Makefile targets: `load-test`, `load-test-ui`, `load-test-light`
-- Добавлен timing (processing_time_ms) в search_memory и add_memory tools
-- Performance baseline создан
-
-**E2E результаты**: 87 passed, 2 failed
-
----
-
-### Session 2025-11-27 #5 (SERVER ISERROR FIX)
-**PM**: AI Assistant (Claude Opus 4.5)
-
-**Выполнено**:
-- **Найден КРИТИЧЕСКИЙ баг в server.py** - isError терялся при передаче от tool к клиенту
-- Исправлен баг в handle_call_tool()
-
----
-
-### Session 2025-11-27 #4 (E2E VALIDATION - BUG FIXED)
-**PM**: AI Assistant (Claude Opus 4.5)
-
-**Выполнено**:
-- Исправлен isError баг в SSE клиенте
-- E2E тестирование по файлам (не все сразу!)
-
----
-
-### Session 2025-11-27 #3 (PHASE 5 - T5.1 COMPLETE)
-**Выполнено**:
-- 115 E2E тестов созданы
-- CI/CD setup (GitHub Actions)
-- Makefile создан
-
----
-
-### Previous Sessions
+### Previous Sessions (#1-#7)
+- Session #7: v0.3.0 RELEASE
+- Session #6: Performance Benchmarking
+- Session #5: Server isError Fix
+- Session #4: E2E Validation
+- Session #3: 115 E2E tests
 - Session #1-2: E2E Infrastructure
 - PHASE 0-3: Аудит, исправления, документация
-- Детали в `.project-management/reports/`
+
+Детали в `.project-management/reports/`
 
 ---
 
-## СЛЕДУЮЩИЕ ШАГИ (v0.4.0)
+## СЛЕДУЮЩИЕ ШАГИ (v0.4.0 Phase 2)
 
-1. **Load testing** с Locust
-2. **Multi-modal support** - изображения, PDF
-3. **Streaming responses** - для больших результатов
-4. **Advanced caching** - query result caching
+1. **Интеграция Tree-sitter с index_codebase**
+   - Заменить текущую реализацию
+   - Hybrid гранулярность (файл + elements)
+
+2. **Language-specific extractors**
+   - PythonExtractor (docstrings, decorators, type hints)
+   - TypeScriptExtractor (interfaces, types)
+   - RustExtractor (traits, impl blocks)
+
+3. **Release v0.4.0**
+   - После успешной интеграции
+   - Обновить pyproject.toml version
 
 См. `ROADMAP.md` для полного плана.
 
 ---
 
-**Успех v0.3.0 = 1853 Unit + 88 E2E passed | 1 xfailed (by design) | Performance baselined**
+**Успех v0.4.0 Foundation = 2089 Unit + 88 E2E passed | Tree-sitter ready for integration**

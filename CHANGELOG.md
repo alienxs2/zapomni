@@ -6,13 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-### v0.4.0 Foundation - Tree-sitter AST Integration (In Progress)
+### v0.4.0 Foundation - Tree-sitter AST Integration (COMPLETE)
 
-**Issue:** [#5](https://github.com/alienxs2/zapomni/issues/5)
+**Issue:** [#5](https://github.com/alienxs2/zapomni/issues/5) | **PR:** [#7](https://github.com/alienxs2/zapomni/pull/7)
 
 **Added:**
 - **Tree-sitter integration** for AST parsing of 41+ programming languages
-- New module: `src/zapomni_core/treesitter/`
+- New module: `src/zapomni_core/treesitter/` (+2671 lines)
   - `models.py` - Pydantic models: `ExtractedCode`, `ASTNodeLocation`, `CodeElementType`, `ParameterInfo`, `ParseResult`
   - `exceptions.py` - Exception hierarchy: `TreeSitterError`, `LanguageNotSupportedError`, `ParseError`, `ExtractorNotFoundError`
   - `config.py` - Language mappings for 42 languages (73 file extensions)
@@ -21,21 +21,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `parser/factory.py` - `ParserFactory` with lazy initialization, `UniversalLanguageParser`
   - `extractors/base.py` - `BaseCodeExtractor` ABC
   - `extractors/generic.py` - `GenericExtractor` fallback (28 function types, 27 class types)
+- **221 unit tests** for treesitter module (+2310 lines)
+  - `test_models.py` - 37 tests
+  - `test_exceptions.py` - 28 tests
+  - `test_config.py` - 27 tests
+  - `parser/test_base.py` - 20 tests
+  - `parser/test_registry.py` - 22 tests
+  - `parser/test_factory.py` - 32 tests
+  - `extractors/test_base_extractor.py` - 15 tests
+  - `extractors/test_generic.py` - 40 tests
 
 **Dependencies:**
 - `tree-sitter>=0.25.0`
 - `tree-sitter-language-pack>=0.13.0`
 
 **Architecture Decisions:**
-- Full replacement of `index_codebase` (Breaking Change planned)
+- Full replacement of `index_codebase` (Breaking Change planned for Phase 2)
 - Hybrid granularity: file + top-level elements stored separately
 - Registry + Factory patterns for extensibility
 - GenericExtractor as universal fallback
 
 **Statistics:**
-- 11 new files created
+- 27 new files created (11 source + 12 tests + 4 __init__.py)
 - 41 languages registered (makefile not available in pack)
 - 55 AST node types supported for extraction
+- **Total unit tests: 2089 passed** (was 1868)
+
+**Next Steps:**
+- Phase 2: Integration with `index_codebase` tool
+- Language-specific extractors (Python, TypeScript, etc.)
 
 See [ROADMAP.md](ROADMAP.md) for full v0.4.0 plan.
 
