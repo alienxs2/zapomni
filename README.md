@@ -12,7 +12,7 @@ Zapomni is a local-first MCP (Model Context Protocol) memory server that provide
 - **Unified database** - FalkorDB combines vector embeddings and knowledge graph in a single system
 - **Hybrid search** - vector similarity, BM25 keyword search, and graph traversal
 - **Knowledge graph** - automatic entity extraction and relationship mapping
-- **Code intelligence** - AST-based code analysis and indexing (41+ languages, Python extractor with full AST support)
+- **Code intelligence** - AST-based code analysis and indexing (41+ languages, Python & TypeScript extractors with full AST support)
 - **Git Hooks integration** - automatic re-indexing on code changes
 - **MCP native** - seamless integration with Claude, Cursor, Cline, and other MCP clients
 - **Privacy guaranteed** - your data never leaves your machine
@@ -270,7 +270,7 @@ For more details, see the [CLI Guide](docs/CLI.md).
 
 ### Running Tests
 
-The project includes **2134 tests** (unit + E2E + integration) with high coverage (74-89% depending on module).
+The project includes **2252+ tests** (unit + E2E + integration) with high coverage (74-89% depending on module).
 
 ```bash
 # Run all tests
@@ -320,8 +320,8 @@ For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOP
 - Git hooks integration
 - All 17 MCP tools available
 - Tree-sitter AST parsing (41 languages, 279 tests)
-- Language-specific extractors: Python (58 tests, full AST support)
-- Comprehensive test suite (2192 tests)
+- Language-specific extractors: Python (58 tests), TypeScript/JS (60 tests)
+- Comprehensive test suite (2252+ tests)
 
 **Recent Fixes (v0.5.0-alpha)**:
 - Workspace isolation (Issue #12)

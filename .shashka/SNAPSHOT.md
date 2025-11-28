@@ -1,20 +1,22 @@
 # Project Snapshot
 
 **Project**: Zapomni
-**Version**: v0.4.0 Foundation (merged) | v0.3.1 (released)
-**Status**: BUG FIXING COMPLETE! Ready for v0.5.0
-**Last Updated**: 2025-11-28 (Session #14)
+**Version**: v0.5.0-alpha
+**Status**: Issues #19, #20 COMPLETE! v0.5.0 Progress: 2/3
+**Last Updated**: 2025-11-28 (Session #16)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| Unit Tests | 2134 passed, 11 skipped |
+| Unit Tests | 2252 passed, 11 skipped |
 | E2E Tests | 88 passed, 1 xfailed |
-| Tree-sitter | 41 languages, 221 tests |
-| Known Bugs | **0 remaining!** |
-| Fixed Bugs | **7** (All bugs from analysis) |
-| Open Issues | 13 (features only) |
+| Tree-sitter | 41 languages, 339 tests |
+| PythonExtractor | 58 tests, full AST support |
+| TypeScriptExtractor | 60 tests, full AST support |
+| Known Bugs | **0 remaining** |
+| Fixed Bugs | **7** (Issues #12-18) |
+| Open Issues | 11 (features only) |
 | Open PRs | 0 |
 
 ## Bug Status Summary - ALL FIXED!
@@ -53,7 +55,7 @@ zapomni/
 │   ├── zapomni_mcp/        # MCP server (17 tools) ✅
 │   ├── zapomni_db/         # FalkorDB + Redis clients
 │   └── zapomni_cli/        # CLI tools + Git hooks
-└── tests/                  # 2134+ unit tests
+└── tests/                  # 2252+ unit tests
 ```
 
 ## Roadmap to v1.0

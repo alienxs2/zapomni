@@ -74,7 +74,7 @@ zapomni/
 │   ├── zapomni_mcp/        # MCP server (17 tools) ✅
 │   ├── zapomni_db/         # FalkorDB + Redis clients
 │   └── zapomni_cli/        # CLI tools + Git hooks
-└── tests/                  # 2192+ unit tests
+└── tests/                  # 2252+ unit tests
 ```
 
 ## Roadmap to v1.0
