@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Added
+
+#### PythonExtractor - Full Python AST Support (Issue #19)
+
+**Issue:** [#19](https://github.com/alienxs2/zapomni/issues/19)
+
+Added specialized Python extractor with comprehensive AST analysis capabilities:
+
+**Features:**
+- **Docstrings** - Google, NumPy, and Sphinx style docstrings fully extracted
+- **Decorators** - @staticmethod, @classmethod, @property, @abstractmethod, custom decorators
+- **Type Hints** - Full parameter and return type annotation extraction
+- **Async/Generators** - async def, yield, yield from detection
+- **Privacy Detection** - `_private` vs `__dunder__` distinction
+
+**Files Added:**
+- `src/zapomni_core/treesitter/extractors/python.py` - PythonExtractor class (~700 lines)
+- `tests/unit/treesitter/extractors/test_python.py` - 58 comprehensive tests (~1000 lines)
+
+**Files Modified:**
+- `src/zapomni_core/treesitter/extractors/__init__.py` - Export PythonExtractor
+- `src/zapomni_core/treesitter/config.py` - Add "python" to LANGUAGES_WITH_EXTRACTORS
+
+**Test Results:**
+- **58 new tests** for PythonExtractor (target was 40+)
+- **Total Unit Tests:** 2192 passed
+- **Coverage:** All extractor functionality tested
+
+**Closes:** [#19](https://github.com/alienxs2/zapomni/issues/19)
+
+---
+
 ## [0.5.0-alpha] - 2025-11-28
 
 ### Bug Fixing Complete - All 7 Critical Bugs Fixed

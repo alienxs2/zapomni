@@ -90,9 +90,11 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
 # Initially empty, will be populated as extractors are implemented.
 # Example: after implementing PythonExtractor, add "python" here.
 
-LANGUAGES_WITH_EXTRACTORS: Set[str] = set()
+LANGUAGES_WITH_EXTRACTORS: Set[str] = {
+    "python",  # PythonExtractor - Issue #19
+}
 # Will be populated as extractors are added:
-# "python", "javascript", "typescript", "java", "go", "rust", etc.
+# "javascript", "typescript", "java", "go", "rust", etc.
 
 
 # =============================================================================
