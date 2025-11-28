@@ -8,6 +8,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+#### Tree-sitter Integration into index_codebase (Issue #21)
+
+**Issue:** [#21](https://github.com/alienxs2/zapomni/issues/21)
+
+Integrated language-specific extractors (PythonExtractor, TypeScriptExtractor) into the `index_codebase` MCP tool. Previously, the tool always used GenericExtractor regardless of file type.
+
+**Changes:**
+- **index_codebase.py** now uses `LanguageParserRegistry` to get language-specific extractors
+- Python files (`.py`) use `PythonExtractor` with full docstring, decorator, and type hint support
+- TypeScript/JavaScript files (`.ts`, `.tsx`, `.js`, `.jsx`) use `TypeScriptExtractor` with JSDoc and interface support
+- Other languages fall back to `GenericExtractor` for universal AST extraction
+
+**Files Modified:**
+- `src/zapomni_mcp/tools/index_codebase.py` - Use registry for extractor selection
+
+**Files Added:**
+- `tests/integration/test_index_codebase_extractors.py` - 10 integration tests
+
+**Test Results:**
+- **10 new integration tests** for extractor integration
+- **Total Unit Tests:** 2252 passed, 11 skipped
+- **All existing tests pass**
+
+**Completes v0.5.0 milestone!**
+
+**Closes:** [#21](https://github.com/alienxs2/zapomni/issues/21)
+
+---
+
 #### TypeScriptExtractor - Full TypeScript/JavaScript AST Support (Issue #20)
 
 **Issue:** [#20](https://github.com/alienxs2/zapomni/issues/20)

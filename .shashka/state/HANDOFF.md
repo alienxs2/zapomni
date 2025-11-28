@@ -1,33 +1,33 @@
 # Session Handoff
 
-**Last Session**: #16 (2025-11-28)
-**Next Session**: #17
-**Focus**: Issue #21 (Tree-sitter Integration)
+**Last Session**: #17 (2025-11-28)
+**Next Session**: #18
+**Focus**: v0.6.0 - Code Intelligence
 
 ## For Next AI Agent / PM
 
-### Session #16 Was Highly Productive!
+### Session #17 - v0.5.0 COMPLETE!
 
-**Issue #20 (TypeScriptExtractor) COMPLETE:**
-- Full TypeScript/JavaScript AST support implemented
-- 60 comprehensive tests (target was 40+)
-- All 2252 unit tests passing
-- Features: JSDoc, decorators, interfaces, type aliases, enums, access modifiers
+**Issue #21 (Tree-sitter Integration) COMPLETE:**
+- Integrated PythonExtractor and TypeScriptExtractor into index_codebase MCP tool
+- Modified `_parse_file_ast()` to use `LanguageParserRegistry`
+- Python files now use PythonExtractor (docstrings, decorators, type hints)
+- TypeScript/JS files now use TypeScriptExtractor (JSDoc, interfaces, enums)
+- Other languages fall back to GenericExtractor
+- 10 new integration tests added
+- All 2252 unit tests + 10 integration tests passing
 
-### Immediate Action for Next Session
-
-1. **Start Issue #21 (Tree-sitter Integration)**
-   - Integrate extractors into index_codebase MCP tool
-   - Replace generic extraction with language-specific extractors
-   - Reference: `src/zapomni_mcp/tools/index_codebase.py`
-
-### v0.5.0 Progress
+### v0.5.0 Progress - COMPLETE!
 
 | Issue | Status | Tests | Notes |
 |-------|--------|-------|-------|
 | #19 | **COMPLETE** | 58 | PythonExtractor |
 | #20 | **COMPLETE** | 60 | TypeScriptExtractor |
-| #21 | Not Started | - | Next priority |
+| #21 | **COMPLETE** | 10 | Tree-sitter Integration |
+
+### Next Milestone: v0.6.0 - Code Intelligence
+
+Refer to GitHub issues for v0.6.0 features.
 
 ### What Was Done in Session #16
 

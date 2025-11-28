@@ -1,8 +1,8 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-11-28 (Session #16)
-**Project Status**: v0.5.0-alpha | Issues #19, #20 COMPLETE | Issue #21 Next
-**Version**: v0.5.0-alpha
+**Last Updated**: 2025-11-28 (Session #17)
+**Project Status**: v0.5.0 COMPLETE | All 3 issues done!
+**Version**: v0.5.0
 **Branch**: `main`
 
 ---
@@ -11,18 +11,19 @@
 
 ### Current State Summary
 
-**v0.5.0 Progress: 2/3 (67%)**
+**v0.5.0 Progress: 3/3 (100%) - COMPLETE!**
 - Issue #19: PythonExtractor - **COMPLETE** (58 tests)
 - Issue #20: TypeScriptExtractor - **COMPLETE** (60 tests)
-- Issue #21: Tree-sitter Integration - **NOT STARTED** (next priority)
+- Issue #21: Tree-sitter Integration - **COMPLETE** (10 tests)
 
 **Test Status:**
 - Unit Tests: **2252 passed**, 11 skipped
+- Integration Tests: **10 passed** (new)
 - E2E Tests: 88 passed, 1 xfailed
 - Tree-sitter: 41 languages, 339 tests
-- Extractors: Python (58), TypeScript (60)
+- Extractors: Python (58), TypeScript (60), Integration (10)
 
-### What was done in Sessions #15-16:
+### What was done in Sessions #15-17:
 
 1. **PythonExtractor** (Session #15)
    - Full Python AST support
@@ -35,21 +36,20 @@
    - Access modifiers, async, generators, arrow functions
    - 60 tests, commit `a5ec6e9e`
 
+3. **Tree-sitter Integration** (Session #17)
+   - Integrated extractors into index_codebase MCP tool
+   - Python files use PythonExtractor (docstrings, decorators, type hints)
+   - TypeScript/JS files use TypeScriptExtractor (JSDoc, interfaces, enums)
+   - Other languages fall back to GenericExtractor
+   - 10 integration tests
+
 ---
 
-## NEXT STEP: Issue #21 (Tree-sitter Integration)
+## NEXT MILESTONE: v0.6.0 - Code Intelligence
 
-### Priority: HIGH - Complete v0.5.0
+**v0.5.0 is COMPLETE!** All 3 issues done.
 
-**Goal**: Integrate language-specific extractors into `index_codebase` MCP tool
-
-**Key File**: `src/zapomni_mcp/tools/index_codebase.py`
-
-**Tasks**:
-1. Use LanguageParserRegistry to get language-specific extractors
-2. Replace generic extraction with specialized extractors for Python/TypeScript
-3. Fall back to generic extractor for other languages
-4. Update tests for integration
+Refer to GitHub issues for v0.6.0 features.
 
 ### Reference Files
 

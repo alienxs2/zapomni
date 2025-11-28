@@ -29,7 +29,8 @@ logger = structlog.get_logger(__name__)
 # Tree-sitter imports for AST parsing
 try:
     from zapomni_core.treesitter.parser.factory import ParserFactory
-    from zapomni_core.treesitter.extractors.generic import GenericExtractor
+    from zapomni_core.treesitter.extractors import GenericExtractor
+    from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
     from zapomni_core.treesitter.models import ExtractedCode
 
     TREESITTER_AVAILABLE = True
@@ -577,8 +578,22 @@ class IndexCodebaseTool:
                     "errors": [f"Parse failed for {file_path}"],
                 }
 
-            # Extract functions and classes using GenericExtractor
-            extractor = GenericExtractor()
+            # Get language-specific extractor with fallback to generic
+            from pathlib import Path as PathLib
+            extension = PathLib(file_path).suffix
+            language = self._extension_to_language(extension)
+            registry = LanguageParserRegistry()
+            extractor = registry.get_extractor(language)
+            if extractor is None:
+                extractor = GenericExtractor()
+
+            self.logger.debug(
+                "using_extractor",
+                file=file_path,
+                language=language,
+                extractor_type=type(extractor).__name__,
+            )
+
             functions = extractor.extract_functions(tree, content, file_path)
             classes = extractor.extract_classes(tree, content, file_path)
 

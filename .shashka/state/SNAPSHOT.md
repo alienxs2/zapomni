@@ -1,15 +1,16 @@
 # Project Snapshot
 
 **Project**: Zapomni
-**Version**: v0.5.0-alpha
-**Status**: Issues #19, #20 COMPLETE! v0.5.0 Progress: 2/3
-**Last Updated**: 2025-11-28 (Session #16)
+**Version**: v0.5.0
+**Status**: v0.5.0 COMPLETE! All 3 issues done.
+**Last Updated**: 2025-11-28 (Session #17)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
 | Unit Tests | 2252 passed, 11 skipped |
+| Integration Tests | 10 passed (new) |
 | E2E Tests | 88 passed, 1 xfailed |
 | Tree-sitter | 41 languages, 339 tests |
 | PythonExtractor | 58 tests, full AST support |
@@ -19,13 +20,28 @@
 | Open Issues | 11 (features only) |
 | Open PRs | 0 |
 
-## v0.5.0 Progress
+## v0.5.0 Progress - COMPLETE!
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
 | #19 | PythonExtractor | **COMPLETE** | 58 |
 | #20 | TypeScriptExtractor | **COMPLETE** | 60 |
-| #21 | Tree-sitter Integration | Not Started | - |
+| #21 | Tree-sitter Integration | **COMPLETE** | 10 |
+
+## Session #17 Summary
+
+**Issue #21 (Tree-sitter Integration) COMPLETE:**
+- Integrated PythonExtractor and TypeScriptExtractor into index_codebase MCP tool
+- Modified `_parse_file_ast()` to use `LanguageParserRegistry`
+- Python files now use PythonExtractor (docstrings, decorators, type hints)
+- TypeScript/JS files now use TypeScriptExtractor (JSDoc, interfaces, enums)
+- Other languages fall back to GenericExtractor
+- 10 new integration tests
+- v0.5.0 milestone COMPLETE!
+
+**Commit:** Pending
+
+---
 
 ## Session #16 Summary
 
@@ -82,7 +98,7 @@ zapomni/
 | Milestone | Focus | Status |
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
-| v0.5.0 | Solid Foundation | **IN PROGRESS** (2/3 done) |
+| v0.5.0 | Solid Foundation | **COMPLETE** (3/3 done) |
 | v0.6.0 | Code Intelligence | Planned |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
