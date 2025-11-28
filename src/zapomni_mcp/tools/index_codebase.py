@@ -26,6 +26,19 @@ from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 logger = structlog.get_logger(__name__)
 
+# Tree-sitter imports for AST parsing
+try:
+    from zapomni_core.treesitter.parser.factory import ParserFactory
+    from zapomni_core.treesitter.extractors.generic import GenericExtractor
+    from zapomni_core.treesitter.models import ExtractedCode
+
+    TREESITTER_AVAILABLE = True
+except ImportError:
+    TREESITTER_AVAILABLE = False
+    ParserFactory = None  # type: ignore
+    GenericExtractor = None  # type: ignore
+    ExtractedCode = None  # type: ignore
+
 
 # Language to file extensions mapping
 LANGUAGE_EXTENSIONS = {
@@ -289,15 +302,19 @@ class IndexCodebaseTool:
             files = index_result.get("files", [])
             files = self._filter_files(files, languages, include_tests, max_file_size)
 
-            # Step 4: Calculate statistics
-            stats = self._calculate_statistics(files, index_result)
-
-            # Step 5: Store code as memories and mark fresh (delta indexing)
+            # Step 4: Store code as memories with AST parsing (delta indexing)
             memories_created = 0
+            functions_found = 0
+            classes_found = 0
             if hasattr(self.memory_processor, "db_client") and self.memory_processor.db_client:
-                memories_created = await self._store_code_memories_with_delta(
-                    files, workspace_id
+                memories_created, functions_found, classes_found = (
+                    await self._store_code_memories_with_delta(files, workspace_id)
                 )
+
+            # Step 5: Calculate statistics with actual AST counts
+            stats = self._calculate_statistics(
+                files, index_result, functions_found, classes_found
+            )
 
             # Step 5.5: Count remaining stale memories
             stale_count = 0
@@ -510,10 +527,92 @@ class IndexCodebaseTool:
                 return lang
         return "unknown"
 
+    def _parse_file_ast(
+        self,
+        file_path: str,
+        content: bytes,
+    ) -> Dict[str, Any]:
+        """
+        Parse file with Tree-sitter and extract functions/classes.
+
+        Uses Tree-sitter's AST parsing to extract structured code elements
+        (functions, methods, classes) from source files. Falls back gracefully
+        if Tree-sitter is not available.
+
+        Args:
+            file_path: Path to the source file.
+            content: File content as bytes.
+
+        Returns:
+            Dictionary containing:
+                - functions: List of ExtractedCode objects for functions/methods
+                - classes: List of ExtractedCode objects for classes
+                - errors: List of error messages (if any)
+        """
+        if not TREESITTER_AVAILABLE:
+            return {
+                "functions": [],
+                "classes": [],
+                "errors": ["Tree-sitter not available"],
+            }
+
+        try:
+            # Get parser for this file type
+            parser_wrapper = ParserFactory.get_parser_for_file(file_path)
+            if parser_wrapper is None:
+                return {
+                    "functions": [],
+                    "classes": [],
+                    "errors": [f"No parser available for {file_path}"],
+                }
+
+            # Get the actual tree-sitter parser and parse the content
+            ts_parser = parser_wrapper.get_parser()
+            tree = ts_parser.parse(content)
+
+            if tree is None or tree.root_node is None:
+                return {
+                    "functions": [],
+                    "classes": [],
+                    "errors": [f"Parse failed for {file_path}"],
+                }
+
+            # Extract functions and classes using GenericExtractor
+            extractor = GenericExtractor()
+            functions = extractor.extract_functions(tree, content, file_path)
+            classes = extractor.extract_classes(tree, content, file_path)
+
+            self.logger.debug(
+                "ast_parse_complete",
+                file=file_path,
+                functions=len(functions),
+                classes=len(classes),
+            )
+
+            return {
+                "functions": functions,
+                "classes": classes,
+                "errors": [],
+            }
+
+        except Exception as e:
+            self.logger.warning(
+                "ast_parse_error",
+                file=file_path,
+                error=str(e),
+            )
+            return {
+                "functions": [],
+                "classes": [],
+                "errors": [str(e)],
+            }
+
     def _calculate_statistics(
         self,
         files: List[Dict[str, Any]],
         full_result: Dict[str, Any],
+        functions_found: int = 0,
+        classes_found: int = 0,
     ) -> Dict[str, Any]:
         """
         Calculate statistics from indexed files.
@@ -521,14 +620,16 @@ class IndexCodebaseTool:
         Args:
             files: Filtered list of files
             full_result: Full result from indexer including statistics
+            functions_found: Number of functions extracted via AST parsing
+            classes_found: Number of classes extracted via AST parsing
 
         Returns:
             Dictionary with calculated statistics
         """
         stats = {
             "files_indexed": len(files),
-            "functions_found": 0,  # Would need AST parsing to count
-            "classes_found": 0,  # Would need AST parsing to count
+            "functions_found": functions_found,
+            "classes_found": classes_found,
             "languages": {},
             "total_lines": 0,
         }
@@ -597,24 +698,30 @@ class IndexCodebaseTool:
         self,
         files: List[Dict[str, Any]],
         workspace_id: str,
-    ) -> int:
+    ) -> Tuple[int, int, int]:
         """
         Store code files as memories with delta indexing support.
 
         For each file:
-        1. Check if memory exists (mark fresh if so)
-        2. Create new memory if not exists
-        3. Track metrics
+        1. Parse AST to extract functions and classes
+        2. Store each function/class as separate memory with rich metadata
+        3. Fall back to whole-file storage if AST parsing not available
+        4. Track metrics
 
         Args:
             files: List of code file dictionaries
             workspace_id: Workspace ID for operations
 
         Returns:
-            Number of new memories created
+            Tuple of (memories_created, functions_found, classes_found)
         """
+        from pathlib import Path
+        from datetime import datetime, timezone
+
         memories_created = 0
         memories_refreshed = 0
+        total_functions = 0
+        total_classes = 0
 
         db_client = self.memory_processor.db_client
 
@@ -628,72 +735,186 @@ class IndexCodebaseTool:
                 if not file_path:
                     continue
 
-                # Try to mark existing memory as fresh
-                existing_id = await db_client.mark_memory_fresh(
-                    file_path=file_path,
-                    workspace_id=workspace_id,
-                )
-
-                if existing_id:
-                    # Memory exists and is now fresh
-                    memories_refreshed += 1
-                    self.logger.debug(
-                        "memory_refreshed",
-                        file_path=file_path,
-                        memory_id=existing_id,
+                # Read file content
+                try:
+                    content_text = Path(file_path).read_text(
+                        encoding="utf-8", errors="ignore"
                     )
-                else:
-                    # New file - read content and create memory
-                    from pathlib import Path
-                    from datetime import datetime, timezone
+                    content_bytes = content_text.encode("utf-8")
+                except Exception as read_error:
+                    self.logger.warning(
+                        "failed_to_read_file_content",
+                        file_path=file_path,
+                        error=str(read_error),
+                    )
+                    continue
 
-                    # Read actual file content for semantic search
+                if not content_text.strip():
+                    self.logger.debug(
+                        "empty_file_skipped",
+                        file_path=file_path,
+                    )
+                    continue
+
+                # Determine language from extension
+                language = self._extension_to_language(extension)
+
+                # Try AST parsing for granular extraction
+                ast_result = self._parse_file_ast(file_path, content_bytes)
+
+                functions = ast_result.get("functions", [])
+                classes = ast_result.get("classes", [])
+
+                total_functions += len(functions)
+                total_classes += len(classes)
+
+                # Store each function as separate memory
+                for func in functions:
                     try:
-                        content = Path(file_path).read_text(
-                            encoding="utf-8", errors="ignore"
-                        )
-                    except Exception as read_error:
-                        self.logger.warning(
-                            "failed_to_read_file_content",
-                            file_path=file_path,
-                            error=str(read_error),
-                        )
-                        content = ""
+                        # Create unique identifier for this code element
+                        element_id = f"{file_path}::{func.qualified_name}"
 
-                    if not content.strip():
+                        # Format function text with context
+                        text_to_store = (
+                            f"# Function: {func.name}\n"
+                            f"# File: {relative_path}\n"
+                            f"# Language: {language}\n"
+                            f"# Lines: {func.location.start_line + 1}-{func.location.end_line + 1}\n"
+                        )
+                        if func.parent_class:
+                            text_to_store += f"# Class: {func.parent_class}\n"
+                        text_to_store += f"\n{func.source_code}"
+
+                        metadata = {
+                            "source": "code_indexer",
+                            "element_type": func.element_type.value,
+                            "element_name": func.name,
+                            "qualified_name": func.qualified_name,
+                            "file_path": file_path,
+                            "relative_path": relative_path,
+                            "extension": extension,
+                            "language": language,
+                            "start_line": func.location.start_line + 1,
+                            "end_line": func.location.end_line + 1,
+                            "line_count": func.line_count,
+                            "is_async": func.is_async,
+                            "is_private": func.is_private,
+                            "indexed_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                        if func.parent_class:
+                            metadata["parent_class"] = func.parent_class
+
+                        await self.memory_processor.add_memory(text_to_store, metadata)
+                        memories_created += 1
+
                         self.logger.debug(
-                            "empty_file_skipped",
+                            "function_memory_created",
+                            name=func.name,
+                            file=relative_path,
+                        )
+
+                    except Exception as func_error:
+                        self.logger.warning(
+                            "failed_to_store_function",
+                            name=func.name,
+                            file=file_path,
+                            error=str(func_error),
+                        )
+
+                # Store each class as separate memory
+                for cls in classes:
+                    try:
+                        # Format class text with context
+                        text_to_store = (
+                            f"# Class: {cls.name}\n"
+                            f"# File: {relative_path}\n"
+                            f"# Language: {language}\n"
+                            f"# Lines: {cls.location.start_line + 1}-{cls.location.end_line + 1}\n"
+                        )
+                        if cls.methods:
+                            text_to_store += f"# Methods: {', '.join(cls.methods)}\n"
+                        if cls.bases:
+                            text_to_store += f"# Bases: {', '.join(cls.bases)}\n"
+                        text_to_store += f"\n{cls.source_code}"
+
+                        metadata = {
+                            "source": "code_indexer",
+                            "element_type": cls.element_type.value,
+                            "element_name": cls.name,
+                            "qualified_name": cls.qualified_name,
+                            "file_path": file_path,
+                            "relative_path": relative_path,
+                            "extension": extension,
+                            "language": language,
+                            "start_line": cls.location.start_line + 1,
+                            "end_line": cls.location.end_line + 1,
+                            "line_count": cls.line_count,
+                            "is_private": cls.is_private,
+                            "indexed_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                        if cls.methods:
+                            metadata["methods"] = cls.methods
+                        if cls.bases:
+                            metadata["bases"] = cls.bases
+
+                        await self.memory_processor.add_memory(text_to_store, metadata)
+                        memories_created += 1
+
+                        self.logger.debug(
+                            "class_memory_created",
+                            name=cls.name,
+                            file=relative_path,
+                        )
+
+                    except Exception as cls_error:
+                        self.logger.warning(
+                            "failed_to_store_class",
+                            name=cls.name,
+                            file=file_path,
+                            error=str(cls_error),
+                        )
+
+                # If no AST elements extracted, fall back to whole-file storage
+                if not functions and not classes:
+                    # Try to mark existing memory as fresh
+                    existing_id = await db_client.mark_memory_fresh(
+                        file_path=file_path,
+                        workspace_id=workspace_id,
+                    )
+
+                    if existing_id:
+                        memories_refreshed += 1
+                        self.logger.debug(
+                            "memory_refreshed",
+                            file_path=file_path,
+                            memory_id=existing_id,
+                        )
+                    else:
+                        # Store whole file as fallback
+                        text_to_store = (
+                            f"# File: {relative_path}\n"
+                            f"# Language: {language}\n"
+                            f"# Lines: {lines}\n\n"
+                            f"{content_text}"
+                        )
+
+                        metadata = {
+                            "source": "code_indexer",
+                            "element_type": "file",
+                            "file_path": file_path,
+                            "relative_path": relative_path,
+                            "extension": extension,
+                            "language": language,
+                            "lines": lines,
+                            "indexed_at": datetime.now(timezone.utc).isoformat(),
+                        }
+
+                        await self.memory_processor.add_memory(text_to_store, metadata)
+                        memories_created += 1
+                        self.logger.debug(
+                            "file_memory_created",
                             file_path=file_path,
                         )
-                        continue
-
-                    # Format with metadata header for context
-                    text_to_store = (
-                        f"# File: {relative_path}\n"
-                        f"# Language: {extension}\n"
-                        f"# Lines: {lines}\n\n"
-                        f"{content}"
-                    )
-
-                    # Determine language from extension
-                    language = self._extension_to_language(extension)
-
-                    metadata = {
-                        "source": "code_indexer",
-                        "file_path": file_path,
-                        "relative_path": relative_path,
-                        "extension": extension,
-                        "language": language,
-                        "lines": lines,
-                        "indexed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-
-                    await self.memory_processor.add_memory(text_to_store, metadata)
-                    memories_created += 1
-                    self.logger.debug(
-                        "memory_created",
-                        file_path=file_path,
-                    )
 
             except Exception as e:
                 self.logger.warning(
@@ -707,10 +928,12 @@ class IndexCodebaseTool:
             "delta_indexing_complete",
             memories_created=memories_created,
             memories_refreshed=memories_refreshed,
+            functions_found=total_functions,
+            classes_found=total_classes,
             workspace_id=workspace_id,
         )
 
-        return memories_created
+        return memories_created, total_functions, total_classes
 
     def _format_success(
         self,
