@@ -8,6 +8,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+#### TypeScriptExtractor - Full TypeScript/JavaScript AST Support (Issue #20)
+
+**Issue:** [#20](https://github.com/alienxs2/zapomni/issues/20)
+
+Added specialized TypeScript/JavaScript extractor with comprehensive AST analysis capabilities:
+
+**Features:**
+- **JSDoc Comments** - Full JSDoc extraction with @param, @returns, @throws tags
+- **Decorators** - Angular, NestJS, and custom decorators support
+- **Type Annotations** - Generics, union types, intersection types, function types
+- **Interfaces** - TypeScript interface declarations with extends
+- **Type Aliases** - Type alias declarations with complex types
+- **Enums** - Regular and const enum support with member extraction
+- **Access Modifiers** - public/private/protected detection
+- **Async/Generators** - async functions, generator functions
+- **Arrow Functions** - Name resolution from variable declarations
+- **Getters/Setters** - Property accessor detection
+
+**Files Added:**
+- `src/zapomni_core/treesitter/extractors/typescript.py` - TypeScriptExtractor class (~1100 lines)
+- `tests/unit/treesitter/extractors/test_typescript.py` - 60 comprehensive tests (~1000 lines)
+
+**Files Modified:**
+- `src/zapomni_core/treesitter/extractors/__init__.py` - Export TypeScriptExtractor
+- `src/zapomni_core/treesitter/config.py` - Add "typescript", "javascript" to LANGUAGES_WITH_EXTRACTORS
+
+**Test Results:**
+- **60 new tests** for TypeScriptExtractor (target was 40+)
+- **Total Unit Tests:** 2252 passed (was 2192, +60)
+- **Coverage:** All extractor functionality tested
+
+**Closes:** [#20](https://github.com/alienxs2/zapomni/issues/20)
+
+---
+
 #### PythonExtractor - Full Python AST Support (Issue #19)
 
 **Issue:** [#19](https://github.com/alienxs2/zapomni/issues/19)

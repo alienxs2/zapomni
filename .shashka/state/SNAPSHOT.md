@@ -2,43 +2,62 @@
 
 **Project**: Zapomni
 **Version**: v0.5.0-alpha
-**Status**: Issue #19 COMPLETE! Ready for #20, #21
-**Last Updated**: 2025-11-28 (Session #15)
+**Status**: Issues #19, #20 COMPLETE! v0.5.0 Progress: 2/3
+**Last Updated**: 2025-11-28 (Session #16)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| Unit Tests | 2192 passed, 11 skipped |
+| Unit Tests | 2252 passed, 11 skipped |
 | E2E Tests | 88 passed, 1 xfailed |
-| Tree-sitter | 41 languages, 279 tests |
+| Tree-sitter | 41 languages, 339 tests |
 | PythonExtractor | 58 tests, full AST support |
+| TypeScriptExtractor | 60 tests, full AST support |
 | Known Bugs | **0 remaining** |
-| Fixed Bugs | **7** (All bugs from analysis) |
-| Open Issues | 12 (features only) |
+| Fixed Bugs | **7** (Issues #12-18) |
+| Open Issues | 11 (features only) |
 | Open PRs | 0 |
 
 ## v0.5.0 Progress
 
-| Issue | Title | Status |
-|-------|-------|--------|
-| #19 | PythonExtractor | **COMPLETE** |
-| #20 | TypeScriptExtractor | Not Started |
-| #21 | Tree-sitter Integration | Not Started |
+| Issue | Title | Status | Tests |
+|-------|-------|--------|-------|
+| #19 | PythonExtractor | **COMPLETE** | 58 |
+| #20 | TypeScriptExtractor | **COMPLETE** | 60 |
+| #21 | Tree-sitter Integration | Not Started | - |
 
-## Session #15 - PythonExtractor Implemented
+## Session #16 Summary
 
-**Issue #19 completed with:**
-- Full Python AST support
+**Issue #20 (TypeScriptExtractor) COMPLETE:**
+- Full TypeScript/JavaScript AST support implemented
+- JSDoc comments: @param, @returns, @throws extraction
+- Decorators: Angular, NestJS, custom decorators
+- Type annotations: generics, union, intersection types
+- Interfaces and type aliases extraction
+- Enums: regular and const enums with members
+- Access modifiers: public/private/protected detection
+- Async functions and generators
+- Arrow functions with name resolution
+- Getters/setters detection
+- 60 comprehensive tests (target was 40+)
+
+**Files Changed:** 4 (+2100 lines)
+
+## Session #15 Summary
+
+**Issue #19 (PythonExtractor) COMPLETE:**
+- Full Python AST support implemented
 - Docstrings: Google, NumPy, Sphinx styles
 - Decorators: @staticmethod, @classmethod, @property, @abstractmethod
 - Type hints: parameters and return types
 - Async/generators: async def, yield, yield from
-- 58 comprehensive tests
+- 58 comprehensive tests (target was 40+)
+- Committed and pushed to main
+- Issue #19 auto-closed via commit message
 
-**Files Added:**
-- `src/zapomni_core/treesitter/extractors/python.py`
-- `tests/unit/treesitter/extractors/test_python.py`
+**Commit:** `c667608b`
+**Files Changed:** 10 (+1965/-107 lines)
 
 ## Architecture Overview
 
@@ -63,7 +82,7 @@ zapomni/
 | Milestone | Focus | Status |
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
-| v0.5.0 | Solid Foundation | **IN PROGRESS** (1/3 done) |
+| v0.5.0 | Solid Foundation | **IN PROGRESS** (2/3 done) |
 | v0.6.0 | Code Intelligence | Planned |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
@@ -72,10 +91,9 @@ zapomni/
 
 ## Next Steps
 
-| Issue | Title | Description |
-|-------|-------|-------------|
-| #20 | TypeScriptExtractor | TS/JS: interfaces, types, JSDoc |
-| #21 | Tree-sitter Integration | Full integration into index_codebase |
+| Priority | Issue | Title | Description |
+|----------|-------|-------|-------------|
+| 1 | #21 | Tree-sitter Integration | Full integration into index_codebase |
 
 ## Key Documents
 
@@ -84,3 +102,4 @@ zapomni/
 | Product Strategy | `.shashka/steering/product.md` | Vision, positioning |
 | Technical Spec | `.shashka/steering/tech.md` | Architecture, stack |
 | Project Structure | `.shashka/steering/structure.md` | Code organization |
+| Resume Prompt | `.claude/resume-prompt.md` | AI agent handoff |

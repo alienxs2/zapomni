@@ -92,9 +92,11 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
 
 LANGUAGES_WITH_EXTRACTORS: Set[str] = {
     "python",  # PythonExtractor - Issue #19
+    "typescript",  # TypeScriptExtractor - Issue #20
+    "javascript",  # TypeScriptExtractor - Issue #20 (same extractor)
 }
 # Will be populated as extractors are added:
-# "javascript", "typescript", "java", "go", "rust", etc.
+# "java", "go", "rust", etc.
 
 
 # =============================================================================
