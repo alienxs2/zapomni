@@ -819,3 +819,246 @@ class TestSearchResultItem:
         )
 
         assert result.highlight == "<em>Test</em> text"
+
+
+# ============================================================================
+# Date Filter Timezone Tests (Issue #17 - BUG-001)
+# ============================================================================
+
+
+class TestParseFilterDate:
+    """Test _parse_filter_date method for timezone handling."""
+
+    @pytest.fixture
+    def processor(self, mock_db_client, mock_chunker, mock_embedder):
+        """Create MemoryProcessor instance for testing."""
+        return MemoryProcessor(
+            db_client=mock_db_client,
+            chunker=mock_chunker,
+            embedder=mock_embedder,
+        )
+
+    def test_parse_date_only_string(self, processor):
+        """Test parsing date-only string (naive) - Issue #17 main case."""
+        result = processor._parse_filter_date("2025-11-01")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.day == 1
+        assert result.hour == 0
+        assert result.minute == 0
+        assert result.second == 0
+        # Must be timezone-aware (UTC)
+        assert result.tzinfo == timezone.utc
+
+    def test_parse_datetime_string_naive(self, processor):
+        """Test parsing datetime string without timezone."""
+        result = processor._parse_filter_date("2025-11-01T12:30:45")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.day == 1
+        assert result.hour == 12
+        assert result.minute == 30
+        assert result.second == 45
+        # Must be timezone-aware (UTC)
+        assert result.tzinfo == timezone.utc
+
+    def test_parse_datetime_with_z_suffix(self, processor):
+        """Test parsing datetime string with Z suffix."""
+        result = processor._parse_filter_date("2025-11-01T12:30:45Z")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.day == 1
+        assert result.hour == 12
+        assert result.minute == 30
+        assert result.second == 45
+        # Z means UTC
+        assert result.tzinfo is not None
+        assert result.utcoffset().total_seconds() == 0
+
+    def test_parse_datetime_with_utc_offset(self, processor):
+        """Test parsing datetime string with explicit UTC offset."""
+        result = processor._parse_filter_date("2025-11-01T12:30:45+00:00")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.day == 1
+        assert result.hour == 12
+        assert result.minute == 30
+        assert result.second == 45
+        # Already timezone-aware
+        assert result.tzinfo is not None
+
+    def test_parse_datetime_with_positive_offset(self, processor):
+        """Test parsing datetime string with positive timezone offset."""
+        result = processor._parse_filter_date("2025-11-01T12:30:45+03:00")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.day == 1
+        assert result.hour == 12
+        assert result.minute == 30
+        assert result.second == 45
+        # Preserves timezone info
+        assert result.tzinfo is not None
+        assert result.utcoffset().total_seconds() == 3 * 3600
+
+    def test_parse_datetime_with_negative_offset(self, processor):
+        """Test parsing datetime string with negative timezone offset."""
+        result = processor._parse_filter_date("2025-11-01T12:30:45-05:00")
+
+        assert result.year == 2025
+        assert result.month == 11
+        assert result.hour == 12
+        # Preserves timezone info
+        assert result.tzinfo is not None
+        assert result.utcoffset().total_seconds() == -5 * 3600
+
+
+class TestApplyFiltersDateRange:
+    """Test _apply_filters with date range filters - Issue #17."""
+
+    @pytest.fixture
+    def processor(self, mock_db_client, mock_chunker, mock_embedder):
+        """Create MemoryProcessor instance for testing."""
+        return MemoryProcessor(
+            db_client=mock_db_client,
+            chunker=mock_chunker,
+            embedder=mock_embedder,
+        )
+
+    def test_apply_date_from_filter_naive_string(self, processor):
+        """Test date_from filter with naive date string (main Issue #17 case)."""
+        # Results with timezone-aware timestamps (as returned from DB)
+        results = [
+            SearchResultItem(
+                memory_id="id-1",
+                text="Memory from October",
+                similarity_score=0.9,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 10, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+            SearchResultItem(
+                memory_id="id-2",
+                text="Memory from November",
+                similarity_score=0.85,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 11, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+        ]
+
+        # Filter with naive date string (no timezone info)
+        filters = {"date_from": "2025-11-01"}
+
+        # Should NOT raise TypeError: can't compare offset-naive and offset-aware datetimes
+        filtered = processor._apply_filters(results, filters)
+
+        assert len(filtered) == 1
+        assert filtered[0].memory_id == "id-2"
+
+    def test_apply_date_to_filter_naive_string(self, processor):
+        """Test date_to filter with naive date string."""
+        results = [
+            SearchResultItem(
+                memory_id="id-1",
+                text="Memory from October",
+                similarity_score=0.9,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 10, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+            SearchResultItem(
+                memory_id="id-2",
+                text="Memory from November",
+                similarity_score=0.85,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 11, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+        ]
+
+        filters = {"date_to": "2025-10-31"}
+
+        filtered = processor._apply_filters(results, filters)
+
+        assert len(filtered) == 1
+        assert filtered[0].memory_id == "id-1"
+
+    def test_apply_date_range_filter(self, processor):
+        """Test both date_from and date_to filters together."""
+        results = [
+            SearchResultItem(
+                memory_id="id-1",
+                text="Memory from September",
+                similarity_score=0.9,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 9, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+            SearchResultItem(
+                memory_id="id-2",
+                text="Memory from October",
+                similarity_score=0.85,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 10, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+            SearchResultItem(
+                memory_id="id-3",
+                text="Memory from November",
+                similarity_score=0.8,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 11, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+        ]
+
+        filters = {"date_from": "2025-10-01", "date_to": "2025-10-31"}
+
+        filtered = processor._apply_filters(results, filters)
+
+        assert len(filtered) == 1
+        assert filtered[0].memory_id == "id-2"
+
+    def test_apply_date_filter_with_z_suffix(self, processor):
+        """Test date filter with Z suffix (UTC indicator)."""
+        results = [
+            SearchResultItem(
+                memory_id="id-1",
+                text="Memory from October",
+                similarity_score=0.9,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 10, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+        ]
+
+        filters = {"date_from": "2025-10-01T00:00:00Z"}
+
+        # Should handle Z suffix correctly
+        filtered = processor._apply_filters(results, filters)
+
+        assert len(filtered) == 1
+
+    def test_apply_date_filter_with_offset(self, processor):
+        """Test date filter with explicit timezone offset."""
+        results = [
+            SearchResultItem(
+                memory_id="id-1",
+                text="Memory from October",
+                similarity_score=0.9,
+                tags=["test"],
+                source="user",
+                timestamp=datetime(2025, 10, 15, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+        ]
+
+        filters = {"date_from": "2025-10-01T00:00:00+00:00"}
+
+        filtered = processor._apply_filters(results, filters)
+
+        assert len(filtered) == 1
