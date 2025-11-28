@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zapomni-mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "Local-first MCP memory server for AI agents"
 authors = [
     {name = "Goncharenko Anton aka alienxs2"}

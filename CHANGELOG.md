@@ -8,6 +8,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 See [ROADMAP.md](ROADMAP.md) for planned features and future versions.
 
+## [0.3.1] - 2025-11-28
+
+### Bug Fix: index_codebase Now Stores File Content (Issue #2)
+
+**Fixed:**
+- **Critical: index_codebase stores actual file content** - Previously, `index_codebase` only stored file metadata (path, extension, line count) instead of the actual source code. Now it reads and stores the full file content, enabling semantic search across indexed code.
+
+**Added:**
+- `_extension_to_language()` method for mapping file extensions to language names
+- File content header with metadata (`# File:`, `# Language:`, `# Lines:`)
+- `language` field in metadata for indexed files
+- `indexed_at` timestamp in metadata
+- Empty file detection and skipping
+- 15 new unit tests for file content storage
+
+**Technical Changes:**
+- `src/zapomni_mcp/tools/index_codebase.py`:
+  - Modified `_store_code_memories_with_delta()` to read file content using `Path.read_text()`
+  - Added `_extension_to_language()` helper method
+  - Enhanced metadata with `language` and `indexed_at` fields
+  - Skip empty files with logging
+
+**Test Results:**
+- **Unit Tests:** 1868 passed (+15), 11 skipped
+- **E2E Tests:** 88 passed, 1 xfailed (by design)
+
+**Closes:** [#2](https://github.com/alienxs2/zapomni/issues/2)
+
 ## [0.3.0] - 2025-11-27
 
 ### E2E Testing Complete - Production Ready Release

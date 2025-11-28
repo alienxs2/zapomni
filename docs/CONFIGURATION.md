@@ -22,7 +22,7 @@ Zapomni uses environment variables for configuration, managed via Pydantic Setti
 2. `.env` file (recommended for development)
 3. Default values in code
 
-**Total Configuration Variables**: 41 (in `.env.example`) + 7 SSE variables = 48 total
+**Total Configuration Variables**: 43 (in `.env.example`) + 7 SSE variables = 50 total
 
 **Configuration Loading Order** (highest priority first):
 1. Environment variables

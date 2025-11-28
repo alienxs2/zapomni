@@ -1,19 +1,19 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-27 (Session #7 - v0.3.0 RELEASED)
-**Project Status**: v0.3.0 Released
-**Version**: v0.3.0
+**Last Updated**: 2025-11-28 (Session #8 - v0.3.1 RELEASED)
+**Project Status**: v0.3.1 Released - Issue #2 Fixed
+**Version**: v0.3.1
 
 ---
 
 ## START HERE (Новый PM)
 
-### E2E результаты (Session #7):
+### E2E результаты (Session #8):
 | Метрика | Значение |
 |---------|----------|
-| Tool tests | **88 passed** |
-| xfailed | **1** (by design) |
-| Total | **88 passed, 1 xfailed** |
+| Unit tests | **1868 passed** (+15 новых) |
+| E2E tests | **88 passed, 1 xfailed** |
+| Total | **~1957 тестов** |
 
 ### Performance Baseline:
 | Tool | P50 | P95 | Target |
@@ -42,26 +42,27 @@ make e2e                      # 88 passed, 1 xfailed
 ```
 
 ### Шаг 3: СЛЕДУЮЩИЕ ЗАДАЧИ (v0.4.0)
-1. **Load testing**: `make load-test`
-2. **Multi-modal support** - изображения, PDF
-3. **Streaming responses** - для больших результатов
-4. **Advanced caching** - query result caching
+1. **Tree-sitter интеграция** - AST парсинг для 165+ языков
+2. **Load testing**: `make load-test`
+3. **Multi-modal support** - изображения, PDF
+4. **Streaming responses** - для больших результатов
 
 ---
 
-## ТЕКУЩЕЕ СОСТОЯНИЕ (v0.3.0)
+## ТЕКУЩЕЕ СОСТОЯНИЕ (v0.3.1)
 
 ### Что готово
 | Компонент | Статус | Детали |
 |-----------|--------|--------|
 | MCP Tools | 17/17 | Все зарегистрированы и работают |
-| Unit Tests | 1853 passed | 11 skipped, ~35 sec runtime |
+| Unit Tests | **1868 passed** | 11 skipped, ~37 sec runtime |
 | E2E Tests | **88 passed, 1 xfailed** | Все критичные тесты проходят |
 | Coverage | 74-89% | По модулям |
 | Feature Flags | Working | Enabled by default |
+| **index_codebase** | **FIXED** | Теперь сохраняет содержимое файлов |
 | Semantic Cache | **ENABLED** | Redis-backed |
 | Performance | **BASELINED** | search < 200ms, add < 500ms |
-| Release | **v0.3.0** | Tagged and pushed |
+| Release | **v0.3.1** | Issue #2 исправлен |
 
 ### xfailed тест (by design)
 - **test_get_current_workspace_after_switch** - SSE sessions stateless, workspace state не persist между подключениями
@@ -140,6 +141,35 @@ REDIS_ENABLED=true           # Redis для кеширования
 ---
 
 ## ИСТОРИЯ СЕССИЙ
+
+### Session 2025-11-28 #8 (v0.3.1 - Issue #2 FIX)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- **ИСПРАВЛЕН Issue #2** - index_codebase теперь сохраняет содержимое файлов
+- Добавлен метод `_extension_to_language()` для определения языка по расширению
+- Улучшены metadata: добавлены поля `language` и `indexed_at`
+- Пустые файлы теперь пропускаются с логированием
+- Добавлено 15 новых unit тестов
+- Обновлена документация: ROADMAP.md, CHANGELOG.md, pyproject.toml
+
+**Файлы изменены**:
+- `src/zapomni_mcp/tools/index_codebase.py` - читает содержимое файлов
+- `tests/unit/test_index_codebase_tool.py` - +15 новых тестов
+- `ROADMAP.md` - v0.3.1
+- `CHANGELOG.md` - запись о v0.3.1
+- `pyproject.toml` - версия 0.3.1
+- `.claude/resume-prompt.md` - обновлён для v0.3.1
+
+**Unit тесты (Session #7 → Session #8)**:
+| Метрика | До | После |
+|---------|-----|-------|
+| passed | 1853 | **1868** |
+| новые тесты | - | **+15** |
+
+**Closes**: [Issue #2](https://github.com/alienxs2/zapomni/issues/2)
+
+---
 
 ### Session 2025-11-27 #7 (v0.3.0 RELEASE)
 **PM**: AI Assistant (Claude Opus 4.5)

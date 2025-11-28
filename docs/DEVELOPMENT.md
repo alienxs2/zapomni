@@ -168,11 +168,14 @@ tests/
 │   ├── test_*_search.py       # Search algorithms
 │   ├── test_falkordb*.py      # Database layer
 │   └── ...
-├── integration/               # ~155 tests (8%)
+├── integration/               # ~155 tests (7.3%)
 │   ├── test_*_integration.py
 │   ├── test_workspace_isolation.py
 │   └── test_garbage_collector_integration.py
-└── e2e/                       # 0 tests (planned)
+└── e2e/                       # ~116 tests (5.4%)
+    ├── tools/                # MCP tool E2E tests
+    ├── workflows/            # Multi-step scenarios
+    └── resilience/           # Error handling & recovery
 ```
 
 ### Running Tests
@@ -180,7 +183,7 @@ tests/
 **Run all tests**:
 ```bash
 pytest
-# ~1858 tests, takes ~35 seconds
+# ~2135 tests (1864 unit + 116 E2E + 155 integration), takes ~50 seconds
 ```
 
 **Run specific test category**:

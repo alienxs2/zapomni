@@ -494,6 +494,22 @@ class IndexCodebaseTool:
         relative_path_lower = relative_path.lower()
         return any(pattern in relative_path_lower for pattern in test_patterns)
 
+    def _extension_to_language(self, extension: str) -> str:
+        """
+        Convert file extension to language name.
+
+        Args:
+            extension: File extension (e.g., ".py", ".ts")
+
+        Returns:
+            Language name (e.g., "python", "typescript")
+        """
+        ext = extension.lower()
+        for lang, exts in LANGUAGE_EXTENSIONS.items():
+            if ext in exts:
+                return lang
+        return "unknown"
+
     def _calculate_statistics(
         self,
         files: List[Dict[str, Any]],
@@ -627,22 +643,52 @@ class IndexCodebaseTool:
                         memory_id=existing_id,
                     )
                 else:
-                    # New file - create memory
-                    summary = (
-                        f"Code file: {relative_path}\n"
-                        f"Type: {extension}\n"
-                        f"Lines: {lines}"
+                    # New file - read content and create memory
+                    from pathlib import Path
+                    from datetime import datetime, timezone
+
+                    # Read actual file content for semantic search
+                    try:
+                        content = Path(file_path).read_text(
+                            encoding="utf-8", errors="ignore"
+                        )
+                    except Exception as read_error:
+                        self.logger.warning(
+                            "failed_to_read_file_content",
+                            file_path=file_path,
+                            error=str(read_error),
+                        )
+                        content = ""
+
+                    if not content.strip():
+                        self.logger.debug(
+                            "empty_file_skipped",
+                            file_path=file_path,
+                        )
+                        continue
+
+                    # Format with metadata header for context
+                    text_to_store = (
+                        f"# File: {relative_path}\n"
+                        f"# Language: {extension}\n"
+                        f"# Lines: {lines}\n\n"
+                        f"{content}"
                     )
+
+                    # Determine language from extension
+                    language = self._extension_to_language(extension)
 
                     metadata = {
                         "source": "code_indexer",
                         "file_path": file_path,
                         "relative_path": relative_path,
                         "extension": extension,
+                        "language": language,
                         "lines": lines,
+                        "indexed_at": datetime.now(timezone.utc).isoformat(),
                     }
 
-                    await self.memory_processor.add_memory(summary, metadata)
+                    await self.memory_processor.add_memory(text_to_store, metadata)
                     memories_created += 1
                     self.logger.debug(
                         "memory_created",

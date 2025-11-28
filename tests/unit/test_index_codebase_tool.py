@@ -999,3 +999,282 @@ class TestIndexCodebaseRequestPydantic:
                 repo_path="/test/repo",
                 max_file_size=200 * 1024 * 1024,  # More than 100MB
             )
+
+
+class TestIndexCodebaseToolExtensionToLanguage:
+    """Test IndexCodebaseTool._extension_to_language() method."""
+
+    @pytest.fixture
+    def tool(self):
+        """Create IndexCodebaseTool with mocks."""
+        mock_indexer = Mock(spec=CodeRepositoryIndexer)
+        mock_processor = Mock(spec=MemoryProcessor)
+        return IndexCodebaseTool(
+            repository_indexer=mock_indexer,
+            memory_processor=mock_processor,
+        )
+
+    def test_extension_to_language_python(self, tool):
+        """Test Python extension detection."""
+        assert tool._extension_to_language(".py") == "python"
+
+    def test_extension_to_language_javascript(self, tool):
+        """Test JavaScript extension detection."""
+        assert tool._extension_to_language(".js") == "javascript"
+        assert tool._extension_to_language(".jsx") == "javascript"
+
+    def test_extension_to_language_typescript(self, tool):
+        """Test TypeScript extension detection."""
+        assert tool._extension_to_language(".ts") == "typescript"
+        assert tool._extension_to_language(".tsx") == "typescript"
+
+    def test_extension_to_language_rust(self, tool):
+        """Test Rust extension detection."""
+        assert tool._extension_to_language(".rs") == "rust"
+
+    def test_extension_to_language_go(self, tool):
+        """Test Go extension detection."""
+        assert tool._extension_to_language(".go") == "go"
+
+    def test_extension_to_language_java(self, tool):
+        """Test Java extension detection."""
+        assert tool._extension_to_language(".java") == "java"
+
+    def test_extension_to_language_cpp(self, tool):
+        """Test C++ extension detection."""
+        assert tool._extension_to_language(".cpp") == "cpp"
+        assert tool._extension_to_language(".cc") == "cpp"
+
+    def test_extension_to_language_c(self, tool):
+        """Test C extension detection."""
+        assert tool._extension_to_language(".c") == "c"
+        assert tool._extension_to_language(".h") == "c"
+
+    def test_extension_to_language_unknown(self, tool):
+        """Test unknown extension returns 'unknown'."""
+        assert tool._extension_to_language(".xyz") == "unknown"
+        assert tool._extension_to_language(".md") == "unknown"
+        assert tool._extension_to_language("") == "unknown"
+
+    def test_extension_to_language_case_insensitive(self, tool):
+        """Test extension detection is case-insensitive."""
+        assert tool._extension_to_language(".PY") == "python"
+        assert tool._extension_to_language(".Js") == "javascript"
+
+
+class TestIndexCodebaseToolStoresFileContent:
+    """Test that IndexCodebaseTool stores actual file content (Issue #2 fix)."""
+
+    @pytest.fixture
+    def temp_repo_dir(self):
+        """Create a temporary repository with code files."""
+        temp_dir = tempfile.mkdtemp()
+
+        # Create a Python file with actual content
+        python_file = Path(temp_dir) / "example.py"
+        python_file.write_text('''
+def hello_world():
+    """Say hello to the world."""
+    print("Hello, World!")
+
+class Calculator:
+    """A simple calculator class."""
+
+    def add(self, a, b):
+        return a + b
+
+    def subtract(self, a, b):
+        return a - b
+''')
+
+        # Create a TypeScript file
+        ts_file = Path(temp_dir) / "utils.ts"
+        ts_file.write_text('''
+export function formatDate(date: Date): string {
+    return date.toISOString();
+}
+
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+''')
+
+        yield temp_dir
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @pytest.fixture
+    def mock_db_client(self):
+        """Create mock database client."""
+        db_client = AsyncMock()
+        db_client.mark_code_memories_stale = AsyncMock(return_value=0)
+        db_client.mark_memory_fresh = AsyncMock(return_value=None)
+        db_client.count_stale_memories = AsyncMock(return_value=0)
+        return db_client
+
+    @pytest.fixture
+    def mock_processor(self, mock_db_client):
+        """Create mock MemoryProcessor with db_client."""
+        processor = Mock(spec=MemoryProcessor)
+        processor.add_memory = AsyncMock(return_value="test-memory-id")
+        processor.db_client = mock_db_client
+        return processor
+
+    @pytest.fixture
+    def mock_indexer(self, temp_repo_dir):
+        """Create mock indexer that returns real file info."""
+        indexer = Mock(spec=CodeRepositoryIndexer)
+        indexer.index_repository = Mock(
+            return_value={
+                "repository": {
+                    "path": temp_repo_dir,
+                    "name": "test_repo",
+                    "git_url": None,
+                    "default_branch": "main",
+                },
+                "files": [
+                    {
+                        "path": str(Path(temp_repo_dir) / "example.py"),
+                        "relative_path": "example.py",
+                        "extension": ".py",
+                        "size_bytes": 300,
+                        "lines": 15,
+                        "encoding": "utf-8",
+                        "last_modified": 1234567890.0,
+                        "git_info": {},
+                    },
+                    {
+                        "path": str(Path(temp_repo_dir) / "utils.ts"),
+                        "relative_path": "utils.ts",
+                        "extension": ".ts",
+                        "size_bytes": 200,
+                        "lines": 10,
+                        "encoding": "utf-8",
+                        "last_modified": 1234567890.0,
+                        "git_info": {},
+                    },
+                ],
+                "statistics": {
+                    "total_files": 2,
+                    "total_lines": 25,
+                    "total_size": 500,
+                    "by_extension": {".py": 1, ".ts": 1},
+                },
+            }
+        )
+        return indexer
+
+    @pytest.fixture
+    def tool(self, mock_indexer, mock_processor):
+        """Create IndexCodebaseTool with mocks."""
+        return IndexCodebaseTool(
+            repository_indexer=mock_indexer,
+            memory_processor=mock_processor,
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_stores_file_content_not_just_metadata(
+        self, tool, mock_processor, temp_repo_dir
+    ):
+        """Test that execute stores actual file content, not just metadata."""
+        # Execute
+        result = await tool.execute({"repo_path": temp_repo_dir})
+
+        # Verify success
+        assert result["isError"] is False
+
+        # Verify add_memory was called with actual content
+        assert mock_processor.add_memory.called
+
+        # Get the text that was stored
+        calls = mock_processor.add_memory.call_args_list
+        stored_texts = [call[0][0] for call in calls]
+
+        # Verify actual code content is in stored text (not just metadata)
+        python_stored = any("def hello_world" in text for text in stored_texts)
+        ts_stored = any("export function formatDate" in text for text in stored_texts)
+
+        assert python_stored, "Python function content should be stored"
+        assert ts_stored, "TypeScript function content should be stored"
+
+    @pytest.mark.asyncio
+    async def test_execute_includes_file_header_in_content(
+        self, tool, mock_processor, temp_repo_dir
+    ):
+        """Test that stored content includes file metadata header."""
+        # Execute
+        await tool.execute({"repo_path": temp_repo_dir})
+
+        # Get the text that was stored
+        calls = mock_processor.add_memory.call_args_list
+        stored_texts = [call[0][0] for call in calls]
+
+        # Verify header format
+        assert any("# File: example.py" in text for text in stored_texts)
+        assert any("# Language: .py" in text for text in stored_texts)
+
+    @pytest.mark.asyncio
+    async def test_execute_metadata_includes_language(
+        self, tool, mock_processor, temp_repo_dir
+    ):
+        """Test that metadata includes language field."""
+        # Execute
+        await tool.execute({"repo_path": temp_repo_dir})
+
+        # Get the metadata that was stored
+        calls = mock_processor.add_memory.call_args_list
+        stored_metadata = [call[0][1] for call in calls]
+
+        # Verify language is in metadata
+        assert any(meta.get("language") == "python" for meta in stored_metadata)
+        assert any(meta.get("language") == "typescript" for meta in stored_metadata)
+
+    @pytest.mark.asyncio
+    async def test_execute_metadata_includes_indexed_at(
+        self, tool, mock_processor, temp_repo_dir
+    ):
+        """Test that metadata includes indexed_at timestamp."""
+        # Execute
+        await tool.execute({"repo_path": temp_repo_dir})
+
+        # Get the metadata that was stored
+        calls = mock_processor.add_memory.call_args_list
+        stored_metadata = [call[0][1] for call in calls]
+
+        # Verify indexed_at is in metadata
+        assert all("indexed_at" in meta for meta in stored_metadata)
+
+    @pytest.mark.asyncio
+    async def test_execute_skips_empty_files(self, tool, mock_processor, mock_indexer):
+        """Test that empty files are skipped."""
+        # Create a temp dir with an empty file
+        temp_dir = tempfile.mkdtemp()
+        try:
+            empty_file = Path(temp_dir) / "empty.py"
+            empty_file.write_text("")
+
+            mock_indexer.index_repository.return_value = {
+                "repository": {"path": temp_dir, "name": "test", "git_url": None, "default_branch": "main"},
+                "files": [
+                    {
+                        "path": str(empty_file),
+                        "relative_path": "empty.py",
+                        "extension": ".py",
+                        "size_bytes": 0,
+                        "lines": 0,
+                        "encoding": "utf-8",
+                        "last_modified": 1234567890.0,
+                        "git_info": {},
+                    },
+                ],
+                "statistics": {"total_files": 1, "total_lines": 0, "total_size": 0, "by_extension": {".py": 1}},
+            }
+
+            # Execute
+            await tool.execute({"repo_path": temp_dir})
+
+            # Verify add_memory was NOT called for empty file
+            assert not mock_processor.add_memory.called
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)

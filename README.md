@@ -149,11 +149,11 @@ ENABLE_CODE_INDEXING=false
 | `CHUNK_OVERLAP` | 50 | Token overlap between chunks |
 | `LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
-**Note**: The project uses 41 environment variables total. For complete configuration options, see the [Configuration Guide](docs/CONFIGURATION.md).
+**Note**: The project uses 43 environment variables total. For complete configuration options, see the [Configuration Guide](docs/CONFIGURATION.md).
 
 ## MCP Tools
 
-Zapomni provides 18 MCP tools organized into 5 categories. Some tools require feature flags to be enabled.
+Zapomni provides 17 MCP tools organized into 5 categories. Some tools require feature flags to be enabled.
 
 ### Memory Operations (4 tools)
 
@@ -177,7 +177,7 @@ Zapomni provides 18 MCP tools organized into 5 categories. Some tools require fe
 
 | Tool | Description | Requires Flag |
 |------|-------------|---------------|
-| `index_codebase` | Index code repository with AST analysis (14+ languages) | `ENABLE_CODE_INDEXING` |
+| `index_codebase` | Index code repository (18 file extensions supported, AST analysis for Python) | `ENABLE_CODE_INDEXING` |
 
 ### System Management (3 tools)
 
@@ -212,7 +212,7 @@ Zapomni consists of 4 layers:
 ┌──────────────────▼──────────────────────────────────┐
 │           zapomni_mcp (MCP Layer)                   │
 │  • MCPServer: Protocol handling                     │
-│  • Tools: 18 MCP tool implementations               │
+│  • Tools: 17 MCP tool implementations               │
 │  • Transport: stdio (default) or SSE (concurrent)   │
 └──────────────────┬──────────────────────────────────┘
                    │
@@ -270,7 +270,7 @@ For more details, see the [CLI Guide](docs/CLI.md).
 
 ### Running Tests
 
-The project includes **2019 tests** (1864 unit tests + 155 integration tests) with high coverage (74-89% depending on module).
+The project includes **2135 tests** (1864 unit + 116 E2E + 155 integration) with high coverage (74-89% depending on module).
 
 ```bash
 # Run all tests
@@ -278,6 +278,9 @@ pytest
 
 # Unit tests only (fast, no external dependencies)
 pytest tests/unit
+
+# E2E tests (requires MCP server running)
+pytest tests/e2e
 
 # Integration tests (requires services running)
 pytest tests/integration

@@ -4,19 +4,19 @@ This document outlines the development roadmap and current status of Zapomni.
 
 ## Current Status
 
-**Version**: v0.2.2 (2025-11-27)
+**Version**: v0.3.1 (2025-11-28)
 **Stage**: Alpha - Production-ready core functionality
 
 | Metric | Value |
 |--------|-------|
 | MCP Tools | 17 registered |
-| Unit Tests | 1,853 passed, 11 skipped |
-| E2E Tests | **115 passed** (NEW) |
-| Total Tests | **~1,968** |
+| Unit Tests | 1,868 passed, 11 skipped |
+| E2E Tests | **88 passed, 1 xfailed** |
+| Total Tests | **~1,957** |
 | Coverage | 74-89% (module-dependent) |
-| Test Runtime | ~35 seconds (unit) |
+| Test Runtime | ~37 seconds (unit) |
 | Python Files | 80 |
-| Lines of Code | ~29,000 |
+| Lines of Code | ~29,500 |
 
 ### Feature Status
 
@@ -38,6 +38,13 @@ pie title Feature Maturity
 
 ## Version History
 
+### v0.3.x - Performance & Bug Fixes
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| v0.3.1 | 2025-11-28 | **Fix**: index_codebase now stores file content (Issue #2) |
+| v0.3.0 | 2025-11-27 | Performance benchmarking, E2E tests complete |
+
 ### v0.2.x - Foundation Complete
 
 | Version | Date | Highlights |
@@ -50,7 +57,7 @@ pie title Feature Maturity
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| v0.1.0 | 2025-11-24 | Initial release: 18 MCP tools, 2019 tests, Git Hooks |
+| v0.1.0 | 2025-11-24 | Initial release: 17 MCP tools, 2135 tests, Git Hooks |
 
 ## Roadmap
 

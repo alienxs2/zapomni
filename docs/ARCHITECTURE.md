@@ -25,7 +25,7 @@ Zapomni consists of 4 distinct layers, from top to bottom:
 ┌─────────────────────────────────────────────────┐
 │         MCP Layer (zapomni_mcp)                 │
 │  - MCP Server (stdio + SSE transport)           │
-│  - 18 MCP Tools                                 │
+│  - 17 MCP Tools                                 │
 │  - Session Management                           │
 └─────────────────────────────────────────────────┘
                       ↓
@@ -67,7 +67,7 @@ Zapomni consists of 4 distinct layers, from top to bottom:
   - Tool registration and lifecycle management
   - Graceful shutdown handling
 
-- **18 MCP Tools** (`tools/`):
+- **17 MCP Tools** (`tools/`):
   - Memory Operations: add_memory, search_memory, get_stats, delete_memory
   - Graph Operations: build_graph, get_related, graph_status, export_graph
   - Code Intelligence: index_codebase
@@ -323,7 +323,7 @@ graph TD
     subgraph "MCP Layer"
         MCP["zapomni_mcp"]
         MCPServer["MCPServer"]
-        Tools["18 MCP Tools"]
+        Tools["17 MCP Tools"]
         SSE["SSE Transport"]
     end
 
@@ -595,14 +595,19 @@ Each layer catches and re-raises with context:
 
 ## Testing Strategy
 
-Comprehensive test suite (2019 tests):
+Comprehensive test suite (2135 tests):
 
-- **Unit Tests** (1864 tests, 92.3%):
+- **Unit Tests** (1864 tests, 87.3%):
   - Each component tested in isolation
   - Mock external dependencies
-  - Fast execution (~50s for full suite)
+  - Fast execution (~35s for full suite)
 
-- **Integration Tests** (155 tests, 7.7%):
+- **E2E Tests** (116 tests, 5.4%):
+  - Full MCP protocol flow testing
+  - Real SSE transport and tools
+  - Workflow and resilience scenarios
+
+- **Integration Tests** (155 tests, 7.3%):
   - Test layer interactions
   - Real database connections (test instances)
   - Workspace isolation
@@ -647,11 +652,11 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for testing details.
 
 | Layer | Files | Lines of Code | Percentage |
 |-------|-------|---------------|------------|
-| Core Layer | 49 | ~16,695 | 59% |
-| MCP Layer | 20 | ~7,851 | 28% |
-| DB Layer | 8 | ~3,829 | 13% |
-| CLI Layer | 3 | ~100 | <1% |
-| **Total** | **80** | **~28,475** | **100%** |
+| Core Layer | 49 | ~16,699 | 57% |
+| MCP Layer | 20 | ~7,831 | 27% |
+| DB Layer | 8 | ~4,551 | 16% |
+| CLI Layer | 3 | ~168 | <1% |
+| **Total** | **80** | **~29,249** | **100%** |
 
 ### Architecture Quality
 
@@ -660,7 +665,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for testing details.
 | **Coupling** | Medium | Minor MCP→DB violations |
 | **Cohesion** | High | Clear layer separation |
 | **Extensibility** | Good | DI enables extensions |
-| **Testability** | Good | 2019 tests, high coverage |
+| **Testability** | Good | 2135 tests, high coverage |
 | **Documentation** | Good | Comprehensive docs |
 
 ## Changelog
