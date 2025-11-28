@@ -1,32 +1,56 @@
 # Project Snapshot
 
 **Project**: Zapomni
-**Version**: v0.5.0
-**Status**: v0.5.0 COMPLETE! All 3 issues done.
-**Last Updated**: 2025-11-28 (Session #17)
+**Version**: v0.6.0-dev
+**Status**: v0.6.0 IN PROGRESS - GoExtractor done (1/3)
+**Last Updated**: 2025-11-28 (Session #18)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| Unit Tests | 2252 passed, 11 skipped |
-| Integration Tests | 10 passed (new) |
+| Unit Tests | 2307 passed, 11 skipped |
+| Integration Tests | 10 passed |
 | E2E Tests | 88 passed, 1 xfailed |
-| Tree-sitter | 41 languages, 339 tests |
+| Tree-sitter | 41 languages, 394 tests |
 | PythonExtractor | 58 tests, full AST support |
 | TypeScriptExtractor | 60 tests, full AST support |
+| **GoExtractor** | **55 tests, full AST support** ✅ NEW |
 | Known Bugs | **0 remaining** |
 | Fixed Bugs | **7** (Issues #12-18) |
-| Open Issues | 11 (features only) |
+| Open Issues | 10 (features only) |
 | Open PRs | 0 |
 
-## v0.5.0 Progress - COMPLETE!
+## v0.6.0 Progress - Code Intelligence
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
-| #19 | PythonExtractor | **COMPLETE** | 58 |
-| #20 | TypeScriptExtractor | **COMPLETE** | 60 |
-| #21 | Tree-sitter Integration | **COMPLETE** | 10 |
+| #22 | GoExtractor | **COMPLETE** ✅ | 55 |
+| #23 | RustExtractor | Planned | - |
+| #24 | CallGraphAnalyzer | Planned | - |
+
+## Session #18 Summary
+
+**Issue #22 (GoExtractor) COMPLETE:**
+- Full Go AST support implemented
+- Functions and methods with receiver types (pointer/value)
+- Structs with fields and embedded types
+- Interfaces with methods and embedded interfaces
+- Go doc comments extraction (// style)
+- Private detection (lowercase = unexported)
+- Generics support (Go 1.18+ type parameters)
+- Multiple and named return values
+- Auto-registration in LanguageParserRegistry
+- 55 comprehensive tests (target was 50+)
+
+**Commit:** `9621168c`
+**Files Changed:** 4 (+2166 lines)
+- `src/zapomni_core/treesitter/extractors/go.py` (1093 lines)
+- `tests/unit/treesitter/extractors/test_go.py` (1052 lines)
+- `src/zapomni_core/treesitter/config.py` (updated)
+- `src/zapomni_core/treesitter/extractors/__init__.py` (updated)
+
+---
 
 ## Session #17 Summary
 
@@ -62,21 +86,6 @@
 
 **Files Changed:** 4 (+2100 lines)
 
-## Session #15 Summary
-
-**Issue #19 (PythonExtractor) COMPLETE:**
-- Full Python AST support implemented
-- Docstrings: Google, NumPy, Sphinx styles
-- Decorators: @staticmethod, @classmethod, @property, @abstractmethod
-- Type hints: parameters and return types
-- Async/generators: async def, yield, yield from
-- 58 comprehensive tests (target was 40+)
-- Committed and pushed to main
-- Issue #19 auto-closed via commit message
-
-**Commit:** `c667608b`
-**Files Changed:** 10 (+1965/-107 lines)
-
 ## Architecture Overview
 
 ```
@@ -86,13 +95,15 @@ zapomni/
 │   │   ├── embeddings/     # Ollama embeddings + cache ✅
 │   │   ├── treesitter/     # AST parsing (41 languages) ✅
 │   │   │   └── extractors/
-│   │   │       ├── generic.py   # Universal fallback
-│   │   │       └── python.py    # Python-specific ✅ NEW
+│   │   │       ├── generic.py     # Universal fallback
+│   │   │       ├── python.py      # Python-specific ✅
+│   │   │       ├── typescript.py  # TypeScript/JS ✅
+│   │   │       └── go.py          # Go-specific ✅ NEW
 │   │   └── memory_processor.py ✅
 │   ├── zapomni_mcp/        # MCP server (17 tools) ✅
 │   ├── zapomni_db/         # FalkorDB + Redis clients
 │   └── zapomni_cli/        # CLI tools + Git hooks
-└── tests/                  # 2252+ unit tests
+└── tests/                  # 2307+ unit tests
 ```
 
 ## Roadmap to v1.0
@@ -101,7 +112,7 @@ zapomni/
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
 | v0.5.0 | Solid Foundation | **COMPLETE** (3/3 done) |
-| v0.6.0 | Code Intelligence | Planned |
+| v0.6.0 | Code Intelligence | **IN PROGRESS** (1/3 done) |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
 | v0.9.0 | Scale & Performance | Planned |
@@ -109,7 +120,9 @@ zapomni/
 
 ## Next Steps
 
-v0.5.0 complete! Next milestone: **v0.6.0 - Code Intelligence**
+v0.6.0 in progress. Next issues:
+- **#23** - RustExtractor (fn, impl, traits, macros)
+- **#24** - CallGraphAnalyzer (track function calls)
 
 Run `gh issue list --state open` to see available issues.
 
