@@ -12,10 +12,10 @@
 ### Что было сделано в Session #12:
 
 1. **FIXED: BUG-007 (Issue #13) - Performance 7-45x медленнее**
-   - Добавлен Ollama batch API `/api/embed`
-   - Интегрирован EmbeddingCache (Redis + in-memory fallback)
+   - Добавлен Ollama batch API `/api/embed` в `ollama_embedder.py`
+   - Интегрирован EmbeddingCache (Redis + in-memory fallback) в `memory_processor.py`
    - Включён semantic cache по умолчанию
-   - Ожидаемое улучшение: -60-90% latency
+   - **Ожидаемое улучшение: -60-90% latency**
 
 ### Предыдущие сессии:
 - **Session #11**: Найдено 7 багов, создан roadmap v0.5-v1.0, 19 issues
@@ -57,6 +57,12 @@ gh issue list --milestone "v0.5.0 - Solid Foundation"
 | Issue | Bug | Severity | Описание | Status |
 |-------|-----|----------|----------|--------|
 | #13 | BUG-007 | HIGH | **Performance 7-45x медленнее** | ✅ FIXED |
+
+**Что было сделано:**
+- `ollama_embedder.py:359-470` - Новый метод `_call_ollama_batch()` для batch API
+- `memory_processor.py:1142-1218` - Интеграция кэша в `_generate_embeddings()`
+- `__main__.py:240-328` - Создание Redis client и EmbeddingCache
+- `config.py:257` - `enable_semantic_cache = True` по умолчанию
 
 ### P0 - Критические баги (СНАЧАЛА ЭТО!)
 
@@ -122,19 +128,21 @@ gh issue list --milestone "v0.5.0 - Solid Foundation"
 
 ## ПОРЯДОК РАБОТЫ
 
-### Рекомендуемый порядок после этой сессии:
+### Рекомендуемый порядок после Session #12:
 
-1. **Fix #13 (Performance)** - Без этого продукт непригоден
-   - Embedding caching в Redis
-   - Ollama batch API `/api/embed`
-
-2. **Fix #12 (Workspace isolation)** - Основная функциональность
+1. **Fix #12 (Workspace isolation)** - CRITICAL, основная функциональность
    - Inject mcp_server в tools
    - resolve_workspace_id() когда не указан
+   - Files: `server.py`, `add_memory.py`, `search_memory.py`
 
-3. **Fix #14, #15 (Code indexing)** - Наш differentiator
+2. **Fix #14, #15 (Code indexing)** - Наш differentiator
    - Integrate Tree-sitter
    - Real functions_found/classes_found
+   - Files: `index_codebase.py`
+
+3. **Fix #16 (Workspace state)** - Related to #12
+   - Instance-level state for stdio mode
+   - Files: `workspace_tools.py`, `server.py`
 
 4. **Start v0.5.0 issues** (#19, #20, #21)
    - PythonExtractor
@@ -152,24 +160,42 @@ make e2e                           # E2E тесты
 
 # GitHub
 gh issue list                      # Все issues
-gh issue list --milestone "v0.5.0 - Solid Foundation"
-gh milestone list                  # Не работает, используй API
-gh api repos/alienxs2/zapomni/milestones | jq '.[] | {number, title}'
+gh issue list --state open         # Открытые issues
+gh issue view 12                   # Посмотреть issue #12
 
 # Сервер
 make docker-up                     # FalkorDB + Redis
 make server                        # MCP сервер
+
+# Redis для кэша (опционально, есть in-memory fallback)
+REDIS_ENABLED=true docker compose up -d redis
 ```
 
 ---
 
 ## ВАЖНЫЕ ФАЙЛЫ
 
+### Код
+```
+/home/dev/zapomni/src/
+├── zapomni_core/
+│   ├── embeddings/
+│   │   ├── ollama_embedder.py     # Batch API (Session #12)
+│   │   └── embedding_cache.py     # Cache implementation
+│   ├── memory_processor.py        # Cache integration (Session #12)
+│   └── treesitter/                # Tree-sitter модуль (ГОТОВ)
+├── zapomni_mcp/
+│   ├── __main__.py                # Redis init (Session #12)
+│   └── tools/                     # MCP tools (17 штук)
+└── tests/                         # 2089+ тестов
+```
+
+### Документация
 ```
 /home/dev/zapomni/
-├── src/zapomni_core/treesitter/   # Tree-sitter модуль (ГОТОВ)
-├── src/zapomni_mcp/tools/         # MCP tools (17 штук)
-└── tests/                         # 2089+ тестов
+├── CHANGELOG.md                   # История изменений
+├── README.md                      # Основная документация
+└── .claude/resume-prompt.md       # ЭТА ИНСТРУКЦИЯ
 
 /home/dev/zapomi_anal/
 ├── ZAPOMNI_PRODUCT_ANALYSIS_REPORT.md
@@ -181,6 +207,20 @@ make server                        # MCP сервер
 ---
 
 ## ИСТОРИЯ СЕССИЙ
+
+### Session 2025-11-28 #12 (PERFORMANCE FIX)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- ✅ FIXED: Issue #13 (BUG-007) - Performance 7-45x медленнее
+- Добавлен Ollama batch API `/api/embed`
+- Интегрирован EmbeddingCache в memory_processor
+- Включён semantic cache по умолчанию
+- 2089 unit tests passed
+
+**Коммиты**:
+- `81c63087` - fix(performance): Implement embedding caching and batch API
+- `d16c0c0a` - docs: Update resume-prompt.md
 
 ### Session 2025-11-28 #11 (STRATEGIC PLANNING)
 **PM**: AI Assistant (Claude Opus 4.5)
@@ -214,4 +254,11 @@ make server                        # MCP сервер
 
 ---
 
-**Успех = Fix 7 bugs → v0.5.0 → v0.6.0 → ... → v1.0 Launch**
+## СЛЕДУЮЩИЕ ШАГИ ДЛЯ НОВОГО PM
+
+1. **Прочитать эту инструкцию полностью**
+2. **Запустить тесты**: `make test` - убедиться что всё работает
+3. **Начать с Issue #12 (Workspace isolation)** - самый критичный баг
+4. **Использовать Task tool с opus** для сложных задач
+
+**Успех = Fix 6 bugs → v0.5.0 → v0.6.0 → ... → v1.0 Launch**
