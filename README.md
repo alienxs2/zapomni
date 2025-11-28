@@ -12,7 +12,7 @@ Zapomni is a local-first MCP (Model Context Protocol) memory server that provide
 - **Unified database** - FalkorDB combines vector embeddings and knowledge graph in a single system
 - **Hybrid search** - vector similarity, BM25 keyword search, and graph traversal
 - **Knowledge graph** - automatic entity extraction and relationship mapping
-- **Code intelligence** - AST-based code analysis and indexing (14+ languages)
+- **Code intelligence** - AST-based code analysis and indexing (41+ languages)
 - **Git Hooks integration** - automatic re-indexing on code changes
 - **MCP native** - seamless integration with Claude, Cursor, Cline, and other MCP clients
 - **Privacy guaranteed** - your data never leaves your machine
@@ -270,7 +270,7 @@ For more details, see the [CLI Guide](docs/CLI.md).
 
 ### Running Tests
 
-The project includes **2135 tests** (1864 unit + 116 E2E + 155 integration) with high coverage (74-89% depending on module).
+The project includes **2134 tests** (unit + E2E + integration) with high coverage (74-89% depending on module).
 
 ```bash
 # Run all tests
@@ -311,15 +311,24 @@ For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOP
 
 ## Project Status
 
-**Current Version**: v0.2.2 (Alpha)
+**Current Version**: v0.5.0-alpha
 
 **What's Working**:
 - Core memory operations (add, search, statistics)
-- Knowledge graph construction and traversal (requires flag)
-- Workspace isolation
+- Knowledge graph construction and traversal
+- Workspace isolation (fixed in v0.5.0-alpha)
 - Git hooks integration
 - All 17 MCP tools available
-- Comprehensive test suite (2019 tests)
+- Tree-sitter AST parsing (41 languages, 221 tests)
+- Comprehensive test suite (2134 tests)
+
+**Recent Fixes (v0.5.0-alpha)**:
+- Workspace isolation (Issue #12)
+- Performance 7-45x improvement (Issue #13)
+- Code indexing with Tree-sitter (Issues #14, #15)
+- Instance-level workspace state (Issue #16)
+- Timezone handling in date filters (Issue #17)
+- Model existence validation (Issue #18)
 
 **Note**: All advanced features are enabled by default.
 

@@ -1,0 +1,34 @@
+# SHASHKA Configuration
+# Solo Human + AI System for Knowledge & Automation
+
+project:
+  name: "zapomni"
+  description: "Local-first MCP memory server for AI agents with 41-language AST support"
+  type: "mcp-server"
+  version: "v0.4.0"
+  repository: "https://github.com/alienxs2/zapomni"
+  stack:
+    languages: ["Python 3.11+"]
+    frameworks: ["MCP Protocol", "Tree-sitter"]
+    databases: ["FalkorDB", "Redis"]
+
+# Language settings
+language:
+  communication: "Русский"   # Language for talking to you
+  documentation: "English"   # Language for SPECs, logs, reports
+
+# Session tracking
+session:
+  current: 14
+  last_date: "2025-11-28"
+
+# Bug tracking - ALL FIXED!
+bugs:
+  fixed: ["#12", "#13", "#14", "#15", "#16", "#17", "#18"]
+  remaining: []
+  next: null
+
+# Milestones
+milestones:
+  current: "Bug Fixing - COMPLETE!"
+  next: "v0.5.0 - Solid Foundation"

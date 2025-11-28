@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.5.0-alpha] - 2025-11-28
+
+### Bug Fixing Complete - All 7 Critical Bugs Fixed
+
+This release marks the completion of the critical bug fixing phase. All 7 bugs identified in Session #11 have been resolved, making the system stable for v0.5.0 feature development.
+
+**PRs Merged:**
+- **PR #31**: fix(workspace): Workspace isolation (Issue #12, BUG-005)
+- **PR #32**: fix(index_codebase): Tree-sitter AST integration (Issues #14, #15, BUG-002, BUG-003)
+- **PR #33**: fix(workspace): Instance-level state persistence (Issue #16, BUG-004)
+- **PR #34**: fix(search): Timezone handling in date filters (Issue #17, BUG-001)
+- **PR #35**: fix(model): Model existence validation (Issue #18, BUG-006)
+
+**Bugs Fixed:**
+
+| Issue | Bug ID | Severity | Description |
+|-------|--------|----------|-------------|
+| #12 | BUG-005 | CRITICAL | Workspace isolation broken - memories leaked across workspaces |
+| #13 | BUG-007 | HIGH | Performance 7-45x slower than target (fixed in previous session) |
+| #14 | BUG-002 | HIGH | Code indexing not working - Tree-sitter integration |
+| #15 | BUG-003 | MEDIUM | AST extraction returning 0 functions/classes |
+| #16 | BUG-004 | HIGH | Workspace state not persisting in stdio mode |
+| #17 | BUG-001 | MEDIUM | Timezone handling in date filters |
+| #18 | BUG-006 | LOW | Model validation not checking Ollama availability |
+
+**Test Results:**
+- **Unit Tests**: 2134 passed
+- **E2E Tests**: 88 passed
+- **Tree-sitter Tests**: 221 passed (41 languages)
+
+**Added:**
+- SHASHKA project management system (`.shashka/`)
+- Claude slash commands (`.claude/commands/`)
+- Architecture Decision Records (`docs/adr/`)
+
+**Next Steps:**
+- v0.5.0 feature development (Issues #19, #20, #21)
+- PythonExtractor implementation
+- TypeScriptExtractor implementation
+- Full Tree-sitter integration
+
+---
+
 ### Performance Fix: Embedding Caching and Batch API (BUG-007)
 
 **Issue:** [#13](https://github.com/alienxs2/zapomni/issues/13) | **Bug:** BUG-007 | **Severity:** HIGH
