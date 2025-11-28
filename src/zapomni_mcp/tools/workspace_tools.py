@@ -308,11 +308,11 @@ class SetCurrentWorkspaceTool:
                     "isError": True,
                 }
 
-            # Set workspace in session
-            if session_id:
-                success = self.mcp_server.set_session_workspace(session_id, request.workspace_id)
-                if not success:
-                    log.warning("failed_to_set_session_workspace")
+            # Set workspace in session (SSE mode) or instance (stdio mode)
+            # Always call set_session_workspace - it handles both modes (Issue #16 / BUG-004)
+            success = self.mcp_server.set_session_workspace(session_id, request.workspace_id)
+            if not success:
+                log.warning("failed_to_set_session_workspace")
 
             log.info(
                 "workspace_set",

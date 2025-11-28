@@ -156,6 +156,11 @@ class MCPServer:
         # Session manager will be set by SSE transport
         self._session_manager: Optional[Any] = None
 
+        # Instance-level workspace state for stdio mode (Issue #16 / BUG-004)
+        # In stdio mode, session_id is None and session_manager is not available,
+        # so we need instance-level state to persist workspace between tool calls.
+        self._default_workspace_id: str = DEFAULT_WORKSPACE_ID
+
         # Setup structured logging to stderr
         structlog.configure(
             processors=[
@@ -716,9 +721,8 @@ class MCPServer:
         Resolve the current workspace_id for a request.
 
         Resolution order:
-        1. If session_id provided and session_manager available,
-           get workspace from session state
-        2. Otherwise, return DEFAULT_WORKSPACE_ID
+        1. For SSE mode (session_id provided): get workspace from session_manager
+        2. For stdio mode (session_id is None): use instance-level default workspace
 
         Args:
             session_id: Optional session ID for SSE transport
@@ -726,41 +730,60 @@ class MCPServer:
         Returns:
             Resolved workspace_id string
         """
-        # Try to get from session if available
+        # SSE mode: Try to get from session if available
         if session_id and self._session_manager is not None:
             try:
                 workspace_id = self._session_manager.get_workspace_id(session_id)
                 if workspace_id:
+                    self._logger.debug(
+                        "resolved_workspace_from_session",
+                        session_id=session_id,
+                        workspace_id=workspace_id,
+                    )
                     return workspace_id
             except Exception as e:
                 self._logger.warning(
-                    "Failed to get workspace from session",
+                    "failed_to_get_session_workspace",
                     session_id=session_id,
                     error=str(e),
                 )
 
-        return DEFAULT_WORKSPACE_ID
+        # stdio mode: use instance-level default workspace
+        self._logger.debug(
+            "using_instance_workspace",
+            workspace_id=self._default_workspace_id,
+        )
+        return self._default_workspace_id
 
     def set_session_workspace(
         self,
-        session_id: str,
+        session_id: Optional[str],
         workspace_id: str,
     ) -> bool:
         """
-        Set the workspace_id for a session.
+        Set the workspace_id for a session (SSE mode) or instance (stdio mode).
+
+        For SSE mode (session_id provided): uses session_manager
+        For stdio mode (session_id is None): uses instance-level state
 
         Args:
-            session_id: Session ID
+            session_id: Session ID for SSE mode, None for stdio mode
             workspace_id: Workspace ID to set
 
         Returns:
             True if successful, False otherwise
         """
-        if self._session_manager is None:
-            self._logger.warning("Session manager not available")
-            return False
+        # SSE mode: use session manager
+        if session_id and self._session_manager is not None:
+            return self._session_manager.set_workspace_id(session_id, workspace_id)
 
-        return self._session_manager.set_workspace_id(session_id, workspace_id)
+        # stdio mode: use instance-level state
+        self._default_workspace_id = workspace_id
+        self._logger.info(
+            "workspace_changed_stdio_mode",
+            workspace_id=workspace_id,
+        )
+        return True
 
     def _setup_signal_handlers(self) -> None:
         """
