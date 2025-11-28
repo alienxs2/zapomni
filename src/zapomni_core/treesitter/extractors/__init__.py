@@ -8,6 +8,7 @@ Classes:
     GenericExtractor: Universal fallback extractor for any language.
     PythonExtractor: Specialized extractor for Python with full AST support.
     TypeScriptExtractor: Specialized extractor for TypeScript/JavaScript.
+    GoExtractor: Specialized extractor for Go with full AST support.
 
 Constants:
     FUNCTION_NODE_TYPES: Set of AST node types for function definitions.
@@ -18,6 +19,10 @@ Constants:
     TYPESCRIPT_CLASS_TYPES: TypeScript class node types.
     TYPESCRIPT_TYPE_TYPES: TypeScript type definition node types.
     TYPESCRIPT_SPECIAL_DECORATORS: TypeScript special decorators.
+    GO_FUNCTION_TYPES: Go function node types.
+    GO_TYPE_TYPES: Go type definition node types.
+    GO_STRUCT_TYPES: Go struct node types.
+    GO_INTERFACE_TYPES: Go interface node types.
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
@@ -38,6 +43,13 @@ from .typescript import (
     TYPESCRIPT_TYPE_TYPES,
     TYPESCRIPT_SPECIAL_DECORATORS,
 )
+from .go import (
+    GoExtractor,
+    GO_FUNCTION_TYPES,
+    GO_TYPE_TYPES,
+    GO_STRUCT_TYPES,
+    GO_INTERFACE_TYPES,
+)
 
 __all__ = [
     # Base class
@@ -48,6 +60,8 @@ __all__ = [
     "PythonExtractor",
     # TypeScript extractor
     "TypeScriptExtractor",
+    # Go extractor
+    "GoExtractor",
     # Node type sets
     "FUNCTION_NODE_TYPES",
     "CLASS_NODE_TYPES",
@@ -59,4 +73,9 @@ __all__ = [
     "TYPESCRIPT_CLASS_TYPES",
     "TYPESCRIPT_TYPE_TYPES",
     "TYPESCRIPT_SPECIAL_DECORATORS",
+    # Go constants
+    "GO_FUNCTION_TYPES",
+    "GO_TYPE_TYPES",
+    "GO_STRUCT_TYPES",
+    "GO_INTERFACE_TYPES",
 ]

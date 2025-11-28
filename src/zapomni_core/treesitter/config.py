@@ -94,9 +94,10 @@ LANGUAGES_WITH_EXTRACTORS: Set[str] = {
     "python",  # PythonExtractor - Issue #19
     "typescript",  # TypeScriptExtractor - Issue #20
     "javascript",  # TypeScriptExtractor - Issue #20 (same extractor)
+    "go",  # GoExtractor - Issue #22
 }
 # Will be populated as extractors are added:
-# "java", "go", "rust", etc.
+# "java", "rust", etc.
 
 
 # =============================================================================
