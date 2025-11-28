@@ -1,8 +1,8 @@
 # Zapomni Project - Project Manager Handoff
 
-**Last Updated**: 2025-11-28 (Session #8 - v0.3.1 RELEASED)
-**Project Status**: v0.3.1 Released - Issue #2 Fixed
-**Version**: v0.3.1
+**Last Updated**: 2025-11-28 (Session #9 - v0.4.0 Foundation PLANNING)
+**Project Status**: v0.4.0 Foundation Phase - Tree-sitter Integration
+**Version**: v0.3.1 → v0.4.0 (in progress)
 
 ---
 
@@ -41,11 +41,31 @@ sleep 10
 make e2e                      # 88 passed, 1 xfailed
 ```
 
-### Шаг 3: СЛЕДУЮЩИЕ ЗАДАЧИ (v0.4.0)
-1. **Tree-sitter интеграция** - AST парсинг для 165+ языков
-2. **Load testing**: `make load-test`
-3. **Multi-modal support** - изображения, PDF
-4. **Streaming responses** - для больших результатов
+### Шаг 3: ТЕКУЩАЯ РАБОТА (v0.4.0 Foundation)
+
+**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
+**План**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
+
+#### Архитектурные решения:
+| Аспект | Решение |
+|--------|---------|
+| Интеграция | Полная замена index_codebase (Breaking Change) |
+| Гранулярность | Hybrid (файл + top-level отдельно) |
+| Паттерны | Registry + Factory |
+| Fallback | GenericExtractor для 165+ языков |
+
+#### Задачи Foundation (F1-F11):
+- [ ] **F1**: Зависимости (tree-sitter-language-pack)
+- [ ] **F2**: models.py (ExtractedCode, ASTNodeLocation)
+- [ ] **F3**: exceptions.py (TreeSitterError)
+- [ ] **F4**: config.py (165+ language mappings)
+- [ ] **F5**: parser/base.py (BaseLanguageParser ABC)
+- [ ] **F6**: parser/registry.py (Singleton)
+- [ ] **F7**: parser/factory.py (lazy init)
+- [ ] **F8**: extractors/base.py (BaseCodeExtractor ABC)
+- [ ] **F9**: extractors/generic.py (fallback)
+- [ ] **F10**: Unit тесты (~115)
+- [ ] **F11**: Документация
 
 ---
 
@@ -141,6 +161,65 @@ REDIS_ENABLED=true           # Redis для кеширования
 ---
 
 ## ИСТОРИЯ СЕССИЙ
+
+### Session 2025-11-28 #9 (v0.4.0 Foundation - IMPLEMENTED)
+**PM**: AI Assistant (Claude Opus 4.5)
+
+**Выполнено**:
+- Создан Issue #5 для v0.4.0 Tree-sitter Integration
+- **РЕАЛИЗОВАН Foundation Phase (F1-F9)**:
+  - F1: Добавлены зависимости tree-sitter в pyproject.toml
+  - F2: Создан models.py (5 Pydantic моделей)
+  - F3: Создан exceptions.py (4 исключения)
+  - F4: Создан config.py (42 языка, 73 расширения)
+  - F5: Создан parser/base.py (BaseLanguageParser ABC)
+  - F6: Создан parser/registry.py (LanguageParserRegistry Singleton)
+  - F7: Создан parser/factory.py (ParserFactory + UniversalLanguageParser)
+  - F8: Создан extractors/base.py (BaseCodeExtractor ABC)
+  - F9: Создан extractors/generic.py (GenericExtractor fallback)
+- Обновлена документация: ROADMAP.md, CHANGELOG.md
+
+**Статистика**:
+| Метрика | Значение |
+|---------|----------|
+| Новых файлов | 11 |
+| Языков поддерживается | 41 |
+| Node types для extraction | 55 |
+| Unit тесты | 1848 passed (существующие не сломаны) |
+
+**Архитектурные решения v0.4.0**:
+| Аспект | Решение |
+|--------|---------|
+| Интеграция | Полная замена index_codebase (Breaking Change) |
+| Гранулярность | Hybrid (файл + top-level отдельно) |
+| Паттерны | Registry + Factory для расширяемости |
+| Fallback | GenericExtractor для всех языков |
+
+**Issue**: [#5](https://github.com/alienxs2/zapomni/issues/5)
+**Plan**: `/home/dev/.claude/plans/optimized-wondering-pnueli.md`
+
+**Структура нового модуля**:
+```
+src/zapomni_core/treesitter/
+├── __init__.py           # Public API (29 exports)
+├── models.py             # ExtractedCode, ASTNodeLocation, etc.
+├── exceptions.py         # TreeSitterError hierarchy
+├── config.py             # 42 languages, 73 extensions
+├── parser/
+│   ├── base.py           # BaseLanguageParser ABC
+│   ├── registry.py       # LanguageParserRegistry (Singleton)
+│   └── factory.py        # ParserFactory, UniversalLanguageParser
+└── extractors/
+    ├── base.py           # BaseCodeExtractor ABC
+    └── generic.py        # GenericExtractor (55 node types)
+```
+
+**Следующие шаги**:
+- [ ] F10: Unit тесты (~115 новых)
+- [ ] Интеграция с index_codebase tool
+- [ ] Python-specific extractor
+
+---
 
 ### Session 2025-11-28 #8 (v0.3.1 - Issue #2 FIX)
 **PM**: AI Assistant (Claude Opus 4.5)
