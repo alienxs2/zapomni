@@ -1192,8 +1192,10 @@ export interface User {
         stored_texts = [call[0][0] for call in calls]
 
         # Verify actual code content is in stored text (not just metadata)
+        # With AST extraction, functions are stored individually
         python_stored = any("def hello_world" in text for text in stored_texts)
-        ts_stored = any("export function formatDate" in text for text in stored_texts)
+        # Tree-sitter extracts function body without 'export' keyword
+        ts_stored = any("function formatDate" in text for text in stored_texts)
 
         assert python_stored, "Python function content should be stored"
         assert ts_stored, "TypeScript function content should be stored"
@@ -1210,9 +1212,10 @@ export interface User {
         calls = mock_processor.add_memory.call_args_list
         stored_texts = [call[0][0] for call in calls]
 
-        # Verify header format
+        # Verify header format - with AST extraction, we store functions/classes
+        # The header contains relative path and language name (not extension)
         assert any("# File: example.py" in text for text in stored_texts)
-        assert any("# Language: .py" in text for text in stored_texts)
+        assert any("# Language: python" in text for text in stored_texts)
 
     @pytest.mark.asyncio
     async def test_execute_metadata_includes_language(
