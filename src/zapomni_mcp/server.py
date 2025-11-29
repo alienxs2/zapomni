@@ -14,7 +14,7 @@ import signal
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Sequence, cast
+from typing import Any, Dict, Optional, cast
 
 import structlog
 from mcp.server import Server
@@ -28,9 +28,6 @@ from mcp.types import (
     TextContent,
     Tool,
 )
-
-# Type alias for MCP content types
-MCPContent = TextContent | ImageContent | AudioContent | ResourceLink | EmbeddedResource
 
 from zapomni_core.exceptions import ValidationError as ZapomniValidationError  # noqa: F401
 from zapomni_core.workspace_manager import WorkspaceManager
@@ -54,6 +51,9 @@ from zapomni_mcp.tools.workspace_tools import (
     ListWorkspacesTool,
     SetCurrentWorkspaceTool,
 )
+
+# Type alias for MCP content types
+MCPContent = TextContent | ImageContent | AudioContent | ResourceLink | EmbeddedResource
 
 # Custom Exceptions
 
