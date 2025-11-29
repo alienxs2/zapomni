@@ -134,7 +134,7 @@ class CodeRepositoryIndexer:
                     details={"received_value": self.config["max_file_size"]},
                 )
 
-    def index_repository(self, repo_path: str) -> Dict[str, Any]:
+    def index_repository(self, repo_path: str | Path) -> Dict[str, Any]:
         """
         Index entire Git repository.
 
@@ -165,22 +165,22 @@ class CodeRepositoryIndexer:
             ValidationError: If repo_path is invalid
             ProcessingError: If repository cannot be read
         """
-        repo_path = self._validate_repo_path(repo_path)
+        validated_path = self._validate_repo_path(repo_path)
 
         try:
             # Get code files
-            files = self.get_code_files(repo_path)
+            files = self.get_code_files(validated_path)
 
             # Calculate statistics
             stats = self._calculate_statistics(files)
 
             # Get git info
-            git_info = self._get_git_info(repo_path)
+            git_info = self._get_git_info(validated_path)
 
             result = {
                 "repository": {
-                    "path": str(repo_path),
-                    "name": repo_path.name,
+                    "path": str(validated_path),
+                    "name": validated_path.name,
                     "git_url": git_info.get("url"),
                     "default_branch": git_info.get("default_branch", "main"),
                 },
@@ -190,7 +190,7 @@ class CodeRepositoryIndexer:
 
             logger.info(
                 "repository_indexed",
-                path=str(repo_path),
+                path=str(validated_path),
                 file_count=len(files),
                 total_lines=stats["total_lines"],
             )
@@ -202,19 +202,19 @@ class CodeRepositoryIndexer:
         except Exception as exc:
             logger.error(
                 "repository_indexing_failed",
-                path=str(repo_path),
+                path=str(validated_path),
                 error=str(exc),
             )
             raise ProcessingError(
-                message=f"Failed to index repository at {repo_path}",
+                message=f"Failed to index repository at {validated_path}",
                 error_code="PROC_003",
-                details={"path": str(repo_path)},
+                details={"path": str(validated_path)},
                 original_exception=exc,
             )
 
     def get_code_files(
         self,
-        repo_path: str,
+        repo_path: str | Path,
         extensions: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -240,30 +240,30 @@ class CodeRepositoryIndexer:
             ValidationError: If repo_path is invalid
             ProcessingError: If files cannot be read
         """
-        repo_path = self._validate_repo_path(repo_path)
+        validated_path = self._validate_repo_path(repo_path)
         extensions = extensions or self.code_extensions
 
         try:
             files = []
-            gitignore_patterns = self._load_gitignore(repo_path)
+            gitignore_patterns = self._load_gitignore(validated_path)
 
-            for file_path in repo_path.rglob("*"):
+            for file_path in validated_path.rglob("*"):
                 # Check if it's a file (handle symlinks based on config)
                 if not self._is_file(file_path):
                     continue
 
                 # Check if file should be included
-                if not self._should_include_file(file_path, repo_path, extensions):
+                if not self._should_include_file(file_path, validated_path, extensions):
                     continue
 
                 # Check gitignore patterns
-                relative_path = file_path.relative_to(repo_path)
+                relative_path = file_path.relative_to(validated_path)
                 if self._is_ignored(str(relative_path), gitignore_patterns):
                     continue
 
                 # Get file metadata
                 try:
-                    file_info = self.get_file_metadata(str(file_path), repo_path)
+                    file_info = self.get_file_metadata(str(file_path), validated_path)
                     files.append(file_info)
                 except Exception as exc:
                     logger.warning(
@@ -273,7 +273,7 @@ class CodeRepositoryIndexer:
                     )
                     continue
 
-            logger.info("code_files_collected", count=len(files), repo=str(repo_path))
+            logger.info("code_files_collected", count=len(files), repo=str(validated_path))
             return sorted(files, key=lambda f: f["relative_path"])
 
         except ProcessingError:
@@ -281,13 +281,13 @@ class CodeRepositoryIndexer:
         except Exception as exc:
             logger.error(
                 "code_files_collection_failed",
-                path=str(repo_path),
+                path=str(validated_path),
                 error=str(exc),
             )
             raise ProcessingError(
-                message=f"Failed to collect code files from {repo_path}",
+                message=f"Failed to collect code files from {validated_path}",
                 error_code="PROC_003",
-                details={"path": str(repo_path)},
+                details={"path": str(validated_path)},
                 original_exception=exc,
             )
 
@@ -355,7 +355,7 @@ class CodeRepositoryIndexer:
             if repo_root and file_path_obj.is_relative_to(repo_root):
                 relative_path = file_path_obj.relative_to(repo_root)
             else:
-                relative_path = file_path_obj.name
+                relative_path = Path(file_path_obj.name)
 
             result = {
                 "path": str(file_path_obj.absolute()),
@@ -468,7 +468,7 @@ class CodeRepositoryIndexer:
         except (OSError, PermissionError):
             return False
 
-    def _validate_repo_path(self, repo_path: str) -> Path:
+    def _validate_repo_path(self, repo_path: str | Path) -> Path:
         """
         Validate and convert repository path to Path object.
 
@@ -494,14 +494,14 @@ class CodeRepositoryIndexer:
             raise ValidationError(
                 f"Repository path does not exist: {repo_path}",
                 error_code="VAL_001",
-                details={"path": repo_path},
+                details={"path": str(repo_path)},
             )
 
         if not path_obj.is_dir():
             raise ValidationError(
                 f"Repository path is not a directory: {repo_path}",
                 error_code="VAL_001",
-                details={"path": repo_path},
+                details={"path": str(repo_path)},
             )
 
         return path_obj
@@ -761,18 +761,20 @@ class CodeRepositoryIndexer:
 
     def _calculate_statistics(self, files: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate statistics from file list."""
-        stats = {
-            "total_files": len(files),
-            "total_lines": 0,
-            "total_size": 0,
-            "by_extension": {},
-        }
+        by_extension: Dict[str, int] = {}
+        total_lines = 0
+        total_size = 0
 
         for file_info in files:
-            stats["total_lines"] += file_info.get("lines", 0)
-            stats["total_size"] += file_info.get("size_bytes", 0)
+            total_lines += file_info.get("lines", 0)
+            total_size += file_info.get("size_bytes", 0)
 
             ext = file_info.get("extension", "unknown")
-            stats["by_extension"][ext] = stats["by_extension"].get(ext, 0) + 1
+            by_extension[ext] = by_extension.get(ext, 0) + 1
 
-        return stats
+        return {
+            "total_files": len(files),
+            "total_lines": total_lines,
+            "total_size": total_size,
+            "by_extension": by_extension,
+        }

@@ -34,7 +34,7 @@ class SearchMemoryRequest(BaseModel):
     query: Annotated[str, StringConstraints(min_length=1, max_length=1000)]
     limit: int = 10
     filters: Optional[Dict[str, Any]] = None
-    workspace_id: str = None  # Optional workspace ID override
+    workspace_id: Optional[str] = None  # Optional workspace ID override
 
 
 class SearchMemoryTool:
@@ -274,47 +274,26 @@ class SearchMemoryTool:
 
         # Additional validation: query cannot be empty or whitespace only
         if not request.query or not request.query.strip():
-            raise ValidationError.from_exception_data(
-                "SearchMemoryRequest",
-                [
-                    {
-                        "type": "value_error",
-                        "loc": ("query",),
-                        "msg": "query cannot be empty or contain only whitespace",
-                        "input": arguments.get("query", ""),
-                    }
-                ],
+            raise CoreValidationError(
+                message="query cannot be empty or contain only whitespace",
+                error_code="VAL_001",
             )
 
         # Additional validation: limit bounds
         if request.limit < 1:
-            raise ValidationError.from_exception_data(
-                "SearchMemoryRequest",
-                [
-                    {
-                        "type": "value_error",
-                        "loc": ("limit",),
-                        "msg": "limit must be at least 1",
-                        "input": arguments.get("limit", 1),
-                    }
-                ],
+            raise CoreValidationError(
+                message="limit must be at least 1",
+                error_code="VAL_001",
             )
         if request.limit > 100:
-            raise ValidationError.from_exception_data(
-                "SearchMemoryRequest",
-                [
-                    {
-                        "type": "value_error",
-                        "loc": ("limit",),
-                        "msg": "limit cannot exceed 100",
-                        "input": arguments.get("limit", 100),
-                    }
-                ],
+            raise CoreValidationError(
+                message="limit cannot exceed 100",
+                error_code="VAL_001",
             )
 
         return request
 
-    def _format_response(self, results: list) -> Dict[str, Any]:
+    def _format_response(self, results: list[Any]) -> Dict[str, Any]:
         """
         Format search results as MCP response.
 

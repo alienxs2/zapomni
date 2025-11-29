@@ -317,7 +317,7 @@ class ExportGraphTool:
         output_path = request.output_path
 
         # Convert options to dict for GraphExporter
-        options_dict = {}
+        options_dict: Dict[str, Any] = {}
         if request.options.node_types is not None:
             options_dict["node_types"] = request.options.node_types
         if request.options.pretty_print is not None:

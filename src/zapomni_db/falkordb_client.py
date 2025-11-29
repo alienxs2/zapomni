@@ -1403,9 +1403,13 @@ class FalkorDBClient:
                 if isinstance(metadata, str):
                     metadata = json.loads(metadata)
 
-                created_at = row.get("created_at")
-                if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                created_at_raw = row.get("created_at")
+                if isinstance(created_at_raw, str):
+                    created_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                elif isinstance(created_at_raw, datetime):
+                    created_at = created_at_raw
+                else:
+                    created_at = datetime.now()
 
                 updated_at = row.get("updated_at")
                 if isinstance(updated_at, str):
@@ -1455,9 +1459,13 @@ class FalkorDBClient:
                 if isinstance(metadata, str):
                     metadata = json.loads(metadata)
 
-                created_at = row.get("created_at")
-                if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                created_at_raw = row.get("created_at")
+                if isinstance(created_at_raw, str):
+                    created_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                elif isinstance(created_at_raw, datetime):
+                    created_at = created_at_raw
+                else:
+                    created_at = datetime.now()
 
                 updated_at = row.get("updated_at")
                 if isinstance(updated_at, str):
@@ -2080,7 +2088,7 @@ class FalkorDBClient:
 
         # Count first
         count_result = await self.get_orphaned_chunks_preview(workspace_id, limit=1)
-        count = count_result["count"]
+        count = int(count_result["count"])
 
         if count == 0:
             self._logger.info(
@@ -2205,7 +2213,7 @@ class FalkorDBClient:
 
         # Count first
         count_result = await self.get_orphaned_entities_preview(workspace_id, limit=1)
-        count = count_result["count"]
+        count = int(count_result["count"])
 
         if count == 0:
             self._logger.info(
@@ -2335,7 +2343,7 @@ class FalkorDBClient:
 
     async def add_calls_batch(
         self,
-        calls: List[Dict],
+        calls: List[Dict[str, Any]],
         workspace_id: str = DEFAULT_WORKSPACE_ID,
     ) -> int:
         """
@@ -2457,7 +2465,7 @@ class FalkorDBClient:
         qualified_name: str,
         workspace_id: str = DEFAULT_WORKSPACE_ID,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Get functions that call the given function.
 

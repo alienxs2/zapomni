@@ -9,7 +9,7 @@ License: MIT
 """
 
 import time
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import structlog
 from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
@@ -33,7 +33,7 @@ class AddMemoryRequest(BaseModel):
 
     text: Annotated[str, StringConstraints(min_length=1, max_length=10_000_000)]
     metadata: Dict[str, Any] = {}
-    workspace_id: str = None  # Optional workspace ID override
+    workspace_id: Optional[str] = None  # Optional workspace ID override
 
 
 class AddMemoryResponse(BaseModel):
@@ -43,7 +43,7 @@ class AddMemoryResponse(BaseModel):
     memory_id: str
     chunks_created: int
     text_preview: str
-    error: str = None
+    error: Optional[str] = None
 
 
 class AddMemoryTool:
@@ -281,16 +281,9 @@ class AddMemoryTool:
 
         # Validate text is not empty after stripping
         if not text:
-            raise ValidationError.from_exception_data(
-                "AddMemoryRequest",
-                [
-                    {
-                        "type": "value_error",
-                        "loc": ("text",),
-                        "msg": "text cannot be empty or contain only whitespace",
-                        "input": arguments.get("text", ""),
-                    }
-                ],
+            raise CoreValidationError(
+                message="text cannot be empty or contain only whitespace",
+                error_code="VAL_001",
             )
 
         metadata = request.metadata or {}

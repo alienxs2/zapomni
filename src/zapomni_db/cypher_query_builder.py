@@ -546,7 +546,7 @@ class CypherQueryBuilder:
         relationship_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
 
-        parameters = {
+        parameters: Dict[str, Any] = {
             "from_id": from_entity_id,
             "to_id": to_entity_id,
             "rel_id": relationship_id,
