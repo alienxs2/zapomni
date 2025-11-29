@@ -8,7 +8,6 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-
 import pytest
 
 from zapomni_core.logging_service import LoggingConfig, LoggingService

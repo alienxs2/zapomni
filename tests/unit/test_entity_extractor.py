@@ -26,11 +26,7 @@ def spacy_model():
     try:
         nlp = spacy.load("en_core_web_sm")
     except OSError:
-        # Model not installed, use blank model with NER component
-        nlp = spacy.blank("en")
-        nlp.add_pipe("ner")
-        # Initialize the NER component
-        nlp.initialize(lambda: [])
+        pytest.skip("SpaCy model 'en_core_web_sm' not installed")
     return nlp
 
 

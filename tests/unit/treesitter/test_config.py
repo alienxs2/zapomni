@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.config module."""
 
-
 from zapomni_core.treesitter.config import (
     EXTENSION_TO_LANGUAGE,
     LANGUAGE_EXTENSIONS,

@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.parser.factory module."""
 
-
 import pytest
 from tree_sitter import Parser
 

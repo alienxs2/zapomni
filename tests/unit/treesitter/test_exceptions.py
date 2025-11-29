@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.exceptions module."""
 
-
 from zapomni_core.exceptions import ProcessingError
 from zapomni_core.treesitter.exceptions import (
     ExtractorNotFoundError,

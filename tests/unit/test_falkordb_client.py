@@ -206,9 +206,7 @@ class TestFalkorDBClientAddMemory:
         """Test ValidationError on empty text (Pydantic validation)."""
         # Pydantic validates BEFORE method execution
         with pytest.raises(Exception, match="String should have at least 1 character"):
-            Memory(
-                text="", chunks=[Chunk(text="dummy", index=0)], embeddings=[[0.1] * 768]
-            )
+            Memory(text="", chunks=[Chunk(text="dummy", index=0)], embeddings=[[0.1] * 768])
 
     @pytest.mark.asyncio
     async def test_add_memory_text_too_long_raises(self, mock_client):

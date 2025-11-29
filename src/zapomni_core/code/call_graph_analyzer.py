@@ -516,6 +516,7 @@ class CallGraphAnalyzer:
         Returns:
             List of FunctionCall objects
         """
+
         class CallVisitor(ast.NodeVisitor):
             """Visitor to find function calls."""
 
