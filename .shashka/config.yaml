@@ -19,12 +19,12 @@ language:
 
 # Session tracking
 session:
-  current: 22
+  current: 23
   last_date: "2025-11-29"
 
 # Bug tracking - ALL FIXED!
 bugs:
-  fixed: ["#12", "#13", "#14", "#15", "#16", "#17", "#18"]
+  fixed: ["#12", "#13", "#14", "#15", "#16", "#17", "#18", "#36"]
   remaining: []
   next: null
 
