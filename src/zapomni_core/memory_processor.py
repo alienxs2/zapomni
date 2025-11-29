@@ -217,8 +217,8 @@ class MemoryProcessor:
         # These are loaded on first access to speed up MCP server startup
         self._extractor = extractor  # May be None, loaded lazily
         self._graph_builder: Optional[GraphBuilder] = None
-        self._spacy_model = None  # Cached SpaCy model
-        self._llm_client = None  # Cached LLM client for entity refinement
+        self._spacy_model: Any = None  # Cached SpaCy model (spacy.language.Language)
+        self._llm_client: Any = None  # Cached LLM client for entity refinement (OllamaLLMClient)
 
         # Handle config
         self.config = config or ProcessorConfig()
@@ -247,12 +247,15 @@ class MemoryProcessor:
             graph_enabled=self.config.enable_graph,
         )
 
-    def _load_spacy_model(self):
+    def _load_spacy_model(self) -> Any:
         """
         Load SpaCy model lazily on first use.
 
         This is called internally when extractor or graph_builder is first accessed.
         Loading SpaCy takes ~2-3 seconds, so we defer it until actually needed.
+
+        Returns:
+            spacy.language.Language: Loaded SpaCy model
         """
         if self._spacy_model is None:
             self.logger.info("lazy_loading_spacy_model", model="en_core_web_sm")
@@ -263,11 +266,14 @@ class MemoryProcessor:
         return self._spacy_model
 
     @property
-    def llm_client(self):
+    def llm_client(self) -> Any:
         """
         Lazy-loaded OllamaLLMClient for entity refinement.
 
         Only loaded if enable_llm_refinement is True.
+
+        Returns:
+            OllamaLLMClient | None: The LLM client if enabled, None otherwise
         """
         if self._llm_client is None and self.config.enable_llm_refinement:
             self.logger.info(
@@ -286,13 +292,16 @@ class MemoryProcessor:
         return self._llm_client
 
     @property
-    def extractor(self):
+    def extractor(self) -> Any:
         """
         Lazy-loaded EntityExtractor.
 
         SpaCy model is loaded on first access (~2-3 seconds).
         If LLM refinement is enabled, OllamaLLMClient is also attached.
         Subsequent accesses return cached instance.
+
+        Returns:
+            EntityExtractor: The entity extractor instance
         """
         if self._extractor is None:
             self.logger.info("lazy_loading_entity_extractor")
@@ -690,21 +699,21 @@ class MemoryProcessor:
             # Convert to SearchResultItem objects
             results = []
             for db_result in db_results:
-                # Extract metadata
-                tags = []
-                source = "unknown"
+                # Extract metadata with proper type handling
+                tags: list[str] = []
+                source: str = "unknown"
                 if hasattr(db_result, "tags"):
-                    tags = db_result.tags
+                    tags = db_result.tags or []
                 if hasattr(db_result, "source"):
-                    source = db_result.source
+                    source = db_result.source or "unknown"
 
                 result = SearchResultItem(
                     memory_id=db_result.memory_id,
-                    text=db_result.text,
-                    similarity_score=db_result.similarity_score,
+                    text=db_result.text or "",
+                    similarity_score=db_result.similarity_score or 0.0,
                     tags=tags,
                     source=source,
-                    timestamp=db_result.timestamp,
+                    timestamp=db_result.timestamp or datetime.now(timezone.utc),
                 )
                 results.append(result)
 

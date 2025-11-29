@@ -121,7 +121,7 @@ def process_markdown(text: str) -> str:
         )
 
 
-def extract_sections(text: str) -> List[Dict[str, str]]:
+def extract_sections(text: str) -> List[Dict[str, str | int]]:
     """
     Extract headers with optional content sections from Markdown.
 
@@ -133,7 +133,7 @@ def extract_sections(text: str) -> List[Dict[str, str]]:
     """
     source = _ensure_text_type(text, "text", allow_empty=True)
     matches = list(HEADER_PATTERN.finditer(source))
-    sections: List[Dict[str, str]] = []
+    sections: List[Dict[str, str | int]] = []
 
     for index, match in enumerate(matches):
         header_raw = match.group("header") or ""
@@ -176,7 +176,7 @@ def extract_links(text: str) -> List[str]:
         (MARKDOWN_LINK_PATTERN, lambda m: (m.group(1), m.group(2))),
     ):
         for match in matcher.finditer(source):
-            label, url = handler(match)
+            label, url = handler(match)  # type: ignore[no-untyped-call]
             entry = f"{label.strip()} ({url.strip()})" if label else url.strip()
             if entry not in seen:
                 seen.add(entry)
@@ -228,7 +228,7 @@ class MarkdownProcessor:
     def process(self, text: str) -> str:
         return process_markdown(text)
 
-    def extract_sections(self, text: str) -> List[Dict[str, str]]:
+    def extract_sections(self, text: str) -> List[Dict[str, str | int]]:
         return extract_sections(text)
 
     def extract_links(self, text: str) -> List[str]:

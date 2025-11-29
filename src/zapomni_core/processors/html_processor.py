@@ -40,7 +40,7 @@ class _HTMLTextExtractor(HTMLParser):
         self.in_script = False
         self.in_style = False
 
-    def handle_starttag(self, tag: str, attrs: List[tuple]) -> None:
+    def handle_starttag(self, tag: str, attrs: List[tuple[str, str | None]]) -> None:
         """Handle opening HTML tags."""
         if tag in ("script", "style"):
             if tag == "script":
@@ -93,7 +93,7 @@ class _LinkExtractor(HTMLParser):
         self.links: List[str] = []
         self.base_url = base_url
 
-    def handle_starttag(self, tag: str, attrs: List[tuple]) -> None:
+    def handle_starttag(self, tag: str, attrs: List[tuple[str, str | None]]) -> None:
         """Handle opening HTML tags."""
         if tag == "a":
             for attr, value in attrs:
@@ -316,11 +316,21 @@ class HTMLProcessor:
             try:
                 meta = trafilatura.extract_metadata(html)
                 if meta:
-                    metadata = {
-                        "title": meta.get("title"),
-                        "author": meta.get("author"),
-                        "date": meta.get("date"),
-                    }
+                    # Handle both Document object (real trafilatura) and dict (mocked/tests)
+                    if hasattr(meta, "title"):
+                        # Real trafilatura Document object
+                        metadata = {
+                            "title": meta.title,
+                            "author": meta.author,
+                            "date": meta.date,
+                        }
+                    else:
+                        # Dict (e.g., from tests/mocks)
+                        metadata = {
+                            "title": meta.get("title"),  # type: ignore[attr-defined]
+                            "author": meta.get("author"),  # type: ignore[attr-defined]
+                            "date": meta.get("date"),  # type: ignore[attr-defined]
+                        }
                     # Remove None values
                     metadata = {k: v for k, v in metadata.items() if v is not None}
 
@@ -434,10 +444,16 @@ class HTMLProcessor:
             if trafilatura:
                 try:
                     meta = trafilatura.extract_metadata(html)
-                    if meta and meta.get("language"):
-                        lang = meta["language"]
-                        self.logger.info("language_detected", language=lang)
-                        return lang
+                    if meta:
+                        # Handle both Document object (real trafilatura) and dict (mocked/tests)
+                        if hasattr(meta, "language"):
+                            lang_value = meta.language
+                        else:
+                            lang_value = meta.get("language")  # type: ignore[attr-defined]
+                        if lang_value:
+                            lang: str = str(lang_value)
+                            self.logger.info("language_detected", language=lang)
+                            return lang
                 except Exception as e:
                     self.logger.debug("trafilatura_language_detection_failed", error=str(e))
 

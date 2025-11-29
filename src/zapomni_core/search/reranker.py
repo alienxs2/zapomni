@@ -10,7 +10,7 @@ License: MIT
 """
 
 import asyncio
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import structlog
 from sentence_transformers import CrossEncoder
@@ -398,8 +398,12 @@ class CrossEncoderReranker:
             )
 
         # Handle single content vs list
-        is_single = isinstance(content, str)
-        contents = [content] if is_single else content
+        if isinstance(content, str):
+            is_single = True
+            contents: List[str] = [content]
+        else:
+            is_single = False
+            contents = list(content)
 
         # Validate contents
         if not contents:
@@ -451,7 +455,7 @@ class CrossEncoderReranker:
 
     async def rerank_batch(
         self,
-        queries: List[dict],
+        queries: List[dict[str, Any]],
     ) -> List[List[SearchResult]]:
         """
         Rerank multiple queries in batch.
@@ -501,7 +505,7 @@ class CrossEncoderReranker:
 
     async def _score_batch(
         self,
-        pairs: List[tuple],
+        pairs: List[tuple[str, str]],
     ) -> List[float]:
         """
         Internal method: Score multiple query-content pairs efficiently.
@@ -522,6 +526,11 @@ class CrossEncoderReranker:
 
         try:
             # Score all pairs at once
+            if self.model is None:
+                raise SearchError(
+                    message="Model not loaded",
+                    error_code="SEARCH_001",
+                )
             raw_scores = self.model.predict(pairs)
 
             # Convert raw scores to probabilities via sigmoid
@@ -530,12 +539,14 @@ class CrossEncoderReranker:
 
             if isinstance(raw_scores, np.ndarray):
                 # Sigmoid: 1 / (1 + e^-x)
-                normalized = 1 / (1 + np.exp(-raw_scores))
-                return normalized.tolist()
+                normalized_arr = 1 / (1 + np.exp(-raw_scores))
+                return list(normalized_arr.tolist())
             else:
                 # Handle list of scores
-                normalized = [1 / (1 + np.exp(-s)) for s in raw_scores]
-                return normalized
+                normalized_list: List[float] = [
+                    float(1 / (1 + np.exp(-s))) for s in raw_scores
+                ]
+                return normalized_list
 
         except Exception as e:
             logger.warning("batch_scoring_failed", error=str(e))

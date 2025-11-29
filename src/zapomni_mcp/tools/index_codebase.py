@@ -228,7 +228,7 @@ class IndexCodebaseTool:
 
         # Initialize call graph analyzer if tree-sitter is available
         self._call_graph_analyzer = (
-            CallGraphAnalyzer() if TREESITTER_AVAILABLE and CallGraphAnalyzer else None
+            CallGraphAnalyzer() if TREESITTER_AVAILABLE and CallGraphAnalyzer is not None else None
         )
 
         self.logger.info("index_codebase_tool_initialized")
@@ -665,12 +665,13 @@ class IndexCodebaseTool:
         Returns:
             Dictionary with calculated statistics
         """
-        stats = {
+        languages: Dict[str, int] = {}
+        stats: Dict[str, Any] = {
             "files_indexed": len(files),
             "functions_found": functions_found,
             "classes_found": classes_found,
             "calls_found": calls_found,
-            "languages": {},
+            "languages": languages,
             "total_lines": 0,
         }
 
@@ -681,7 +682,7 @@ class IndexCodebaseTool:
             # Find language for this extension
             for lang, exts in LANGUAGE_EXTENSIONS.items():
                 if ext in exts:
-                    stats["languages"][lang] = stats["languages"].get(lang, 0) + 1
+                    languages[lang] = languages.get(lang, 0) + 1
                     break
 
             # Count lines
@@ -797,7 +798,7 @@ class IndexCodebaseTool:
                     continue
 
                 # Determine language from extension
-                language = self._extension_to_language(extension)
+                language = self._extension_to_language(extension if extension else "")
 
                 # Try AST parsing for granular extraction
                 ast_result = self._parse_file_ast(file_path, content_bytes)
