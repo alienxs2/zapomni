@@ -325,16 +325,29 @@ class SchemaManager:
         }
 
         try:
-            # Query all indexes
+            # Query all indexes using FalkorDB's db.indexes() procedure
             existing_indexes: Dict[str, List[Any]] = {}
             try:
-                result = self.graph.query("SHOW INDEXES")
+                result = self.graph.query("CALL db.indexes()")
                 if result.result_set:
                     for row in result.result_set:
-                        index_name = row[0]
-                        existing_indexes[index_name] = row
+                        # db.indexes() returns tuples with index info
+                        # Extract index name from the row
+                        row_str = str(row)
+                        for idx_name in [
+                            self.INDEX_VECTOR,
+                            self.INDEX_MEMORY_ID,
+                            self.INDEX_ENTITY_NAME,
+                            self.INDEX_TIMESTAMP,
+                            self.INDEX_MEMORY_STALE,
+                            self.INDEX_MEMORY_FILE_PATH,
+                            self.INDEX_MEMORY_QUALIFIED_NAME,
+                            "chunk_memory_id_idx",
+                        ]:
+                            if idx_name in row_str:
+                                existing_indexes[idx_name] = list(row)
             except Exception:
-                # FalkorDB may not support SHOW INDEXES, assume no indexes exist
+                # If db.indexes() fails, assume no indexes exist
                 self.logger.debug("Could not query indexes, assuming none exist")
 
             # Check vector index
@@ -447,20 +460,24 @@ class SchemaManager:
             # Delete all nodes and edges
             self._execute_cypher("MATCH (n) DETACH DELETE n")
 
-            # Drop all indexes (query for existing indexes first)
+            # Drop all indexes using FalkorDB's db.indexes() procedure
             try:
-                result = self.graph.query("SHOW INDEXES")
+                result = self.graph.query("CALL db.indexes()")
                 if result.result_set:
                     for row in result.result_set:
-                        index_name = row[0]
+                        # Try to extract index name from the row
+                        # FalkorDB returns index info as tuples
                         try:
-                            self._execute_cypher(f"DROP INDEX {index_name}")
+                            # Index name is typically the first element
+                            index_name = row[0] if row else None
+                            if index_name:
+                                self._execute_cypher(f"DROP INDEX ON :{index_name}")
                         except Exception as e:
                             self.logger.warning(
-                                "Failed to drop index", index_name=index_name, error=str(e)
+                                "Failed to drop index", index_info=str(row), error=str(e)
                             )
             except Exception as e:
-                # FalkorDB may not support SHOW INDEXES, skip index dropping
+                # If db.indexes() fails, skip index dropping
                 self.logger.debug("Could not query indexes for dropping", error=str(e))
 
             # Reset initialized flag
@@ -488,15 +505,19 @@ class SchemaManager:
             DatabaseError: If query fails
         """
         try:
-            result = self.graph.query("SHOW INDEXES")
+            # FalkorDB uses CALL db.indexes() instead of SHOW INDEXES
+            result = self.graph.query("CALL db.indexes()")
             if result.result_set:
                 for row in result.result_set:
-                    if row[0] == index_name:
+                    # db.indexes() returns tuples with index info
+                    # Format varies but typically index name is in the result
+                    row_str = str(row)
+                    if index_name in row_str:
                         return True
             return False
 
         except Exception as e:
-            # FalkorDB may not support SHOW INDEXES, return False to allow creation to proceed
+            # If db.indexes() fails, return False to allow creation to proceed
             self.logger.debug(
                 "Index check failed, assuming index does not exist",
                 error=str(e),

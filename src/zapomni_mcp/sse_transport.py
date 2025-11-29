@@ -170,10 +170,16 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
     Returns:
         Configured Starlette application ready to be run with uvicorn
     """
+    from zapomni_mcp.session_manager import SessionManager
+
     # Track startup time for uptime calculation
     startup_time = time.time()
 
     bound_logger = logger.bind(component="SSETransport")
+
+    # Create and attach session manager to mcp_server for tracking connections
+    session_manager = SessionManager(heartbeat_interval=config.heartbeat_interval)
+    mcp_server._session_manager = session_manager
 
     # Create a single shared SSE transport for all sessions
     # The SDK will manage multiple sessions internally using UUID-based session IDs
@@ -267,6 +273,7 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
                 "version": __version__,
                 "transport": "sse",
                 "uptime_seconds": round(uptime_seconds, 2),
+                "active_connections": session_manager.active_session_count,
             }
 
             # Add database pool statistics if available

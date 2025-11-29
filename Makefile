@@ -16,10 +16,10 @@ e2e: ## Run E2E tests (requires running server)
 	$(PYTEST) tests/e2e/ -v
 
 docker-up: ## Start Docker services (FalkorDB + Redis)
-	docker-compose up -d
+	docker compose up -d
 
 docker-down: ## Stop Docker services
-	docker-compose down
+	docker compose down
 
 server: ## Start MCP server
 	$(PYTHON) -m zapomni_mcp --host $(HOST) --port $(PORT)

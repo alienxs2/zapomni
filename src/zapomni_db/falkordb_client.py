@@ -1757,13 +1757,18 @@ class FalkorDBClient:
             ConnectionError: If not initialized
             DatabaseError: If query fails
         """
+        from datetime import datetime, timezone
+
+        # FalkorDB doesn't support datetime() function, so we pass timestamp as parameter
+        current_timestamp = datetime.now(timezone.utc).isoformat()
+
         cypher = """
         MATCH (m:Memory)
         WHERE m.source = 'code_indexer'
           AND m.workspace_id = $workspace_id
           AND m.file_path = $file_path
         SET m.stale = false,
-            m.last_seen_at = datetime()
+            m.last_seen_at = $timestamp
         RETURN m.id AS memory_id
         """
 
@@ -1773,6 +1778,7 @@ class FalkorDBClient:
                 {
                     "workspace_id": workspace_id,
                     "file_path": file_path,
+                    "timestamp": current_timestamp,
                 },
             )
 
