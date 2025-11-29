@@ -6,7 +6,6 @@ Tests exception creation, error codes, transient flags, and serialization.
 
 import uuid
 
-
 # Import will fail initially (TDD RED phase)
 from zapomni_core.exceptions import (
     ConnectionError,

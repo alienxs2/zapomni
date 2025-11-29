@@ -6,7 +6,6 @@ Tests automatic processor selection based on file type detection.
 
 from __future__ import annotations
 
-
 import pytest
 
 from zapomni_core import code_processor

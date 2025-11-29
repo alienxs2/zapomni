@@ -7,7 +7,6 @@ Covers signatures, parameters, docstrings, decorators, complexity, and edge case
 
 from __future__ import annotations
 
-
 import pytest
 
 from zapomni_core.code.function_extractor import (
