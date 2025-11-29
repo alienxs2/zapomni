@@ -7,6 +7,8 @@ This module contains all MCP tool implementations:
 - get_stats: Query system statistics
 - get_related: Find related entities through graph traversal
 - set_model: Hot-reload Ollama LLM model without server restart
+- get_callers: Find functions that call a specified function
+- get_callees: Find functions called by a specified function
 - Workspace tools: create, list, set, get, delete workspaces
 
 Author: Goncharenko Anton aka alienxs2
@@ -35,6 +37,7 @@ class MCPTool(Protocol):
 
 from .add_memory import AddMemoryTool
 from .build_graph import BuildGraphTool
+from .call_graph import GetCalleesTool, GetCallersTool
 from .clear_all import ClearAllTool
 from .delete_memory import DeleteMemoryTool
 from .export_graph import ExportGraphTool
@@ -67,6 +70,9 @@ __all__ = [
     "DeleteMemoryTool",
     "ExportGraphTool",
     "IndexCodebaseTool",
+    # Call graph tools
+    "GetCallersTool",
+    "GetCalleesTool",
     # Workspace tools
     "CreateWorkspaceTool",
     "ListWorkspacesTool",

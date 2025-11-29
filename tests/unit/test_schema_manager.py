@@ -374,9 +374,9 @@ class TestSchemaManagerCreatePropertyIndexes:
 
         mock_manager.create_property_indexes()
 
-        # Should execute CREATE INDEX for 5 missing indexes (not for memory_id_idx)
-        # Total indexes: 6 (original 4 + 2 GC indexes), minus 1 existing = 5
-        assert mock_manager._execute_cypher.call_count == 5
+        # Should execute CREATE INDEX for 6 missing indexes (not for memory_id_idx)
+        # Total indexes: 7 (original 4 + 2 GC indexes + 1 call graph index), minus 1 existing = 6
+        assert mock_manager._execute_cypher.call_count == 6
 
     def test_create_property_indexes_correct_cypher(self, mock_manager):
         """Test property indexes created with correct Cypher syntax."""
@@ -385,8 +385,8 @@ class TestSchemaManagerCreatePropertyIndexes:
         # Check that Cypher queries contain expected patterns
         cypher_calls = [call[0][0] for call in mock_manager._execute_cypher.call_args_list]
 
-        # Should have 6 CREATE INDEX queries (including 2 GC indexes)
-        assert len(cypher_calls) == 6
+        # Should have 7 CREATE INDEX queries (including 2 GC indexes + 1 call graph index)
+        assert len(cypher_calls) == 7
 
         # All should be CREATE INDEX
         for query in cypher_calls:

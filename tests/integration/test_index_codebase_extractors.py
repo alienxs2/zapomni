@@ -17,7 +17,9 @@ from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_core.treesitter.extractors import (
     GenericExtractor,
+    GoExtractor,
     PythonExtractor,
+    RustExtractor,
     TypeScriptExtractor,
 )
 from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
@@ -69,13 +71,21 @@ class TestExtractorRegistration:
         assert extractor is not None
         assert isinstance(extractor, GenericExtractor)
 
-    def test_go_falls_back_to_generic(self):
-        """Verify Go falls back to GenericExtractor."""
+    def test_go_extractor_registered(self):
+        """Verify GoExtractor is registered for Go."""
         registry = LanguageParserRegistry()
         extractor = registry.get_extractor("go")
 
         assert extractor is not None
-        assert isinstance(extractor, GenericExtractor)
+        assert isinstance(extractor, GoExtractor)
+
+    def test_rust_extractor_registered(self):
+        """Verify RustExtractor is registered for Rust."""
+        registry = LanguageParserRegistry()
+        extractor = registry.get_extractor("rust")
+
+        assert extractor is not None
+        assert isinstance(extractor, RustExtractor)
 
 
 class TestParseFileAstIntegration:
@@ -191,17 +201,18 @@ function add(a, b) {
             )
             assert add_func is not None
 
-    def test_go_file_uses_generic_extractor(self, tool):
-        """Verify Go files use GenericExtractor (fallback)."""
+    def test_go_file_uses_go_extractor(self, tool):
+        """Verify Go files use GoExtractor."""
         go_code = '''
 package main
 
-func main() {
-    println("Hello, World!")
+// Add adds two integers and returns the result.
+func Add(a, b int) int {
+    return a + b
 }
 
-func add(a, b int) int {
-    return a + b
+func main() {
+    println("Hello, World!")
 }
 '''
         with tempfile.NamedTemporaryFile(suffix=".go", delete=False) as f:
@@ -210,7 +221,14 @@ func add(a, b int) int {
 
             result = tool._parse_file_ast(f.name, go_code.encode("utf-8"))
 
-            # GenericExtractor should still work
             assert len(result["errors"]) == 0
-            # Go functions should be extracted by generic extractor
-            assert len(result["functions"]) >= 1
+            assert len(result["functions"]) >= 2
+
+            # GoExtractor extracts doc comments
+            add_func = next(
+                (f for f in result["functions"] if f.name == "Add"),
+                None
+            )
+            assert add_func is not None
+            assert add_func.docstring is not None
+            assert "adds two integers" in add_func.docstring.lower()

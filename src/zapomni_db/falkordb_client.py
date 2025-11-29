@@ -1765,10 +1765,13 @@ class FalkorDBClient:
         """
 
         try:
-            result = await self._execute_cypher(cypher, {
-                "workspace_id": workspace_id,
-                "file_path": file_path,
-            })
+            result = await self._execute_cypher(
+                cypher,
+                {
+                    "workspace_id": workspace_id,
+                    "file_path": file_path,
+                },
+            )
 
             if result.row_count > 0:
                 memory_id = result.rows[0].get("memory_id")
@@ -1852,9 +1855,7 @@ class FalkorDBClient:
         """
 
         try:
-            count_result = await self._execute_cypher(
-                count_cypher, {"workspace_id": workspace_id}
-            )
+            count_result = await self._execute_cypher(count_cypher, {"workspace_id": workspace_id})
 
             memory_count = 0
             chunk_count = 0
@@ -1879,10 +1880,13 @@ class FalkorDBClient:
             LIMIT $limit
             """
 
-            preview_result = await self._execute_cypher(preview_cypher, {
-                "workspace_id": workspace_id,
-                "limit": limit,
-            })
+            preview_result = await self._execute_cypher(
+                preview_cypher,
+                {
+                    "workspace_id": workspace_id,
+                    "limit": limit,
+                },
+            )
 
             preview = []
             for row in preview_result.rows:
@@ -1891,14 +1895,16 @@ class FalkorDBClient:
                 if isinstance(metadata, str):
                     metadata = json.loads(metadata)
 
-                preview.append({
-                    "id": row.get("id"),
-                    "type": "Memory",
-                    "file_path": row.get("file_path") or metadata.get("file_path"),
-                    "relative_path": metadata.get("relative_path"),
-                    "created_at": row.get("created_at"),
-                    "chunk_count": row.get("chunk_count", 0),
-                })
+                preview.append(
+                    {
+                        "id": row.get("id"),
+                        "type": "Memory",
+                        "file_path": row.get("file_path") or metadata.get("file_path"),
+                        "relative_path": metadata.get("relative_path"),
+                        "created_at": row.get("created_at"),
+                        "chunk_count": row.get("chunk_count", 0),
+                    }
+                )
 
             return {
                 "memory_count": memory_count,
@@ -1933,9 +1939,7 @@ class FalkorDBClient:
             DatabaseError: If query fails
         """
         if not confirm:
-            raise ValidationError(
-                "Deletion requires explicit confirmation (confirm=True)"
-            )
+            raise ValidationError("Deletion requires explicit confirmation (confirm=True)")
 
         # Count first (since DETACH DELETE doesn't return counts reliably)
         count_result = await self.get_stale_memories_preview(workspace_id, limit=1)
@@ -2005,14 +2009,8 @@ class FalkorDBClient:
         """
 
         try:
-            count_result = await self._execute_cypher(
-                count_cypher, {"workspace_id": workspace_id}
-            )
-            count = (
-                count_result.rows[0].get("count", 0)
-                if count_result.row_count > 0
-                else 0
-            )
+            count_result = await self._execute_cypher(count_cypher, {"workspace_id": workspace_id})
+            count = count_result.rows[0].get("count", 0) if count_result.row_count > 0 else 0
 
             preview_cypher = """
             MATCH (c:Chunk)
@@ -2023,10 +2021,13 @@ class FalkorDBClient:
             LIMIT $limit
             """
 
-            preview_result = await self._execute_cypher(preview_cypher, {
-                "workspace_id": workspace_id,
-                "limit": limit,
-            })
+            preview_result = await self._execute_cypher(
+                preview_cypher,
+                {
+                    "workspace_id": workspace_id,
+                    "limit": limit,
+                },
+            )
 
             preview = [
                 {
@@ -2066,9 +2067,7 @@ class FalkorDBClient:
             DatabaseError: If query fails
         """
         if not confirm:
-            raise ValidationError(
-                "Deletion requires explicit confirmation (confirm=True)"
-            )
+            raise ValidationError("Deletion requires explicit confirmation (confirm=True)")
 
         # Count first
         count_result = await self.get_orphaned_chunks_preview(workspace_id, limit=1)
@@ -2132,14 +2131,8 @@ class FalkorDBClient:
         """
 
         try:
-            count_result = await self._execute_cypher(
-                count_cypher, {"workspace_id": workspace_id}
-            )
-            count = (
-                count_result.rows[0].get("count", 0)
-                if count_result.row_count > 0
-                else 0
-            )
+            count_result = await self._execute_cypher(count_cypher, {"workspace_id": workspace_id})
+            count = count_result.rows[0].get("count", 0) if count_result.row_count > 0 else 0
 
             preview_cypher = """
             MATCH (e:Entity)
@@ -2152,10 +2145,13 @@ class FalkorDBClient:
             LIMIT $limit
             """
 
-            preview_result = await self._execute_cypher(preview_cypher, {
-                "workspace_id": workspace_id,
-                "limit": limit,
-            })
+            preview_result = await self._execute_cypher(
+                preview_cypher,
+                {
+                    "workspace_id": workspace_id,
+                    "limit": limit,
+                },
+            )
 
             preview = [
                 {
@@ -2196,9 +2192,7 @@ class FalkorDBClient:
             DatabaseError: If query fails
         """
         if not confirm:
-            raise ValidationError(
-                "Deletion requires explicit confirmation (confirm=True)"
-            )
+            raise ValidationError("Deletion requires explicit confirmation (confirm=True)")
 
         # Count first
         count_result = await self.get_orphaned_entities_preview(workspace_id, limit=1)
@@ -2234,3 +2228,395 @@ class FalkorDBClient:
         except Exception as e:
             self._logger.error("delete_orphaned_entities_error", error=str(e))
             raise DatabaseError(f"Failed to delete orphaned entities: {e}")
+
+    # ========================================
+    # CALL GRAPH OPERATIONS
+    # ========================================
+
+    async def add_calls_relationship(
+        self,
+        caller_qualified_name: str,
+        callee_qualified_name: str,
+        call_line: int,
+        call_type: str,
+        arguments_count: int,
+        workspace_id: str = DEFAULT_WORKSPACE_ID,
+    ) -> bool:
+        """
+        Add a CALLS relationship between two functions.
+
+        Creates a directed edge from the caller function to the callee function
+        with call site metadata (line number, call type, arguments count).
+
+        Args:
+            caller_qualified_name: Qualified name of the calling function
+            callee_qualified_name: Qualified name of the called function
+            call_line: Line number where the call occurs
+            call_type: Type of call (function, method, constructor, etc.)
+            arguments_count: Number of arguments in the call
+            workspace_id: Workspace ID for data isolation
+
+        Returns:
+            True if relationship was created, False if caller or callee not found
+
+        Raises:
+            ValidationError: If input parameters are invalid
+            DatabaseError: If database operation fails
+
+        Example:
+            ```python
+            success = await client.add_calls_relationship(
+                caller_qualified_name="module.MyClass.process",
+                callee_qualified_name="module.helper_func",
+                call_line=42,
+                call_type="function",
+                arguments_count=2,
+                workspace_id="default"
+            )
+            ```
+        """
+        # Validate inputs
+        if not caller_qualified_name or not caller_qualified_name.strip():
+            raise ValidationError("caller_qualified_name cannot be empty")
+
+        if not callee_qualified_name or not callee_qualified_name.strip():
+            raise ValidationError("callee_qualified_name cannot be empty")
+
+        if call_line < 0:
+            raise ValidationError(f"call_line must be >= 0, got {call_line}")
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_create_calls_relationship(
+            caller_qualified_name=caller_qualified_name,
+            callee_qualified_name=callee_qualified_name,
+            call_line=call_line,
+            call_type=call_type,
+            arguments_count=arguments_count,
+            workspace_id=workspace_id,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            if result.row_count > 0:
+                self._logger.debug(
+                    "calls_relationship_added",
+                    caller=caller_qualified_name,
+                    callee=callee_qualified_name,
+                    call_line=call_line,
+                )
+                return True
+            else:
+                self._logger.debug(
+                    "calls_relationship_skipped_no_match",
+                    caller=caller_qualified_name,
+                    callee=callee_qualified_name,
+                )
+                return False
+
+        except Exception as e:
+            self._logger.error(
+                "add_calls_relationship_error",
+                error=str(e),
+                caller=caller_qualified_name,
+                callee=callee_qualified_name,
+            )
+            raise DatabaseError(f"Failed to add CALLS relationship: {e}")
+
+    async def add_calls_batch(
+        self,
+        calls: List[Dict],
+        workspace_id: str = DEFAULT_WORKSPACE_ID,
+    ) -> int:
+        """
+        Batch add CALLS relationships.
+
+        Efficiently adds multiple CALLS relationships in a single database
+        operation using UNWIND for better performance.
+
+        Args:
+            calls: List of call dictionaries, each containing:
+                - caller: str - Caller qualified name
+                - callee: str - Callee qualified name
+                - line: int - Call line number
+                - type: str - Call type
+                - args: int - Arguments count
+            workspace_id: Workspace ID for data isolation
+
+        Returns:
+            Number of relationships successfully added
+
+        Raises:
+            ValidationError: If calls list is empty or malformed
+            DatabaseError: If database operation fails
+
+        Example:
+            ```python
+            count = await client.add_calls_batch(
+                calls=[
+                    {"caller": "mod.A.foo", "callee": "mod.bar", "line": 10, "type": "function", "args": 1},
+                    {"caller": "mod.A.foo", "callee": "mod.baz", "line": 15, "type": "method", "args": 2},
+                ],
+                workspace_id="default"
+            )
+            print(f"Added {count} CALLS relationships")
+            ```
+        """
+        if not calls:
+            return 0
+
+        # Validate each call entry
+        validated_calls = []
+        for i, call in enumerate(calls):
+            if not isinstance(call, dict):
+                raise ValidationError(f"calls[{i}] must be a dictionary")
+
+            caller = call.get("caller")
+            callee = call.get("callee")
+            line = call.get("line", 0)
+            call_type = call.get("type", "function")
+            args_count = call.get("args", 0)
+
+            if not caller or not isinstance(caller, str):
+                raise ValidationError(f"calls[{i}].caller must be a non-empty string")
+            if not callee or not isinstance(callee, str):
+                raise ValidationError(f"calls[{i}].callee must be a non-empty string")
+            if not isinstance(line, int) or line < 0:
+                raise ValidationError(f"calls[{i}].line must be a non-negative integer")
+
+            validated_calls.append(
+                {
+                    "caller": caller,
+                    "callee": callee,
+                    "line": line,
+                    "type": call_type,
+                    "args": args_count,
+                }
+            )
+
+        # Build batch Cypher query
+        cypher = """
+        UNWIND $calls AS call_data
+        MATCH (caller:Memory {qualified_name: call_data.caller, workspace_id: $workspace_id})
+        MATCH (callee:Memory {qualified_name: call_data.callee, workspace_id: $workspace_id})
+        MERGE (caller)-[r:CALLS {call_line: call_data.line}]->(callee)
+        ON CREATE SET
+            r.id = randomUUID(),
+            r.call_type = call_data.type,
+            r.arguments_count = call_data.args,
+            r.created_at = datetime()
+        ON MATCH SET
+            r.call_type = call_data.type,
+            r.arguments_count = call_data.args
+        RETURN count(r) AS created_count
+        """
+
+        parameters = {
+            "calls": validated_calls,
+            "workspace_id": workspace_id,
+        }
+
+        try:
+            result = await self._execute_cypher(cypher, parameters)
+
+            created_count = 0
+            if result.row_count > 0:
+                created_count = result.rows[0].get("created_count", 0) or 0
+
+            self._logger.info(
+                "calls_batch_added",
+                requested=len(calls),
+                created=created_count,
+                workspace_id=workspace_id,
+            )
+
+            return created_count
+
+        except Exception as e:
+            self._logger.error(
+                "add_calls_batch_error",
+                error=str(e),
+                calls_count=len(calls),
+            )
+            raise DatabaseError(f"Failed to add CALLS batch: {e}")
+
+    async def get_callers(
+        self,
+        qualified_name: str,
+        workspace_id: str = DEFAULT_WORKSPACE_ID,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """
+        Get functions that call the given function.
+
+        Finds all Memory nodes that have a CALLS relationship pointing
+        to the target function.
+
+        Args:
+            qualified_name: Qualified name of the target function
+            workspace_id: Workspace ID for data isolation
+            limit: Maximum number of results (1-100)
+
+        Returns:
+            List of dictionaries, each containing:
+                - caller_qualified_name: str
+                - caller_id: str
+                - caller_file_path: str
+                - call_line: int
+                - call_type: str
+                - arguments_count: int
+                - call_count: int
+
+        Raises:
+            ValidationError: If parameters are invalid
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            callers = await client.get_callers(
+                qualified_name="module.helper_func",
+                workspace_id="default",
+                limit=20
+            )
+            for caller in callers:
+                print(f"{caller['caller_qualified_name']} calls from line {caller['call_line']}")
+            ```
+        """
+        # Validate inputs
+        if not qualified_name or not qualified_name.strip():
+            raise ValidationError("qualified_name cannot be empty")
+
+        if not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValidationError(f"limit must be int in range [1, 100], got {limit}")
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_get_callers_query(
+            qualified_name=qualified_name,
+            workspace_id=workspace_id,
+            limit=limit,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            callers = []
+            for row in result.rows:
+                callers.append(
+                    {
+                        "caller_qualified_name": row.get("caller_qualified_name"),
+                        "caller_id": row.get("caller_id"),
+                        "caller_file_path": row.get("caller_file_path"),
+                        "call_line": row.get("call_line"),
+                        "call_type": row.get("call_type"),
+                        "arguments_count": row.get("arguments_count"),
+                        "call_count": row.get("call_count"),
+                    }
+                )
+
+            self._logger.debug(
+                "callers_retrieved",
+                qualified_name=qualified_name,
+                count=len(callers),
+            )
+
+            return callers
+
+        except Exception as e:
+            self._logger.error(
+                "get_callers_error",
+                error=str(e),
+                qualified_name=qualified_name,
+            )
+            raise DatabaseError(f"Failed to get callers: {e}")
+
+    async def get_callees(
+        self,
+        qualified_name: str,
+        workspace_id: str = DEFAULT_WORKSPACE_ID,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """
+        Get functions called by the given function.
+
+        Finds all Memory nodes that the target function calls via
+        CALLS relationships.
+
+        Args:
+            qualified_name: Qualified name of the calling function
+            workspace_id: Workspace ID for data isolation
+            limit: Maximum number of results (1-100)
+
+        Returns:
+            List of dictionaries, each containing:
+                - callee_qualified_name: str
+                - callee_id: str
+                - callee_file_path: str
+                - call_line: int
+                - call_type: str
+                - arguments_count: int
+                - call_count: int
+
+        Raises:
+            ValidationError: If parameters are invalid
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            callees = await client.get_callees(
+                qualified_name="module.MyClass.process",
+                workspace_id="default",
+                limit=20
+            )
+            for callee in callees:
+                print(f"Calls {callee['callee_qualified_name']} at line {callee['call_line']}")
+            ```
+        """
+        # Validate inputs
+        if not qualified_name or not qualified_name.strip():
+            raise ValidationError("qualified_name cannot be empty")
+
+        if not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValidationError(f"limit must be int in range [1, 100], got {limit}")
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_get_callees_query(
+            qualified_name=qualified_name,
+            workspace_id=workspace_id,
+            limit=limit,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            callees = []
+            for row in result.rows:
+                callees.append(
+                    {
+                        "callee_qualified_name": row.get("callee_qualified_name"),
+                        "callee_id": row.get("callee_id"),
+                        "callee_file_path": row.get("callee_file_path"),
+                        "call_line": row.get("call_line"),
+                        "call_type": row.get("call_type"),
+                        "arguments_count": row.get("arguments_count"),
+                        "call_count": row.get("call_count"),
+                    }
+                )
+
+            self._logger.debug(
+                "callees_retrieved",
+                qualified_name=qualified_name,
+                count=len(callees),
+            )
+
+            return callees
+
+        except Exception as e:
+            self._logger.error(
+                "get_callees_error",
+                error=str(e),
+                qualified_name=qualified_name,
+            )
+            raise DatabaseError(f"Failed to get callees: {e}")

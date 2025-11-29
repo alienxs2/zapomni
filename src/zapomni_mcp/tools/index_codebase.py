@@ -32,6 +32,7 @@ try:
     from zapomni_core.treesitter.extractors import GenericExtractor
     from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
     from zapomni_core.treesitter.models import ExtractedCode
+    from zapomni_core.treesitter.analyzers.call_graph import CallGraphAnalyzer
 
     TREESITTER_AVAILABLE = True
 except ImportError:
@@ -39,6 +40,7 @@ except ImportError:
     ParserFactory = None  # type: ignore
     GenericExtractor = None  # type: ignore
     ExtractedCode = None  # type: ignore
+    CallGraphAnalyzer = None  # type: ignore
 
 
 # Language to file extensions mapping
@@ -225,6 +227,11 @@ class IndexCodebaseTool:
         self.memory_processor = memory_processor
         self.logger = logger.bind(tool=self.name)
 
+        # Initialize call graph analyzer if tree-sitter is available
+        self._call_graph_analyzer = (
+            CallGraphAnalyzer() if TREESITTER_AVAILABLE and CallGraphAnalyzer else None
+        )
+
         self.logger.info("index_codebase_tool_initialized")
 
     async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -307,14 +314,15 @@ class IndexCodebaseTool:
             memories_created = 0
             functions_found = 0
             classes_found = 0
+            calls_found = 0
             if hasattr(self.memory_processor, "db_client") and self.memory_processor.db_client:
-                memories_created, functions_found, classes_found = (
+                memories_created, functions_found, classes_found, calls_found = (
                     await self._store_code_memories_with_delta(files, workspace_id)
                 )
 
             # Step 5: Calculate statistics with actual AST counts
             stats = self._calculate_statistics(
-                files, index_result, functions_found, classes_found
+                files, index_result, functions_found, classes_found, calls_found
             )
 
             # Step 5.5: Count remaining stale memories
@@ -344,6 +352,7 @@ class IndexCodebaseTool:
                 files_indexed=stats["files_indexed"],
                 functions=stats["functions_found"],
                 classes=stats["classes_found"],
+                calls=stats["calls_found"],
                 memories_created=memories_created,
                 stale_count=stale_count,
                 processing_time_ms=processing_time_ms,
@@ -354,6 +363,7 @@ class IndexCodebaseTool:
                 files_indexed=stats["files_indexed"],
                 functions_found=stats["functions_found"],
                 classes_found=stats["classes_found"],
+                calls_found=stats["calls_found"],
                 languages=stats["languages"],
                 total_lines=stats["total_lines"],
                 processing_time_ms=processing_time_ms,
@@ -548,12 +558,16 @@ class IndexCodebaseTool:
             Dictionary containing:
                 - functions: List of ExtractedCode objects for functions/methods
                 - classes: List of ExtractedCode objects for classes
+                - tree: Parsed tree-sitter Tree (for call graph analysis)
+                - language: Detected language name
                 - errors: List of error messages (if any)
         """
         if not TREESITTER_AVAILABLE:
             return {
                 "functions": [],
                 "classes": [],
+                "tree": None,
+                "language": None,
                 "errors": ["Tree-sitter not available"],
             }
 
@@ -564,6 +578,8 @@ class IndexCodebaseTool:
                 return {
                     "functions": [],
                     "classes": [],
+                    "tree": None,
+                    "language": None,
                     "errors": [f"No parser available for {file_path}"],
                 }
 
@@ -575,11 +591,14 @@ class IndexCodebaseTool:
                 return {
                     "functions": [],
                     "classes": [],
+                    "tree": None,
+                    "language": None,
                     "errors": [f"Parse failed for {file_path}"],
                 }
 
             # Get language-specific extractor with fallback to generic
             from pathlib import Path as PathLib
+
             extension = PathLib(file_path).suffix
             language = self._extension_to_language(extension)
             registry = LanguageParserRegistry()
@@ -607,6 +626,8 @@ class IndexCodebaseTool:
             return {
                 "functions": functions,
                 "classes": classes,
+                "tree": tree,
+                "language": language,
                 "errors": [],
             }
 
@@ -619,6 +640,8 @@ class IndexCodebaseTool:
             return {
                 "functions": [],
                 "classes": [],
+                "tree": None,
+                "language": None,
                 "errors": [str(e)],
             }
 
@@ -628,6 +651,7 @@ class IndexCodebaseTool:
         full_result: Dict[str, Any],
         functions_found: int = 0,
         classes_found: int = 0,
+        calls_found: int = 0,
     ) -> Dict[str, Any]:
         """
         Calculate statistics from indexed files.
@@ -637,6 +661,7 @@ class IndexCodebaseTool:
             full_result: Full result from indexer including statistics
             functions_found: Number of functions extracted via AST parsing
             classes_found: Number of classes extracted via AST parsing
+            calls_found: Number of call relationships extracted via call graph analysis
 
         Returns:
             Dictionary with calculated statistics
@@ -645,6 +670,7 @@ class IndexCodebaseTool:
             "files_indexed": len(files),
             "functions_found": functions_found,
             "classes_found": classes_found,
+            "calls_found": calls_found,
             "languages": {},
             "total_lines": 0,
         }
@@ -713,22 +739,23 @@ class IndexCodebaseTool:
         self,
         files: List[Dict[str, Any]],
         workspace_id: str,
-    ) -> Tuple[int, int, int]:
+    ) -> Tuple[int, int, int, int]:
         """
         Store code files as memories with delta indexing support.
 
         For each file:
         1. Parse AST to extract functions and classes
         2. Store each function/class as separate memory with rich metadata
-        3. Fall back to whole-file storage if AST parsing not available
-        4. Track metrics
+        3. Analyze call graph and store CALLS relationships
+        4. Fall back to whole-file storage if AST parsing not available
+        5. Track metrics
 
         Args:
             files: List of code file dictionaries
             workspace_id: Workspace ID for operations
 
         Returns:
-            Tuple of (memories_created, functions_found, classes_found)
+            Tuple of (memories_created, functions_found, classes_found, calls_found)
         """
         from pathlib import Path
         from datetime import datetime, timezone
@@ -737,6 +764,7 @@ class IndexCodebaseTool:
         memories_refreshed = 0
         total_functions = 0
         total_classes = 0
+        total_calls = 0
 
         db_client = self.memory_processor.db_client
 
@@ -752,9 +780,7 @@ class IndexCodebaseTool:
 
                 # Read file content
                 try:
-                    content_text = Path(file_path).read_text(
-                        encoding="utf-8", errors="ignore"
-                    )
+                    content_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
                     content_bytes = content_text.encode("utf-8")
                 except Exception as read_error:
                     self.logger.warning(
@@ -889,6 +915,49 @@ class IndexCodebaseTool:
                             error=str(cls_error),
                         )
 
+                # Analyze and store call graph relationships
+                tree = ast_result.get("tree")
+                ast_language = ast_result.get("language")
+                if (
+                    self._call_graph_analyzer is not None
+                    and tree is not None
+                    and ast_language is not None
+                    and ast_language in self._call_graph_analyzer.CALL_NODE_TYPES
+                    and functions
+                ):
+                    try:
+                        call_graph = self._call_graph_analyzer.analyze_file(
+                            tree, content_bytes, file_path, ast_language, functions
+                        )
+                        if call_graph.calls:
+                            # Prepare batch for storing
+                            calls_batch = [
+                                {
+                                    "caller": call.caller_qualified_name,
+                                    "callee": call.callee_name,
+                                    "line": call.location.start_line,
+                                    "type": call.call_type.value,
+                                    "args": call.arguments_count,
+                                }
+                                for call in call_graph.calls
+                            ]
+                            stored_count = await db_client.add_calls_batch(
+                                calls_batch, workspace_id
+                            )
+                            total_calls += stored_count
+                            self.logger.debug(
+                                "call_graph_stored",
+                                file=relative_path,
+                                calls_found=len(call_graph.calls),
+                                calls_stored=stored_count,
+                            )
+                    except Exception as cg_error:
+                        self.logger.warning(
+                            "call_graph_analysis_failed",
+                            file=file_path,
+                            error=str(cg_error),
+                        )
+
                 # If no AST elements extracted, fall back to whole-file storage
                 if not functions and not classes:
                     # Try to mark existing memory as fresh
@@ -945,10 +1014,11 @@ class IndexCodebaseTool:
             memories_refreshed=memories_refreshed,
             functions_found=total_functions,
             classes_found=total_classes,
+            calls_found=total_calls,
             workspace_id=workspace_id,
         )
 
-        return memories_created, total_functions, total_classes
+        return memories_created, total_functions, total_classes, total_calls
 
     def _format_success(
         self,
@@ -956,6 +1026,7 @@ class IndexCodebaseTool:
         files_indexed: int,
         functions_found: int,
         classes_found: int,
+        calls_found: int,
         languages: Dict[str, int],
         total_lines: int,
         processing_time_ms: float,
@@ -969,6 +1040,7 @@ class IndexCodebaseTool:
             files_indexed: Number of files indexed
             functions_found: Number of functions extracted
             classes_found: Number of classes extracted
+            calls_found: Number of call relationships extracted
             languages: Dictionary of language counts
             total_lines: Total lines of code
             processing_time_ms: Processing time in milliseconds
@@ -993,6 +1065,7 @@ class IndexCodebaseTool:
             f"Files indexed: {files_indexed}\n"
             f"Functions: {functions_found}\n"
             f"Classes: {classes_found}\n"
+            f"Call relationships: {calls_found}\n"
             f"Languages: {lang_summary}\n"
             f"Total lines: {total_lines:,}\n"
             f"Indexing time: {processing_time_sec:.2f}s"

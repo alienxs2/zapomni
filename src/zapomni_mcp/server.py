@@ -27,6 +27,7 @@ from zapomni_db.models import DEFAULT_WORKSPACE_ID
 from zapomni_mcp.config import Settings, SSEConfig
 from zapomni_mcp.tools import AddMemoryTool, GetStatsTool, MCPTool, SearchMemoryTool
 from zapomni_mcp.tools.build_graph import BuildGraphTool
+from zapomni_mcp.tools.call_graph import GetCalleesTool, GetCallersTool
 from zapomni_mcp.tools.clear_all import ClearAllTool
 from zapomni_mcp.tools.delete_memory import DeleteMemoryTool
 from zapomni_mcp.tools.export_graph import ExportGraphTool
@@ -289,6 +290,15 @@ class MCPServer:
         if hasattr(memory_processor, "db_client") and memory_processor.db_client is not None:
             tools.append(
                 PruneMemoryTool(db_client=memory_processor.db_client)
+            )
+
+        # Phase 3.6: Add Call Graph tools for querying callers/callees
+        if hasattr(memory_processor, "db_client") and memory_processor.db_client is not None:
+            tools.extend(
+                [
+                    GetCallersTool(db_client=memory_processor.db_client),
+                    GetCalleesTool(db_client=memory_processor.db_client),
+                ]
             )
 
         # Phase 4: Workspace management tools

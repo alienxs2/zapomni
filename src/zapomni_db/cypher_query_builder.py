@@ -700,3 +700,234 @@ class CypherQueryBuilder:
             return (where_clause, params)
 
         return ("", params)
+
+    # ========================================
+    # CALL GRAPH QUERIES
+    # ========================================
+
+    def build_create_calls_relationship(
+        self,
+        caller_qualified_name: str,
+        callee_qualified_name: str,
+        call_line: int,
+        call_type: str,
+        arguments_count: int,
+        workspace_id: str,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Create CALLS relationship between two Memory nodes.
+
+        Matches caller and callee Memory nodes by their qualified_name property
+        and creates a CALLS edge with call site metadata.
+
+        Args:
+            caller_qualified_name: Qualified name of the calling function/method
+            callee_qualified_name: Qualified name of the called function/method
+            call_line: Line number where the call occurs
+            call_type: Type of call (function, method, constructor, etc.)
+            arguments_count: Number of arguments in the call
+            workspace_id: Workspace ID for data isolation
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If qualified names are empty
+            ValidationError: If call_line < 0
+            ValidationError: If workspace_id is empty
+
+        Example:
+            ```python
+            cypher, params = builder.build_create_calls_relationship(
+                caller_qualified_name="module.MyClass.process",
+                callee_qualified_name="module.helper_func",
+                call_line=42,
+                call_type="function",
+                arguments_count=2,
+                workspace_id="default"
+            )
+            ```
+        """
+        # STEP 1: Validate inputs
+        if not caller_qualified_name or not caller_qualified_name.strip():
+            raise ValidationError("caller_qualified_name cannot be empty")
+
+        if not callee_qualified_name or not callee_qualified_name.strip():
+            raise ValidationError("callee_qualified_name cannot be empty")
+
+        if call_line < 0:
+            raise ValidationError(f"call_line must be >= 0, got {call_line}")
+
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        # STEP 2: Build parameters
+        relationship_id = str(uuid.uuid4())
+        parameters = {
+            "caller_qualified_name": caller_qualified_name,
+            "callee_qualified_name": callee_qualified_name,
+            "call_line": call_line,
+            "call_type": call_type,
+            "arguments_count": arguments_count,
+            "workspace_id": workspace_id,
+            "rel_id": relationship_id,
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # STEP 3: Build Cypher query
+        # Match Memory nodes by qualified_name within the workspace
+        # Use MERGE to avoid duplicate relationships for the same call site
+        cypher = """
+        MATCH (caller:Memory {qualified_name: $caller_qualified_name, workspace_id: $workspace_id})
+        MATCH (callee:Memory {qualified_name: $callee_qualified_name, workspace_id: $workspace_id})
+        MERGE (caller)-[r:CALLS {call_line: $call_line}]->(callee)
+        ON CREATE SET
+            r.id = $rel_id,
+            r.call_type = $call_type,
+            r.arguments_count = $arguments_count,
+            r.created_at = $created_at
+        ON MATCH SET
+            r.call_type = $call_type,
+            r.arguments_count = $arguments_count
+        RETURN r.id AS relationship_id
+        """
+
+        return (cypher, parameters)
+
+    def build_get_callers_query(
+        self,
+        qualified_name: str,
+        workspace_id: str,
+        limit: int = 50,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Find all functions that call the given function.
+
+        Returns Memory nodes that have a CALLS relationship pointing
+        to the target function, sorted by call frequency.
+
+        Args:
+            qualified_name: Qualified name of the target function
+            workspace_id: Workspace ID for data isolation
+            limit: Maximum number of results (1-100)
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If qualified_name is empty
+            ValidationError: If workspace_id is empty
+            ValidationError: If limit is out of range
+
+        Example:
+            ```python
+            cypher, params = builder.build_get_callers_query(
+                qualified_name="module.helper_func",
+                workspace_id="default",
+                limit=20
+            )
+            # Returns all functions that call helper_func
+            ```
+        """
+        # STEP 1: Validate inputs
+        if not qualified_name or not qualified_name.strip():
+            raise ValidationError("qualified_name cannot be empty")
+
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValidationError(f"limit must be int in range [1, 100], got {limit}")
+
+        # STEP 2: Build parameters
+        parameters = {
+            "qualified_name": qualified_name,
+            "workspace_id": workspace_id,
+            "limit": limit,
+        }
+
+        # STEP 3: Build Cypher query
+        cypher = """
+        MATCH (caller:Memory)-[r:CALLS]->(callee:Memory {qualified_name: $qualified_name, workspace_id: $workspace_id})
+        WHERE caller.workspace_id = $workspace_id
+        RETURN caller.qualified_name AS caller_qualified_name,
+               caller.id AS caller_id,
+               caller.file_path AS caller_file_path,
+               r.call_line AS call_line,
+               r.call_type AS call_type,
+               r.arguments_count AS arguments_count,
+               count(r) AS call_count
+        ORDER BY call_count DESC
+        LIMIT $limit
+        """
+
+        return (cypher, parameters)
+
+    def build_get_callees_query(
+        self,
+        qualified_name: str,
+        workspace_id: str,
+        limit: int = 50,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Find all functions called by the given function.
+
+        Returns Memory nodes that the target function calls via
+        CALLS relationships, sorted by call frequency.
+
+        Args:
+            qualified_name: Qualified name of the calling function
+            workspace_id: Workspace ID for data isolation
+            limit: Maximum number of results (1-100)
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If qualified_name is empty
+            ValidationError: If workspace_id is empty
+            ValidationError: If limit is out of range
+
+        Example:
+            ```python
+            cypher, params = builder.build_get_callees_query(
+                qualified_name="module.MyClass.process",
+                workspace_id="default",
+                limit=20
+            )
+            # Returns all functions that process() calls
+            ```
+        """
+        # STEP 1: Validate inputs
+        if not qualified_name or not qualified_name.strip():
+            raise ValidationError("qualified_name cannot be empty")
+
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValidationError(f"limit must be int in range [1, 100], got {limit}")
+
+        # STEP 2: Build parameters
+        parameters = {
+            "qualified_name": qualified_name,
+            "workspace_id": workspace_id,
+            "limit": limit,
+        }
+
+        # STEP 3: Build Cypher query
+        cypher = """
+        MATCH (caller:Memory {qualified_name: $qualified_name, workspace_id: $workspace_id})-[r:CALLS]->(callee:Memory)
+        WHERE callee.workspace_id = $workspace_id
+        RETURN callee.qualified_name AS callee_qualified_name,
+               callee.id AS callee_id,
+               callee.file_path AS callee_file_path,
+               r.call_line AS call_line,
+               r.call_type AS call_type,
+               r.arguments_count AS arguments_count,
+               count(r) AS call_count
+        ORDER BY call_count DESC
+        LIMIT $limit
+        """
+
+        return (cypher, parameters)

@@ -63,6 +63,7 @@ class SchemaManager:
     EDGE_HAS_CHUNK: str = "HAS_CHUNK"
     EDGE_MENTIONS: str = "MENTIONS"
     EDGE_RELATED_TO: str = "RELATED_TO"
+    EDGE_CALLS: str = "CALLS"
 
     # Index names
     INDEX_VECTOR: str = "chunk_embedding_idx"
@@ -71,6 +72,7 @@ class SchemaManager:
     INDEX_TIMESTAMP: str = "timestamp_idx"
     INDEX_MEMORY_STALE: str = "memory_stale_idx"
     INDEX_MEMORY_FILE_PATH: str = "memory_file_path_idx"
+    INDEX_MEMORY_QUALIFIED_NAME: str = "memory_qualified_name_idx"
 
     def __init__(self, graph: Graph, logger: Optional[BoundLogger] = None) -> None:
         """
@@ -219,7 +221,12 @@ class SchemaManager:
         node_labels = [self.NODE_MEMORY, self.NODE_CHUNK, self.NODE_ENTITY, self.NODE_DOCUMENT]
 
         # Document edge labels
-        edge_labels = [self.EDGE_HAS_CHUNK, self.EDGE_MENTIONS, self.EDGE_RELATED_TO]
+        edge_labels = [
+            self.EDGE_HAS_CHUNK,
+            self.EDGE_MENTIONS,
+            self.EDGE_RELATED_TO,
+            self.EDGE_CALLS,
+        ]
 
         self.logger.info("Graph schema defined", node_labels=node_labels, edge_labels=edge_labels)
 
@@ -250,6 +257,8 @@ class SchemaManager:
             # Garbage collection indexes
             (self.INDEX_MEMORY_STALE, self.NODE_MEMORY, "stale"),
             (self.INDEX_MEMORY_FILE_PATH, self.NODE_MEMORY, "file_path"),
+            # Index for call graph queries
+            (self.INDEX_MEMORY_QUALIFIED_NAME, self.NODE_MEMORY, "qualified_name"),
         ]
 
         created_count = 0
@@ -372,7 +381,12 @@ class SchemaManager:
                 self.NODE_ENTITY,
                 self.NODE_DOCUMENT,
             ]
-            status["edge_labels"] = [self.EDGE_HAS_CHUNK, self.EDGE_MENTIONS, self.EDGE_RELATED_TO]
+            status["edge_labels"] = [
+                self.EDGE_HAS_CHUNK,
+                self.EDGE_MENTIONS,
+                self.EDGE_RELATED_TO,
+                self.EDGE_CALLS,
+            ]
 
             # Set initialized flag
             status["initialized"] = len(status["issues"]) == 0

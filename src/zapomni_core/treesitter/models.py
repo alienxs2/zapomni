@@ -161,3 +161,59 @@ class ParseResult(BaseModel):
         default_factory=list,
         description="Any parsing errors or warnings"
     )
+
+
+class CallType(str, Enum):
+    """Type of function/method call."""
+    FUNCTION = "function"       # Direct function call: foo()
+    METHOD = "method"           # Method call: obj.method()
+    CONSTRUCTOR = "constructor" # Class instantiation: MyClass()
+    STATIC = "static"           # Static method: Type::method() or Class.method()
+    MACRO = "macro"             # Rust macros: println!()
+    BUILTIN = "builtin"         # Built-in functions: print(), len()
+
+
+class FunctionCall(BaseModel, frozen=True):
+    """Represents a function/method call site in source code."""
+
+    # Caller context
+    caller_qualified_name: str
+    caller_file_path: str
+
+    # Callee info
+    callee_name: str
+    callee_qualified_name: Optional[str] = None
+
+    # Location of call site
+    location: ASTNodeLocation
+
+    # Call characteristics
+    call_type: CallType = CallType.FUNCTION
+    receiver: Optional[str] = None
+    arguments_count: int = 0
+    is_await: bool = False
+    is_chained: bool = False
+
+    # Resolution status
+    is_resolved: bool = False
+    is_external: bool = False
+
+
+class CallGraph(BaseModel):
+    """Collection of function calls for a file or codebase."""
+
+    file_path: str
+    language: str
+    calls: List[FunctionCall] = Field(default_factory=list)
+
+    @property
+    def total_calls(self) -> int:
+        return len(self.calls)
+
+    @property
+    def resolved_calls(self) -> int:
+        return sum(1 for c in self.calls if c.is_resolved)
+
+    @property
+    def external_calls(self) -> int:
+        return sum(1 for c in self.calls if c.is_external)
