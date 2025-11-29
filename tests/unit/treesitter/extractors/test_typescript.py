@@ -12,7 +12,7 @@ from tree_sitter import Tree
 from tree_sitter_language_pack import get_parser
 
 from zapomni_core.treesitter.extractors.typescript import TypeScriptExtractor
-from zapomni_core.treesitter.models import CodeElementType, ParameterInfo
+from zapomni_core.treesitter.models import CodeElementType
 
 # =============================================================================
 # Fixtures

@@ -20,18 +20,12 @@ License: MIT
 """
 
 import asyncio
-import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List
 
 import pytest
 
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.exceptions import (
-    DatabaseError,
-    EmbeddingError,
-    SearchError,
     ValidationError,
 )
 from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
@@ -298,7 +292,7 @@ class TestFullMemoryPipeline:
         """
         # Plain text
         text1 = "This is plain text documentation about the project."
-        mid1 = await memory_processor.add_memory(text=text1)
+        await memory_processor.add_memory(text=text1)
 
         # Markdown
         text2 = """
@@ -313,7 +307,7 @@ from project import main
 main()
 ```
 """
-        mid2 = await memory_processor.add_memory(text=text2)
+        await memory_processor.add_memory(text=text2)
 
         # Code
         text3 = """
@@ -322,7 +316,7 @@ def fibonacci(n):
         return n
     return fibonacci(n-1) + fibonacci(n-2)
 """
-        mid3 = await memory_processor.add_memory(text=text3)
+        await memory_processor.add_memory(text=text3)
 
         # All should be searchable
         results = await memory_processor.search_memory(
@@ -838,7 +832,6 @@ class TestEndToEndScenarios:
             },
         ]
 
-        added_ids = []
         for mem in test_memories:
             result = await add_memory_tool.execute(mem)
             assert result["isError"] is False

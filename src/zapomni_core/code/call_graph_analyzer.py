@@ -243,7 +243,7 @@ class CallGraphAnalyzer:
 
             return self.call_graph
 
-        except (SyntaxError, ValueError) as e:
+        except (SyntaxError, ValueError):
             raise
         except Exception as e:
             raise ValidationError(
@@ -516,9 +516,6 @@ class CallGraphAnalyzer:
         Returns:
             List of FunctionCall objects
         """
-        calls: List[FunctionCall] = []
-        current_function: str = "<module>"
-
         class CallVisitor(ast.NodeVisitor):
             """Visitor to find function calls."""
 

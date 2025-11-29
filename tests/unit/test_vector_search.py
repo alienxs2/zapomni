@@ -9,8 +9,7 @@ License: MIT
 """
 
 from datetime import datetime, timezone
-from typing import List
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 

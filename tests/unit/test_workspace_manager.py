@@ -8,11 +8,11 @@ License: MIT
 """
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from zapomni_core.exceptions import DatabaseError, ValidationError
+from zapomni_core.exceptions import ValidationError
 from zapomni_core.workspace_manager import WorkspaceManager
 from zapomni_db.models import DEFAULT_WORKSPACE_ID, Workspace, WorkspaceStats
 

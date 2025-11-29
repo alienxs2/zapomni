@@ -13,15 +13,13 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from datetime import datetime
 from typing import List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from zapomni_core.exceptions import SearchError, ValidationError
 from zapomni_core.search.bm25_search import BM25Search
-from zapomni_db.models import SearchResult
 
 # ==================== FIXTURES ====================
 

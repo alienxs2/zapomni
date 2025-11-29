@@ -308,7 +308,7 @@ class MCPSSEClient:
             # Try to get error details from response body
             try:
                 error_detail = response.json()
-            except:
+            except Exception:
                 error_detail = response.text
             raise RuntimeError(f"HTTP {response.status_code}: {error_detail}") from e
 
@@ -479,7 +479,7 @@ class MCPSSEClient:
         # Check isError field from MCP CallToolResult (per MCP spec)
         is_error = result.get("isError", False)
 
-        # Fallback: also check if content indicates an error (e.g., {"type": "text", "text": "Error: ..."})
+        # Fallback: check if content indicates error ({"type": "text", "text": "Error: ..."})
         if not is_error and content:
             for item in content:
                 if item.get("type") == "text":

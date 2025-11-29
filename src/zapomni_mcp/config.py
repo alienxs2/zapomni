@@ -79,8 +79,8 @@ class SSEConfig:
                 if self.dns_rebinding_protection:
                     raise ValidationError(
                         f"allowed_hosts must be explicitly configured when binding to "
-                        f"non-localhost address '{self.host}' with dns_rebinding_protection enabled. "
-                        f"Example: allowed_hosts=['yourdomain.com', 'api.yourdomain.com']"
+                        f"non-localhost address '{self.host}' with dns_rebinding_protection. "
+                        f"Example: allowed_hosts=['yourdomain.com']"
                     )
 
     def _is_localhost_binding(self) -> bool:

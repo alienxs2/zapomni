@@ -12,15 +12,13 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import asyncio
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 import pytest
 
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
-from zapomni_core.exceptions import EmbeddingError, TimeoutError, ValidationError
+from zapomni_core.exceptions import EmbeddingError, ValidationError
 
 # === Fixtures ===
 
@@ -323,7 +321,7 @@ async def test_embed_batch_partial_failures(mock_ollama_response, mock_httpx_cli
             # With our implementation, ANY failure raises immediately
             with pytest.raises(EmbeddingError, match="Failed to embed text at index"):
                 texts = ["text1", "text2", "text3"]
-                embeddings = await embedder.embed_batch(texts, batch_size=1)
+                await embedder.embed_batch(texts, batch_size=1)
 
 
 @pytest.mark.unit

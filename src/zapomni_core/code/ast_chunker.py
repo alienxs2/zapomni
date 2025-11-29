@@ -96,7 +96,8 @@ class ASTCodeChunker:
             self.language = SupportedLanguage(language_lower)
         except ValueError:
             raise ValidationError(
-                message=f"Unsupported language: {language}. Supported: python, javascript, typescript",
+                message=f"Unsupported language: {language}. "
+                "Supported: python, javascript, typescript",
                 error_code="VAL_002",
             )
 
@@ -201,8 +202,9 @@ class ASTCodeChunker:
         chunks: List[Chunk] = []
         lines = content.split("\n")
 
-        # Extract module-level docstring if present
-        module_docstring = ast.get_docstring(tree)
+        # Module docstring extracted for future metadata use
+        # (currently unused but kept for API expansion)
+        ast.get_docstring(tree)
 
         # Extract all top-level definitions
         for node in tree.body:

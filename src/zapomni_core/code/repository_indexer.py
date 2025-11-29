@@ -12,7 +12,6 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set

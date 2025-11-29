@@ -8,13 +8,18 @@ Author: Goncharenko Anton aka alienxs2
 TDD Implementation: Code written to pass tests from specifications.
 """
 
+from __future__ import annotations
+
 import re
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from zapomni_db.exceptions import ValidationError
 from zapomni_db.models import DEFAULT_WORKSPACE_ID
+
+if TYPE_CHECKING:
+    from zapomni_db.models import Entity, Memory
 
 
 class CypherQueryBuilder:
@@ -321,7 +326,8 @@ class CypherQueryBuilder:
         MATCH (start)-{pattern}-(related:Entity)
         WHERE related.id <> $entity_id
         WITH DISTINCT related,
-             reduce(strength = 1.0, r IN rels | strength * coalesce(r.strength, 1.0)) AS path_strength
+             reduce(strength = 1.0, r IN rels |
+                    strength * coalesce(r.strength, 1.0)) AS path_strength
         RETURN related.id AS entity_id,
                related.name AS name,
                related.type AS type,
@@ -848,7 +854,8 @@ class CypherQueryBuilder:
 
         # STEP 3: Build Cypher query
         cypher = """
-        MATCH (caller:Memory)-[r:CALLS]->(callee:Memory {qualified_name: $qualified_name, workspace_id: $workspace_id})
+        MATCH (caller:Memory)-[r:CALLS]->(callee:Memory {
+            qualified_name: $qualified_name, workspace_id: $workspace_id})
         WHERE caller.workspace_id = $workspace_id
         RETURN caller.qualified_name AS caller_qualified_name,
                caller.id AS caller_id,
@@ -917,7 +924,9 @@ class CypherQueryBuilder:
 
         # STEP 3: Build Cypher query
         cypher = """
-        MATCH (caller:Memory {qualified_name: $qualified_name, workspace_id: $workspace_id})-[r:CALLS]->(callee:Memory)
+        MATCH (caller:Memory {
+            qualified_name: $qualified_name, workspace_id: $workspace_id}
+        )-[r:CALLS]->(callee:Memory)
         WHERE callee.workspace_id = $workspace_id
         RETURN callee.qualified_name AS callee_qualified_name,
                callee.id AS callee_id,

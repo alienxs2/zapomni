@@ -7,10 +7,6 @@ and edge cases as specified in the requirements.
 
 from __future__ import annotations
 
-from typing import List
-
-import pytest
-
 from zapomni_core.utils.token_counter import TokenCounter
 
 

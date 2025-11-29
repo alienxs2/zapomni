@@ -7,7 +7,6 @@ Focuses on security (no SQL injection), correctness, and parameter handling.
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
@@ -413,7 +412,7 @@ class TestBuildAddEntityQuery:
 
     def test_build_add_entity_query_validation_happens_at_pydantic(self):
         """Test that validation happens at Pydantic level for models."""
-        builder = CypherQueryBuilder()
+        CypherQueryBuilder()  # Builder instance for validation context
 
         # Pydantic validates before we even get to the builder
         with pytest.raises(PydanticValidationError):

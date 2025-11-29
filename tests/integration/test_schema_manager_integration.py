@@ -12,7 +12,6 @@ Prerequisites:
 import pytest
 from falkordb import FalkorDB
 
-from zapomni_db.exceptions import DatabaseError, QuerySyntaxError
 from zapomni_db.schema_manager import SchemaManager
 
 

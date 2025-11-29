@@ -10,7 +10,6 @@ TDD Implementation: Code written to pass tests from specifications.
 
 import json
 import time
-from abc import ABC
 from typing import Any, Dict, List, Optional
 
 import redis
@@ -256,7 +255,6 @@ class RedisClient:
             raise ValueError("key must be non-empty string")
 
         retry_count = 0
-        last_error = None
 
         while retry_count <= self.MAX_RETRIES:
             try:
@@ -276,7 +274,6 @@ class RedisClient:
                 raise
             except redis.ConnectionError as e:
                 retry_count += 1
-                last_error = e
                 if retry_count > self.MAX_RETRIES:
                     self._logger.error("get_failed_after_retries", key=key, retries=retry_count)
                     raise CacheError(

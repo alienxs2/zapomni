@@ -12,14 +12,13 @@ Tests for:
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from zapomni_db.exceptions import ConnectionError, DatabaseError, ValidationError
+from zapomni_db.exceptions import ValidationError
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_db.models import Entity, QueryResult, Relationship
+from zapomni_db.models import Entity
 
 # ============================================================================
 # add_entity TESTS
@@ -73,20 +72,20 @@ class TestFalkorDBClientAddEntity:
     def test_add_entity_empty_name_raises(self):
         """Test ValidationError on empty name."""
         with pytest.raises(Exception, match="at least 1 character"):
-            entity = Entity(name="", type="CONCEPT")
+            Entity(name="", type="CONCEPT")
 
     def test_add_entity_empty_type_raises(self):
         """Test ValidationError on empty type."""
         with pytest.raises(Exception, match="at least 1 character"):
-            entity = Entity(name="Test", type="")
+            Entity(name="Test", type="")
 
     def test_add_entity_invalid_confidence_raises(self):
         """Test ValidationError on confidence out of range."""
         with pytest.raises(Exception, match="greater than or equal to 0"):
-            entity = Entity(name="Test", type="CONCEPT", confidence=-0.1)
+            Entity(name="Test", type="CONCEPT", confidence=-0.1)
 
         with pytest.raises(Exception, match="less than or equal to 1"):
-            entity = Entity(name="Test", type="CONCEPT", confidence=1.5)
+            Entity(name="Test", type="CONCEPT", confidence=1.5)
 
 
 # ============================================================================

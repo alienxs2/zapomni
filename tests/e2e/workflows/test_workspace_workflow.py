@@ -162,14 +162,12 @@ class TestWorkspaceWorkflow:
         7. Cleanup
         """
         new_workspace = f"test-switch-{uuid.uuid4().hex[:8]}"
-        original_workspace_id = None
 
         try:
             # Step 1: Get current workspace
             response = mcp_client.call_tool("get_current_workspace", {})
             response.assert_success("Failed to get current workspace")
-            # Store original workspace info for later
-            original_response_text = response.text
+            # Original workspace info stored in response.text for verification
 
             # Step 2: Create new workspace
             response = mcp_client.call_tool(

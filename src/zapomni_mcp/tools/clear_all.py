@@ -217,10 +217,10 @@ class ClearAllTool:
                     {
                         "type": "text",
                         "text": (
-                            f"All memories cleared successfully!\n"
-                            f"Status: CLEARED\n"
-                            f"All data has been permanently deleted from the knowledge graph.\n"
-                            f"WARNING: This operation is irreversible."
+                            "All memories cleared successfully!\n"
+                            "Status: CLEARED\n"
+                            "All data has been permanently deleted from the knowledge graph.\n"
+                            "WARNING: This operation is irreversible."
                         ),
                     }
                 ],

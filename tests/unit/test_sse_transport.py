@@ -11,7 +11,6 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import json
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,7 +18,6 @@ import pytest
 from starlette.testclient import TestClient
 
 from zapomni_mcp.config import SSEConfig
-from zapomni_mcp.session_manager import SessionManager
 
 # Fixtures
 

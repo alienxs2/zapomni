@@ -70,7 +70,7 @@ class GetRelatedTool:
                 "type": "integer",
                 "description": (
                     "Maximum traversal depth in hops (default: 2, range: 1-5). "
-                    "Depth 1 returns direct connections, depth 2 includes connections of connections, etc."
+                    "Depth 1 returns direct, depth 2 includes connections of connections."
                 ),
                 "default": 2,
                 "minimum": 1,
@@ -216,7 +216,7 @@ class GetRelatedTool:
         # Validate using Pydantic model
         try:
             request = GetRelatedRequest(**arguments)
-        except ValidationError as e:
+        except ValidationError:
             # Re-raise as is for handling upstream
             raise
 

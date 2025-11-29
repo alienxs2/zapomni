@@ -19,7 +19,7 @@ Test Coverage:
 Total: 41 comprehensive tests
 """
 
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from falkordb import Graph

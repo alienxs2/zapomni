@@ -10,10 +10,8 @@ License: MIT
 
 from __future__ import annotations
 
-import asyncio
 import json
 import uuid
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -32,7 +30,7 @@ from zapomni_core.exceptions import (
 )
 from zapomni_core.graph.graph_builder import GraphBuilder
 from zapomni_db import FalkorDBClient
-from zapomni_db.models import DEFAULT_WORKSPACE_ID, Chunk, Memory, SearchResult, Workspace
+from zapomni_db.models import DEFAULT_WORKSPACE_ID, Chunk, Memory
 
 logger = structlog.get_logger(__name__)
 
@@ -566,7 +564,7 @@ class MemoryProcessor:
                 - Example: {"tags": ["python"], "source": "wikipedia"}
 
             search_mode: Search algorithm to use
-                - Options: "vector" (Phase 1), "bm25" (Phase 2), "hybrid" (Phase 2), "graph" (Phase 2)
+                - Options: "vector" (Phase 1), "bm25", "hybrid", "graph" (all Phase 2)
                 - Default: "vector"
                 - "vector": Semantic similarity via embeddings (cosine distance)
                 - "bm25": Keyword matching via BM25 algorithm (Phase 2)
@@ -761,8 +759,8 @@ class MemoryProcessor:
             - cache_hit_rate: float - Embedding cache hit rate 0-1 (if caching enabled, Phase 2)
             - cache_size_mb: float - Cache size in MB (if caching enabled, Phase 2)
             - avg_query_latency_ms: int - Average search latency in milliseconds
-            - total_entities: int - Total entities in knowledge graph (if graph built, Phase 2)
-            - total_relationships: int - Total relationships in knowledge graph (if graph built, Phase 2)
+            - total_entities: int - Total entities in knowledge graph (Phase 2)
+            - total_relationships: int - Total relationships in graph (Phase 2)
             - oldest_memory_date: datetime - Timestamp of oldest memory
             - newest_memory_date: datetime - Timestamp of newest memory
 

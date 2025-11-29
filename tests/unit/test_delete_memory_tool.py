@@ -26,7 +26,6 @@ from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
 from zapomni_mcp.tools.delete_memory import (
     DeleteMemoryRequest,
-    DeleteMemoryResponse,
     DeleteMemoryTool,
 )
 

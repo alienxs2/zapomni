@@ -6,7 +6,6 @@ Tests automatic processor selection based on file type detection.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
 
 import pytest
 

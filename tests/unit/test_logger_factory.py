@@ -9,7 +9,6 @@ License: MIT
 """
 
 import pytest
-import structlog
 
 from zapomni_core.logging_service import LoggingService
 from zapomni_core.utils import get_logger
@@ -240,8 +239,8 @@ def test_get_logger_performance_cached(configured_logging):
 
     # First call (creates logger)
     start = time.perf_counter()
-    logger = get_logger("performance.test")
-    first_call_duration = time.perf_counter() - start
+    get_logger("performance.test")
+    time.perf_counter() - start  # First call duration
 
     # Subsequent calls (cached)
     start = time.perf_counter()

@@ -19,7 +19,7 @@ import time
 # Add parent directory to path to import sse_client
 sys.path.insert(0, os.path.dirname(__file__))
 
-from sse_client import MCPSSEClient
+from sse_client import MCPSSEClient  # noqa: E402
 
 
 def test_sse_client():
@@ -46,7 +46,7 @@ def test_sse_client():
         # Check if server is still running
         if server_process.poll() is not None:
             stdout, stderr = server_process.communicate()
-            print(f"\n[ERROR] Server failed to start!")
+            print("\n[ERROR] Server failed to start!")
             print(f"STDOUT: {stdout.decode()}")
             print(f"STDERR: {stderr.decode()}")
             return False
@@ -66,7 +66,7 @@ def test_sse_client():
             print(f"      Uptime: {health.get('uptime_seconds')} seconds")
 
             if health.get("status") != "healthy":
-                print(f"\n[ERROR] Server is not healthy!")
+                print("\n[ERROR] Server is not healthy!")
                 return False
 
             print("      Health check passed!")
@@ -80,7 +80,7 @@ def test_sse_client():
         try:
             session_id = client.connect()
             print(f"      Session ID: {session_id}")
-            print(f"      Connected successfully!")
+            print("      Connected successfully!")
         except Exception as e:
             print(f"\n[ERROR] Connection failed: {e}")
             import traceback
@@ -93,7 +93,7 @@ def test_sse_client():
         try:
             response = client.call_tool("get_stats", {})
 
-            print(f"      Response received!")
+            print("      Response received!")
             print(f"      Is error: {response.is_error}")
             print(f"      Content items: {len(response.content)}")
             print(f"      Full text: {response.text}")
@@ -106,9 +106,9 @@ def test_sse_client():
             # Check that response contains expected data
             text = response.text
             if "total_memories" not in text:
-                print(f"\n[WARNING] Response doesn't contain 'total_memories'")
+                print("\n[WARNING] Response doesn't contain 'total_memories'")
             else:
-                print(f"      Response contains expected data!")
+                print("      Response contains expected data!")
 
         except Exception as e:
             print(f"\n[ERROR] Tool call failed: {e}")

@@ -18,16 +18,15 @@ import asyncio
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from zapomni_db.exceptions import ConnectionError, DatabaseError, QueryError, ValidationError
+from zapomni_db.exceptions import ConnectionError, DatabaseError, ValidationError
 
 # Will be implemented
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_db.models import Chunk, Memory, QueryResult, SearchResult
+from zapomni_db.models import Chunk, Memory, SearchResult
 
 # ============================================================================
 # __init__ TESTS (10 tests from spec)
@@ -207,7 +206,7 @@ class TestFalkorDBClientAddMemory:
         """Test ValidationError on empty text (Pydantic validation)."""
         # Pydantic validates BEFORE method execution
         with pytest.raises(Exception, match="String should have at least 1 character"):
-            memory = Memory(
+            Memory(
                 text="", chunks=[Chunk(text="dummy", index=0)], embeddings=[[0.1] * 768]
             )
 
@@ -218,7 +217,7 @@ class TestFalkorDBClientAddMemory:
 
         # Pydantic validates BEFORE method execution
         with pytest.raises(Exception, match="String should have at most 1000000 characters"):
-            memory = Memory(
+            Memory(
                 text=huge_text, chunks=[Chunk(text=huge_text, index=0)], embeddings=[[0.1] * 768]
             )
 
@@ -258,14 +257,14 @@ class TestFalkorDBClientAddMemory:
 
         # Pydantic validates BEFORE method execution
         with pytest.raises(Exception, match="List should have at most 100 items"):
-            memory = Memory(text="Very long text", chunks=chunks, embeddings=embeddings)
+            Memory(text="Very long text", chunks=chunks, embeddings=embeddings)
 
     @pytest.mark.asyncio
     async def test_add_memory_empty_chunks_raises(self, mock_client):
         """Test ValidationError on empty chunks list (Pydantic validation)."""
         # Pydantic validates BEFORE method execution
         with pytest.raises(Exception, match="List should have at least 1 item"):
-            memory = Memory(text="Test text", chunks=[], embeddings=[])
+            Memory(text="Test text", chunks=[], embeddings=[])
 
     @pytest.mark.asyncio
     async def test_add_memory_non_serializable_metadata_raises(self, mock_client):
@@ -413,7 +412,7 @@ class TestFalkorDBClientAddMemory:
         )
 
         start = time.time()
-        memory_id = await mock_client.add_memory(memory)
+        await mock_client.add_memory(memory)
         elapsed = (time.time() - start) * 1000
 
         assert elapsed < 2000  # 2 second SLA for large input
@@ -701,7 +700,7 @@ class TestFalkorDBClientVectorSearch:
         embedding = [0.1] * 768
 
         start = time.time()
-        results = await mock_search_client.vector_search(embedding, limit=10)
+        await mock_search_client.vector_search(embedding, limit=10)
         elapsed = (time.time() - start) * 1000
 
         assert elapsed < 50  # 50ms for mocked call
@@ -786,7 +785,7 @@ class TestFalkorDBClientGetStats:
         """Test health indicators present."""
         stats = await mock_stats_client.get_stats()
 
-        assert stats["health"]["connected"] == True
+        assert stats["health"]["connected"] is True
         assert stats["health"]["graph_name"] == "test_graph"
         assert "query_latency_ms" in stats["health"]
 
@@ -842,7 +841,7 @@ class TestFalkorDBClientClose:
         await client.close()
 
         # Just verify _closed flag is set
-        assert client._closed == True
+        assert client._closed is True
 
     @pytest.mark.asyncio
     async def test_close_idempotent(self, mocker):
@@ -856,7 +855,7 @@ class TestFalkorDBClientClose:
         await client.close()  # Should not raise
 
         # Verify idempotent behavior
-        assert client._closed == True
+        assert client._closed is True
 
     @pytest.mark.asyncio
     async def test_close_never_connected(self):
@@ -879,7 +878,7 @@ class TestFalkorDBClientClose:
         await client.close()
 
         assert hasattr(client, "_closed")
-        assert client._closed == True
+        assert client._closed is True
 
     @pytest.mark.asyncio
     async def test_close_logs_success(self, mocker):

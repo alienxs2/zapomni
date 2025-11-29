@@ -20,12 +20,10 @@ from pydantic import ValidationError
 
 from zapomni_core.exceptions import (
     DatabaseError,
-    EmbeddingError,
     SearchError,
 )
-from zapomni_core.exceptions import ValidationError as CoreValidationError
 from zapomni_core.memory_processor import MemoryProcessor, SearchResultItem
-from zapomni_mcp.tools.search_memory import SearchMemoryRequest, SearchMemoryTool
+from zapomni_mcp.tools.search_memory import SearchMemoryTool
 
 
 class TestSearchMemoryToolInit:

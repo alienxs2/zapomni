@@ -8,8 +8,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest

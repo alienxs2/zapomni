@@ -13,11 +13,10 @@ from __future__ import annotations
 import ast
 import tempfile
 from pathlib import Path
-from typing import List
 
 import pytest
 
-from zapomni_core.code.ast_chunker import ASTCodeChunker, CodeMetadata, SupportedLanguage
+from zapomni_core.code.ast_chunker import ASTCodeChunker, SupportedLanguage
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_db.models import Chunk
 
@@ -824,7 +823,7 @@ class TestIntegration:
         tree = ast.parse(simple_python_code)
         chunker = ASTCodeChunker(language="python")
 
-        classes = chunker.extract_classes(tree)
+        chunker.extract_classes(tree)  # Extract classes for consistency check
         chunks = chunker.chunk_file(
             file_path="test.py",
             content=simple_python_code,

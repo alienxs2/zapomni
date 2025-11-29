@@ -162,7 +162,7 @@ class GraphStatusTool:
                 "content": [
                     {
                         "type": "text",
-                        "text": "Error: An unexpected error occurred while retrieving graph statistics",
+                        "text": "Error: An unexpected error occurred getting graph statistics",
                     }
                 ],
                 "isError": True,

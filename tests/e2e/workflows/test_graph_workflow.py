@@ -219,7 +219,7 @@ class TestGraphWorkflow:
         # Step 2: Check initial status
         response = mcp_client.call_tool("graph_status", {})
         response.assert_success("Failed to get initial graph status")
-        initial_status = response.text
+        # initial_status checked for success above
 
         # Step 3: Build graph with text B
         response = mcp_client.call_tool(

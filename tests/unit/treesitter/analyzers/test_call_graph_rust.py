@@ -366,7 +366,10 @@ fn inner_call() {}
         func = make_rust_func(
             name="caller",
             qualified_name="caller",
-            source="fn caller() {\n    outer_call();\n    let closure = || {\n        inner_call();\n    };\n}",
+            source=(
+                "fn caller() {\n    outer_call();\n    let closure = || {\n        "
+                "inner_call();\n    };\n}"
+            ),
             start_line=0,
             start_col=0,
             end_line=5,
@@ -406,7 +409,10 @@ fn helper(a: i32, b: i32) {}
         func = make_rust_func(
             name="caller",
             qualified_name="caller",
-            source='fn caller() {\n    println!("start");\n    let d = Data::new();\n    d.process();\n    helper(1, 2);\n    println!("end");\n}',
+            source=(
+                'fn caller() {\n    println!("start");\n    let d = Data::new();\n    '
+                'd.process();\n    helper(1, 2);\n    println!("end");\n}'
+            ),
             start_line=7,
             start_col=0,
             end_line=13,

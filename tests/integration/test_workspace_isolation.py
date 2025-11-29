@@ -7,8 +7,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -147,7 +146,6 @@ class TestWorkspaceValidation:
     @pytest.mark.asyncio
     async def test_delete_memory_validates_workspace(self):
         """Test delete_memory validates workspace ownership."""
-        from zapomni_db.exceptions import ValidationError
         from zapomni_db.falkordb_client import FalkorDBClient
 
         # Create a mock client that simulates workspace mismatch

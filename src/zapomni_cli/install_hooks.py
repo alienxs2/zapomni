@@ -5,11 +5,9 @@ Installs post-commit, post-merge, and post-checkout hooks
 that trigger automatic re-indexing on file changes.
 """
 
-import os
 import shutil
 import stat
 from pathlib import Path
-from typing import List
 
 # Hook templates directory
 HOOKS_DIR = Path(__file__).parent / "hooks"

@@ -12,14 +12,13 @@ License: MIT
 """
 
 import asyncio
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from starlette.testclient import TestClient
 
 from zapomni_mcp.config import SSEConfig
-from zapomni_mcp.session_manager import SessionManager, generate_session_id
+from zapomni_mcp.session_manager import generate_session_id
 
 # Fixtures
 
@@ -94,7 +93,7 @@ class TestSSELifecycle:
         """Should create and cleanup session properly."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Simulate session creation
@@ -123,7 +122,7 @@ class TestSSELifecycle:
         """Should handle multiple independent sessions."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create multiple sessions
@@ -148,7 +147,7 @@ class TestSSELifecycle:
         """Should track session activity correctly."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         session_id = generate_session_id()
@@ -181,7 +180,7 @@ class TestConcurrentConnections:
         """Should handle concurrent session creation."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         async def create_session():
@@ -206,7 +205,7 @@ class TestConcurrentConnections:
         """Should handle concurrent messages to different sessions."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create sessions
@@ -242,7 +241,7 @@ class TestConcurrentConnections:
         """Should track peak concurrent connections."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create 10 sessions
@@ -297,7 +296,7 @@ class TestToolExecution:
 
         # Test through client
         with TestClient(app, raise_server_exceptions=False) as client:
-            response = client.post(
+            client.post(
                 f"/messages/{session_id}",
                 json={
                     "jsonrpc": "2.0",
@@ -317,7 +316,7 @@ class TestToolExecution:
         """Should isolate sessions from each other."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create two sessions
@@ -483,7 +482,7 @@ class TestGracefulShutdown:
         """Should close all sessions on shutdown."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create sessions
@@ -506,7 +505,7 @@ class TestGracefulShutdown:
         """Should preserve metrics after shutdown."""
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create and process sessions
@@ -541,7 +540,7 @@ class TestStaleSessionCleanup:
 
         from zapomni_mcp.sse_transport import create_sse_app
 
-        app = create_sse_app(mock_mcp_server, sse_config)
+        create_sse_app(mock_mcp_server, sse_config)  # Initialize app
         session_manager = mock_mcp_server._session_manager
 
         # Create session

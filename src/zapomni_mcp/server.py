@@ -21,7 +21,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool
 
-from zapomni_core.exceptions import ValidationError
+from zapomni_core.exceptions import ValidationError as ZapomniValidationError  # noqa: F401
 from zapomni_core.workspace_manager import WorkspaceManager
 from zapomni_db.models import DEFAULT_WORKSPACE_ID
 from zapomni_mcp.config import Settings, SSEConfig

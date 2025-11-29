@@ -9,11 +9,10 @@ License: MIT
 """
 
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 import structlog
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
-from typing_extensions import Annotated
 
 from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 from zapomni_core.exceptions import (
@@ -415,7 +414,7 @@ class IndexCodebaseTool:
         # Validate using Pydantic model
         try:
             request = IndexCodebaseRequest(**arguments)
-        except ValidationError as e:
+        except ValidationError:
             raise
 
         # Validate repo path exists and is directory
@@ -812,15 +811,14 @@ class IndexCodebaseTool:
                 # Store each function as separate memory
                 for func in functions:
                     try:
-                        # Create unique identifier for this code element
-                        element_id = f"{file_path}::{func.qualified_name}"
-
                         # Format function text with context
+                        start_l = func.location.start_line + 1
+                        end_l = func.location.end_line + 1
                         text_to_store = (
                             f"# Function: {func.name}\n"
                             f"# File: {relative_path}\n"
                             f"# Language: {language}\n"
-                            f"# Lines: {func.location.start_line + 1}-{func.location.end_line + 1}\n"
+                            f"# Lines: {start_l}-{end_l}\n"
                         )
                         if func.parent_class:
                             text_to_store += f"# Class: {func.parent_class}\n"

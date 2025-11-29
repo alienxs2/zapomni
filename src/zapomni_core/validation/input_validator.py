@@ -17,7 +17,6 @@ License: MIT
 """
 
 import json
-import re
 import unicodedata
 from typing import Any, Dict, Optional, Set
 

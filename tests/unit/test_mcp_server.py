@@ -12,13 +12,11 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import asyncio
 import signal
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mcp.types import TextContent, Tool
 
 from zapomni_core.exceptions import ValidationError
 from zapomni_core.memory_processor import MemoryProcessor

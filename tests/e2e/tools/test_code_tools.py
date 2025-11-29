@@ -8,7 +8,6 @@ Author: Zapomni Test Suite
 License: MIT
 """
 
-import os
 import re
 
 import pytest
@@ -57,7 +56,7 @@ class TestIndexCodebase:
 
         # Should have indexed files
         match = re.search(r"Files indexed:\s*(\d+)", response.text)
-        assert match is not None, f"Expected file count in response"
+        assert match is not None, "Expected file count in response"
         files_indexed = int(match.group(1))
         assert files_indexed >= 1, f"Expected at least 1 Python file, got {files_indexed}"
 

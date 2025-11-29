@@ -33,7 +33,6 @@ import argparse
 import asyncio
 import os
 import sys
-from typing import Optional
 
 # CRITICAL: Configure logging BEFORE any other zapomni imports
 # This prevents "Logging not configured" errors from modules that call
@@ -45,20 +44,20 @@ LoggingService.configure_logging(level="INFO", format="json")
 # Get logger after logging is configured
 logger = LoggingService.get_logger(__name__)
 
-from zapomni_core.chunking import SemanticChunker
-from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
+from zapomni_core.chunking import SemanticChunker  # noqa: E402
+from zapomni_core.code.repository_indexer import CodeRepositoryIndexer  # noqa: E402
 
 # Now safe to import other zapomni modules (after logging is configured)
-from zapomni_core.config import ZapomniSettings
-from zapomni_core.embeddings.embedding_cache import EmbeddingCache
-from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
+from zapomni_core.config import ZapomniSettings  # noqa: E402
+from zapomni_core.embeddings.embedding_cache import EmbeddingCache  # noqa: E402
+from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder  # noqa: E402
 
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
-from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
-from zapomni_db import FalkorDBClient
-from zapomni_db.pool_config import PoolConfig, RetryConfig
-from zapomni_mcp.config import Settings, SSEConfig
-from zapomni_mcp.server import MCPServer
+from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig  # noqa: E402
+from zapomni_db import FalkorDBClient  # noqa: E402
+from zapomni_db.pool_config import PoolConfig, RetryConfig  # noqa: E402
+from zapomni_mcp.config import Settings, SSEConfig  # noqa: E402
+from zapomni_mcp.server import MCPServer  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,7 +92,7 @@ Environment Variables:
         "--transport",
         choices=["stdio", "sse"],
         default="sse",
-        help="Transport type: 'sse' for HTTP Server-Sent Events (default), 'stdio' for standard I/O",
+        help="Transport: 'sse' for HTTP Server-Sent Events (default), 'stdio' for standard I/O",
     )
 
     parser.add_argument(
@@ -112,7 +111,7 @@ Environment Variables:
     parser.add_argument(
         "--cors-origins",
         default=None,
-        help="Comma-separated CORS origins for SSE (default: *, or ZAPOMNI_SSE_CORS_ORIGINS env var)",
+        help="Comma-separated CORS origins for SSE (default: *, or env ZAPOMNI_SSE_CORS_ORIGINS)",
     )
 
     return parser.parse_args()
@@ -295,7 +294,7 @@ async def main(args: argparse.Namespace) -> None:
         # This speeds up MCP server startup significantly (~3 sec faster)
         logger.info("Initializing MemoryProcessor (SpaCy/EntityExtractor loaded lazily)")
 
-        # Read feature flags from environment (all enabled by default, semantic cache enabled by default now)
+        # Read feature flags from environment (all enabled by default)
         enable_hybrid_search = os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true"
         enable_knowledge_graph = os.getenv("ENABLE_KNOWLEDGE_GRAPH", "true").lower() == "true"
         enable_code_indexing = os.getenv("ENABLE_CODE_INDEXING", "true").lower() == "true"

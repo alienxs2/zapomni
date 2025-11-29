@@ -19,7 +19,7 @@ from typing import List, Optional, Set
 import structlog
 from tree_sitter import Node, Tree
 
-from ..models import ASTNodeLocation, CodeElementType, ExtractedCode, ParameterInfo
+from ..models import CodeElementType, ExtractedCode, ParameterInfo
 from .base import BaseCodeExtractor
 
 logger = structlog.get_logger(__name__)

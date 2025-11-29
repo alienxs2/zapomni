@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Dict, List
+from typing import List
 
 import pytest
 

@@ -14,7 +14,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -473,10 +473,8 @@ class TestGraphStatusToolFormatting:
         assert "TECHNOLOGY: 5" in text
         # PERSON and ORG should not appear in entity types section
         lines = text.split("\n")
-        entity_section = False
         for i, line in enumerate(lines):
             if "Entity Types:" in line:
-                entity_section = True
                 # Check next few lines
                 for j in range(i + 1, min(i + 4, len(lines))):
                     if lines[j].startswith("  PERSON") or lines[j].startswith("  ORG"):

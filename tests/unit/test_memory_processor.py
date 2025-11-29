@@ -10,10 +10,8 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import asyncio
 from datetime import datetime, timezone
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -21,7 +19,6 @@ from zapomni_core.exceptions import (
     DatabaseError,
     EmbeddingError,
     ProcessingError,
-    SearchError,
     ValidationError,
 )
 from zapomni_core.memory_processor import (
@@ -360,7 +357,7 @@ class TestAddMemoryValidation:
         """Test that reserved metadata key raises ValidationError."""
         reserved_keys = ["memory_id", "timestamp", "chunks"]
         for key in reserved_keys:
-            with pytest.raises(ValidationError, match=f"Reserved key in metadata"):
+            with pytest.raises(ValidationError, match="Reserved key in metadata"):
                 await memory_processor.add_memory(text="Test", metadata={key: "value"})
 
     @pytest.mark.asyncio

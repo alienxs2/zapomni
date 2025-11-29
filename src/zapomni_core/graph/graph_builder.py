@@ -22,8 +22,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import structlog
 
 from zapomni_core.exceptions import (
-    DatabaseError,
-    ExtractionError,
     ProcessingError,
     ValidationError,
 )
@@ -517,8 +515,10 @@ class GraphBuilder:
             for rel in relationships:
                 try:
                     # Find entity IDs from cache
-                    source_key = f"{rel.source_entity}:{self._find_entity_type(rel.source_entity, entities)}".lower()
-                    target_key = f"{rel.target_entity}:{self._find_entity_type(rel.target_entity, entities)}".lower()
+                    source_type = self._find_entity_type(rel.source_entity, entities)
+                    target_type = self._find_entity_type(rel.target_entity, entities)
+                    source_key = f"{rel.source_entity}:{source_type}".lower()
+                    target_key = f"{rel.target_entity}:{target_type}".lower()
 
                     source_id = self._entity_map.get(source_key)
                     target_id = self._entity_map.get(target_key)

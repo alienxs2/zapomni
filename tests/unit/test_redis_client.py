@@ -21,9 +21,7 @@ Total: 15+ comprehensive tests
 """
 
 import json
-import time
-from typing import Any
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import redis

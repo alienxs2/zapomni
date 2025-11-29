@@ -7,8 +7,7 @@ Phase 1 tests: SpaCy-only extraction (LLM refinement tests for Phase 2).
 
 from __future__ import annotations
 
-from typing import List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import spacy
@@ -29,7 +28,7 @@ def spacy_model():
     except OSError:
         # Model not installed, use blank model with NER component
         nlp = spacy.blank("en")
-        ner = nlp.add_pipe("ner")
+        nlp.add_pipe("ner")
         # Initialize the NER component
         nlp.initialize(lambda: [])
     return nlp
@@ -51,7 +50,8 @@ def mock_ollama_client():
     client = MagicMock()
     client.generate = MagicMock(
         return_value={
-            "response": "Python: TECHNOLOGY, Programming language\nGuido van Rossum: PERSON, Creator of Python"
+            "response": "Python: TECHNOLOGY, Programming language\n"
+            "Guido van Rossum: PERSON, Creator of Python"
         }
     )
 
@@ -443,7 +443,7 @@ class TestPerformance:
         text = "Python was created by Guido van Rossum in 1991 at CWI."
 
         start = time.time()
-        entities = basic_extractor.extract_entities(text)
+        basic_extractor.extract_entities(text)
         elapsed = time.time() - start
 
         # SpaCy extraction should be fast (< 100ms for small text)

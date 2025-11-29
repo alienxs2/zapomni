@@ -21,9 +21,8 @@ License: MIT
 from __future__ import annotations
 
 import ast
-import inspect
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import structlog
 

@@ -18,7 +18,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -381,7 +381,7 @@ class TestExportCytoscape:
         ]
 
         output_path = temp_dir / "nostyle.json"
-        result = await graph_exporter.export_cytoscape(
+        await graph_exporter.export_cytoscape(
             output_path=str(output_path), options={"include_style": False}
         )
 
@@ -503,7 +503,7 @@ class TestExportNeo4j:
         ]
 
         output_path = temp_dir / "relationships.cypher"
-        result = await graph_exporter.export_neo4j(output_path=str(output_path))
+        await graph_exporter.export_neo4j(output_path=str(output_path))
 
         content = output_path.read_text()
 
@@ -590,7 +590,7 @@ class TestExportJSON:
         ]
 
         output_path = temp_dir / "compact.json"
-        result = await graph_exporter.export_json(
+        await graph_exporter.export_json(
             output_path=str(output_path), options={"pretty_print": False}
         )
 

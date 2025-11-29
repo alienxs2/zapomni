@@ -8,7 +8,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from zapomni_core.exceptions import ProcessingError
 

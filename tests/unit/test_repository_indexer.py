@@ -10,8 +10,6 @@ Follows TDD approach with comprehensive mocking of dependencies.
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -20,7 +18,7 @@ from zapomni_core.code.repository_indexer import (
     DEFAULT_IGNORE_PATTERNS,
     CodeRepositoryIndexer,
 )
-from zapomni_core.exceptions import ProcessingError, ValidationError
+from zapomni_core.exceptions import ValidationError
 
 
 class TestCodeRepositoryIndexerInit:

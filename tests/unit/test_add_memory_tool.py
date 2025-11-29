@@ -12,7 +12,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pydantic import ValidationError
@@ -20,11 +20,9 @@ from pydantic import ValidationError
 from zapomni_core.exceptions import (
     DatabaseError,
     EmbeddingError,
-    ProcessingError,
 )
-from zapomni_core.exceptions import ValidationError as CoreValidationError
 from zapomni_core.memory_processor import MemoryProcessor
-from zapomni_mcp.tools.add_memory import AddMemoryRequest, AddMemoryTool
+from zapomni_mcp.tools.add_memory import AddMemoryTool
 
 
 class TestAddMemoryToolInit:

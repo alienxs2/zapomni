@@ -11,7 +11,7 @@ from typing import List
 import structlog
 from tree_sitter import Node, Tree
 
-from ..models import ASTNodeLocation, CodeElementType, ExtractedCode, ParameterInfo
+from ..models import ASTNodeLocation, ExtractedCode
 
 logger = structlog.get_logger(__name__)
 

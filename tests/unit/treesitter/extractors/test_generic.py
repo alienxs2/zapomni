@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.extractors.generic module."""
 
-import pytest
 from tree_sitter_language_pack import get_parser
 
 from zapomni_core.treesitter.extractors.generic import (

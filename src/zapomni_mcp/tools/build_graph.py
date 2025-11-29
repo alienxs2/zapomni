@@ -101,7 +101,7 @@ class BuildGraphTool:
                     },
                     "build_relationships": {
                         "type": "boolean",
-                        "description": "Enable relationship detection - Phase 2 LLM (default: false)",
+                        "description": "Enable relationship detection via LLM (default: false)",
                         "default": False,
                     },
                     "confidence_threshold": {
@@ -273,7 +273,7 @@ class BuildGraphTool:
         # Validate using Pydantic model
         try:
             request = BuildGraphRequest(**arguments)
-        except ValidationError as e:
+        except ValidationError:
             # Re-raise as is for handling upstream
             raise
 

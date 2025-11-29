@@ -22,7 +22,6 @@ import math
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-import structlog
 from redis.asyncio import Redis
 
 from zapomni_core.exceptions import ValidationError
@@ -372,7 +371,8 @@ class EmbeddingCache:
 
         if len(embedding) != self.embedding_dimensions:
             raise ValidationError(
-                message=f"embedding dimensions mismatch: expected {self.embedding_dimensions}, got {len(embedding)}",
+                message=f"embedding dimensions mismatch: expected {self.embedding_dimensions}, "
+                f"got {len(embedding)}",
                 error_code="VAL_003",
                 details={
                     "expected_dims": self.embedding_dimensions,
@@ -549,7 +549,8 @@ class EmbeddingCache:
         - backend_errors: Redis errors encountered
 
         Returns:
-            Dict with keys: hits, misses, total_requests, hit_rate, redis_hits, memory_hits, backend_errors
+            Dict with keys: hits, misses, total_requests, hit_rate, redis_hits,
+            memory_hits, backend_errors
 
         Performance Target:
             - Operation: O(1) - simple dict copy

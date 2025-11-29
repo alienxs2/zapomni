@@ -12,15 +12,14 @@ License: MIT
 from __future__ import annotations
 
 import asyncio
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Coroutine, Dict, List, Optional, Set
 
 import structlog
 
-from .exceptions import TaskError, TaskNotFoundError, TaskQueueFullError
+from .exceptions import TaskNotFoundError, TaskQueueFullError
 
 logger = structlog.get_logger(__name__)
 
@@ -310,8 +309,9 @@ class TaskManager:
             - task_id must exist in tasks dict
 
         Postconditions:
-            - If task was PENDING: state → CANCELLED, removed from queue
-            - If task was RUNNING: asyncio.Task.cancel() called, state → CANCELLED after task handles CancelledError
+            - If task was PENDING: state -> CANCELLED, removed from queue
+            - If task was RUNNING: asyncio.Task.cancel() called,
+              state -> CANCELLED after task handles CancelledError
             - If task was already finished: No state change
 
         Note:

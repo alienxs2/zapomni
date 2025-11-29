@@ -15,7 +15,6 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from zapomni_core.memory_processor import MemoryProcessor
-from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 
 class TestAddMemoryToolWorkspaceResolution:
@@ -99,7 +98,8 @@ class TestAddMemoryToolWorkspaceResolution:
 
         # Verify add_memory was called with default workspace_id (None -> processor handles default)
         call_args = mock_processor.add_memory.call_args
-        # When no mcp_server and no workspace_id provided, should pass None (processor handles default)
+        # When no mcp_server and no workspace_id provided, should pass None
+        # (processor handles default)
         assert call_args[1]["workspace_id"] is None
 
 
@@ -184,9 +184,11 @@ class TestSearchMemoryToolWorkspaceResolution:
         arguments = {"query": "test query"}
         await tool.execute(arguments)
 
-        # Verify search_memory was called with default workspace_id (None -> processor handles default)
+        # Verify search_memory was called with default workspace_id
+        # (None -> processor handles default)
         call_args = mock_processor.search_memory.call_args
-        # When no mcp_server and no workspace_id provided, should pass None (processor handles default)
+        # When no mcp_server and no workspace_id provided, should pass None
+        # (processor handles default)
         assert call_args[1]["workspace_id"] is None
 
 
@@ -257,7 +259,9 @@ class TestServerRegisterToolsWithMCPServer:
 
     @pytest.mark.asyncio
     async def test_register_all_tools_passes_mcp_server(self):
-        """Test that register_all_tools injects mcp_server into add_memory and search_memory tools."""
+        """
+        Test register_all_tools injects mcp_server into add_memory and search_memory tools.
+        """
         from zapomni_db.falkordb_client import FalkorDBClient
         from zapomni_mcp.server import MCPServer
 

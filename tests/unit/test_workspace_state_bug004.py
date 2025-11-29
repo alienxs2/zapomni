@@ -134,7 +134,7 @@ class TestWorkspaceStatePersistence:
         assert result == "fallback-workspace"
 
     def test_session_manager_returns_none_falls_back_to_instance_state(self, server):
-        """Test that if session_manager.get_workspace_id returns None, we fall back to instance state."""
+        """Test session_manager.get_workspace_id returns None falls back to instance state."""
         server._default_workspace_id = "fallback-workspace"
 
         mock_session_manager = MagicMock()

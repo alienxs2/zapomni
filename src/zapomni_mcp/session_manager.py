@@ -17,8 +17,8 @@ License: MIT
 import asyncio
 import secrets
 import time
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional, Set
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional
 
 import structlog
 

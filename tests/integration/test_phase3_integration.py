@@ -24,7 +24,6 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, List
 
 import pytest
 

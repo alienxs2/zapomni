@@ -13,18 +13,14 @@ Requirements:
 - Correct FALKORDB_HOST, FALKORDB_PORT environment variables
 """
 
-import asyncio
 import os
 import tempfile
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
 
 import pytest
 
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_db.models import DEFAULT_WORKSPACE_ID
 from zapomni_db.schema_manager import SchemaManager
 
 

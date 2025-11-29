@@ -9,8 +9,7 @@ License: MIT
 """
 
 import os
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from zapomni_db.exceptions import ValidationError
 

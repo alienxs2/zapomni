@@ -14,7 +14,7 @@ License: MIT
 """
 
 import time
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -130,7 +130,7 @@ async def test_set_embedding(embedding_cache, mock_redis_client, sample_text, sa
     """Test setting an embedding in cache."""
     mock_redis_client.set.return_value = True
 
-    result = await embedding_cache.set(sample_text, sample_embedding)
+    await embedding_cache.set(sample_text, sample_embedding)
 
     # Should call Redis set with proper TTL
     mock_redis_client.set.assert_called_once()
@@ -602,7 +602,6 @@ async def test_set_stores_to_both_redis_and_memory(
     embedding_cache, mock_redis_client, sample_text, sample_embedding
 ):
     """Test that set operation stores to both Redis and in-memory cache."""
-    import json
 
     mock_redis_client.set.return_value = True
 
@@ -647,7 +646,6 @@ async def test_fallback_to_memory_when_redis_fails(
     embedding_cache, mock_redis_client, sample_text, sample_embedding
 ):
     """Test fallback to in-memory cache when Redis fails during get."""
-    import json
 
     # First set both caches
     mock_redis_client.set.return_value = True
@@ -701,13 +699,13 @@ async def test_statistics_track_redis_vs_memory_hits(
 
     # First get comes from Redis
     mock_redis_client.get.return_value = json.dumps(sample_embedding)
-    result1 = await embedding_cache.get("text1")
+    await embedding_cache.get("text1")
     assert embedding_cache.stats["redis_hits"] == 1
     assert embedding_cache.stats["memory_hits"] == 0
 
     # Now make Redis fail, second get comes from memory
     mock_redis_client.get.side_effect = Exception("Redis down")
-    result2 = await embedding_cache.get("text1")
+    await embedding_cache.get("text1")
     assert embedding_cache.stats["redis_hits"] == 1
     assert embedding_cache.stats["memory_hits"] == 1
 

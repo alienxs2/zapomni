@@ -17,20 +17,18 @@ License: MIT
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pydantic import ValidationError
 
 from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 from zapomni_core.exceptions import (
-    DatabaseError,
     ProcessingError,
 )
 from zapomni_core.exceptions import ValidationError as CoreValidationError
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_mcp.tools.index_codebase import (
-    LANGUAGE_EXTENSIONS,
     VALID_LANGUAGES,
     IndexCodebaseRequest,
     IndexCodebaseTool,

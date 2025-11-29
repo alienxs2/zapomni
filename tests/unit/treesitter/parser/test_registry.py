@@ -2,9 +2,7 @@
 
 from unittest.mock import MagicMock
 
-import pytest
 
-from zapomni_core.treesitter.extractors.base import BaseCodeExtractor
 from zapomni_core.treesitter.parser.base import BaseLanguageParser
 from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 

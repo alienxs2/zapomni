@@ -12,7 +12,6 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import json
 import time
 
 import pytest

@@ -17,18 +17,13 @@ License: MIT
 """
 
 import ast
-from typing import List
 
 import pytest
 
 from zapomni_core.code.class_hierarchy_builder import (
-    AttributeInfo,
     ClassHierarchyBuilder,
-    ClassInfo,
-    HierarchyNode,
-    MethodInfo,
 )
-from zapomni_core.exceptions import ExtractionError, ValidationError
+from zapomni_core.exceptions import ValidationError
 
 # ============================================================================
 # Test Data / Fixtures

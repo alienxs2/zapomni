@@ -8,7 +8,6 @@ Follows TDD approach with comprehensive mocking of dependencies.
 """
 
 import uuid
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -297,7 +296,7 @@ class TestTextProcessorAddText:
         )
 
         with patch.object(processor.logger, "info") as mock_log:
-            memory_id = await processor.add_text("Test text", {})
+            await processor.add_text("Test text", {})
 
             # Verify logging was called
             assert mock_log.call_count >= 1

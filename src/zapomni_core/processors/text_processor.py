@@ -229,7 +229,8 @@ class TextProcessor:
         # Ensure chunks and embeddings count match
         if len(chunks) != len(embeddings):
             raise ProcessingError(
-                message=f"Chunks/embeddings count mismatch: {len(chunks)} chunks, {len(embeddings)} embeddings",
+                message=f"Chunks/embeddings count mismatch: "
+                f"{len(chunks)} chunks, {len(embeddings)} embeddings",
                 error_code="PROC_001",
                 details={"num_chunks": len(chunks), "num_embeddings": len(embeddings)},
             )
@@ -238,7 +239,8 @@ class TextProcessor:
         for i, embedding in enumerate(embeddings):
             if len(embedding) != 768:
                 raise ProcessingError(
-                    message=f"Invalid embedding dimension at index {i}: expected 768, got {len(embedding)}",
+                    message=f"Invalid embedding dimension at index {i}: "
+                    f"expected 768, got {len(embedding)}",
                     error_code="PROC_001",
                     details={
                         "index": i,

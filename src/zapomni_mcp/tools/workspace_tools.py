@@ -12,14 +12,14 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
 from zapomni_core.exceptions import DatabaseError, ValidationError
 from zapomni_core.workspace_manager import WorkspaceManager
-from zapomni_db.models import DEFAULT_WORKSPACE_ID, Workspace, WorkspaceStats
+from zapomni_db.models import DEFAULT_WORKSPACE_ID
 
 logger = structlog.get_logger(__name__)
 

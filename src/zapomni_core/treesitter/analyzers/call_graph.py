@@ -10,7 +10,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
 import structlog
 from tree_sitter import Node, Tree
@@ -909,7 +909,7 @@ class CallGraphAnalyzer:
 
         elif func_node.type == "field_expression":
             # Method-like call: obj.method()
-            # In Rust, this appears as field_expression when the method isn't a method_call_expression
+            # In Rust, field_expression when method isn't method_call_expression
             field_node = None
             value_node = None
             for child in func_node.children:

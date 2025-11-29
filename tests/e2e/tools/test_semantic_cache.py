@@ -145,7 +145,7 @@ class TestSemanticCache:
 
         # Both searches should return results
         # The cache hit happens internally - we verify via stats
-        stats = _get_stats_dict(mcp_client)
+        _get_stats_dict(mcp_client)  # Check stats are accessible
 
         # Cache hit rate should be non-zero after repeated searches
         # (If cache is working, at least some hits should occur)
@@ -170,8 +170,8 @@ class TestSemanticCache:
 
         time.sleep(0.5)
 
-        # Record initial state
-        initial_stats = _get_stats_dict(mcp_client)
+        # Record initial state (stats access check)
+        _get_stats_dict(mcp_client)
 
         # Perform multiple identical searches
         search_query = "Python data science NumPy Pandas"
@@ -247,8 +247,10 @@ class TestSemanticCache:
 
         # Add two distinct memories
         texts = [
-            "JavaScript is a programming language for web development. React and Vue are popular frameworks.",
-            "Rust is a systems programming language focused on safety. Memory management without garbage collection.",
+            "JavaScript is a programming language for web development. "
+            "React and Vue are popular frameworks.",
+            "Rust is a systems programming language focused on safety. "
+            "Memory management without garbage collection.",
         ]
 
         for text in texts:

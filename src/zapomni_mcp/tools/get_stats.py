@@ -1,8 +1,8 @@
 """
 GetStats MCP Tool - Full Implementation.
 
-Retrieves memory system statistics including memory count, chunks, database size, and performance metrics.
-Delegates to MemoryProcessor for all statistics operations.
+Retrieves memory system statistics including memory count, chunks, database size,
+and performance metrics. Delegates to MemoryProcessor for all statistics operations.
 
 Also includes SSE transport metrics when available (active connections, total requests, etc.).
 

@@ -30,7 +30,8 @@ logger = structlog.get_logger()
 # Prompts for Entity Refinement
 # ============================================================================
 
-ENTITY_REFINEMENT_PROMPT = """You are an expert entity extraction system. Given a text and a list of entities extracted by SpaCy NER, your task is to:
+ENTITY_REFINEMENT_PROMPT = """You are an expert entity extraction system. \
+Given a text and a list of entities extracted by SpaCy NER, your task is to:
 
 1. VALIDATE each entity - confirm it's a real entity, not noise
 2. ENHANCE entity names - expand abbreviations, fix typos, use canonical names
@@ -51,8 +52,10 @@ Return ONLY valid JSON array with refined entities. Each entity must have:
 
 Example output:
 [
-  {{"name": "Guido van Rossum", "type": "PERSON", "description": "Creator of Python programming language", "confidence": 0.95}},
-  {{"name": "Python", "type": "TECHNOLOGY", "description": "High-level programming language", "confidence": 0.98}}
+  {{"name": "Guido van Rossum", "type": "PERSON", \
+"description": "Creator of Python programming language", "confidence": 0.95}},
+  {{"name": "Python", "type": "TECHNOLOGY", \
+"description": "High-level programming language", "confidence": 0.98}}
 ]
 
 IMPORTANT: Return ONLY the JSON array, no other text or explanation.
@@ -60,7 +63,8 @@ IMPORTANT: Return ONLY the JSON array, no other text or explanation.
 REFINED ENTITIES:"""
 
 
-RELATIONSHIP_EXTRACTION_PROMPT = """You are an expert relationship extraction system. Given a text and a list of entities, identify relationships between them.
+RELATIONSHIP_EXTRACTION_PROMPT = """You are an expert relationship extraction system. \
+Given a text and a list of entities, identify relationships between them.
 
 INPUT TEXT:
 {text}
@@ -85,7 +89,8 @@ Return ONLY valid JSON array with relationships. Each relationship must have:
 
 Example output:
 [
-  {{"source": "Guido van Rossum", "target": "Python", "type": "CREATED", "confidence": 0.95, "evidence": "Guido created Python"}}
+  {{"source": "Guido van Rossum", "target": "Python", "type": "CREATED", \
+"confidence": 0.95, "evidence": "Guido created Python"}}
 ]
 
 IMPORTANT:

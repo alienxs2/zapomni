@@ -397,7 +397,8 @@ class OllamaEmbedder:
                 for i, emb in enumerate(embeddings):
                     if len(emb) != self.dimensions:
                         raise EmbeddingError(
-                            message=f"Invalid embedding dimensions at index {i}: expected {self.dimensions}, got {len(emb)}",
+                            message=f"Invalid embedding dimensions at index {i}: "
+                            f"expected {self.dimensions}, got {len(emb)}",
                             error_code="EMB_003",
                             details={"index": i, "expected": self.dimensions, "got": len(emb)},
                         )
@@ -407,7 +408,8 @@ class OllamaEmbedder:
             elif response.status_code == 404:
                 # Model not found or batch API not supported - will fallback
                 raise EmbeddingError(
-                    message=f"Model '{self.model_name}' not found or batch API not supported. Run: ollama pull {self.model_name}",
+                    message=f"Model '{self.model_name}' not found or batch API not supported. "
+                    f"Run: ollama pull {self.model_name}",
                     error_code="EMB_004",
                     details={"model": self.model_name, "status_code": 404},
                 )
@@ -452,7 +454,8 @@ class OllamaEmbedder:
                 return await self._call_ollama_batch(texts, retry_count + 1)
             else:
                 raise EmbeddingError(
-                    message=f"Ollama batch connection failed after {self.max_retries} retries: {str(e)}",
+                    message=f"Ollama batch connection failed after {self.max_retries} retries: "
+                    f"{str(e)}",
                     error_code="EMB_001",
                     details={"retries": retry_count, "error": str(e)},
                     original_exception=e,
@@ -573,7 +576,8 @@ class OllamaEmbedder:
 
             elif response.status_code == 404:
                 raise EmbeddingError(
-                    message=f"Model '{self.model_name}' not found. Run: ollama pull {self.model_name}",
+                    message=f"Model '{self.model_name}' not found. "
+                    f"Run: ollama pull {self.model_name}",
                     error_code="EMB_004",
                     details={"model": self.model_name},
                 )
@@ -696,7 +700,8 @@ class OllamaEmbedder:
         # Check dimensions
         if len(embedding) != self.dimensions:
             raise EmbeddingError(
-                message=f"Invalid embedding dimensions: expected {self.dimensions}, got {len(embedding)}",
+                message=f"Invalid embedding dimensions: expected {self.dimensions}, "
+                f"got {len(embedding)}",
                 error_code="EMB_003",
                 details={"expected": self.dimensions, "got": len(embedding)},
             )

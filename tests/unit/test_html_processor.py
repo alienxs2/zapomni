@@ -8,11 +8,11 @@ Tests use mocked trafilatura to avoid external dependencies.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-from zapomni_core.exceptions import ProcessingError, ValidationError
+from zapomni_core.exceptions import ValidationError
 from zapomni_core.processors.html_processor import HTMLProcessor
 
 

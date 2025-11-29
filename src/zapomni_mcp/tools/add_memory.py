@@ -272,7 +272,7 @@ class AddMemoryTool:
         # Validate using Pydantic model
         try:
             request = AddMemoryRequest(**arguments)
-        except ValidationError as e:
+        except ValidationError:
             # Re-raise as is for handling upstream
             raise
 

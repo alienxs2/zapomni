@@ -30,16 +30,13 @@ from zapomni_db.exceptions import (
     ConnectionError,
     DatabaseError,
     QueryError,
-    TransactionError,
     ValidationError,
 )
 from zapomni_db.models import (
     DEFAULT_WORKSPACE_ID,
-    Chunk,
     Entity,
     Memory,
     QueryResult,
-    Relationship,
     SearchResult,
     Workspace,
     WorkspaceStats,
@@ -548,7 +545,8 @@ class FalkorDBClient:
             # Check chunk index is sequential
             if chunk.index != i:
                 raise ValidationError(
-                    f"Validation failed for memory: chunk index mismatch: expected {i}, got {chunk.index}"
+                    f"Validation failed for memory: chunk index mismatch: "
+                    f"expected {i}, got {chunk.index}"
                 )
 
             # Check chunk text not empty
@@ -560,7 +558,8 @@ class FalkorDBClient:
             # Check embedding dimension
             if len(embedding) != 768:
                 raise ValidationError(
-                    f"Validation failed for memory: embedding {i} dimension must be 768, got {len(embedding)}"
+                    f"Validation failed for memory: embedding {i} dimension must be 768, "
+                    f"got {len(embedding)}"
                 )
 
             # Check embedding values are numeric
@@ -611,7 +610,8 @@ class FalkorDBClient:
                 retry_count += 1
                 if retry_count > self.retry_config.max_retries:
                     raise DatabaseError(
-                        f"Database error during add_memory: connection failed after {self.retry_config.max_retries} retries: {e}"
+                        f"Database error during add_memory: connection failed after "
+                        f"{self.retry_config.max_retries} retries: {e}"
                     )
 
                 backoff_seconds = 2 ** (retry_count - 1)
@@ -807,7 +807,8 @@ class FalkorDBClient:
                     )
                 if not (0.0 <= min_sim <= 1.0):
                     raise ValidationError(
-                        f"Validation failed: filters['min_similarity'] must be in [0.0, 1.0], got {min_sim}"
+                        f"Validation failed: filters['min_similarity'] must be in "
+                        f"[0.0, 1.0], got {min_sim}"
                     )
 
         # STEP 2: BUILD QUERY USING CypherQueryBuilder
@@ -936,7 +937,8 @@ class FalkorDBClient:
             # Index stats
             try:
                 index_results = await self._execute_cypher(
-                    "CALL db.indexes() YIELD name, type WHERE name = 'chunk_embedding_idx' RETURN name, type",
+                    "CALL db.indexes() YIELD name, type "
+                    "WHERE name = 'chunk_embedding_idx' RETURN name, type",
                     {},
                 )
 
@@ -1569,7 +1571,8 @@ class FalkorDBClient:
         WITH total_memories, count(c) AS total_chunks
         OPTIONAL MATCH (e:Entity {workspace_id: $workspace_id})
         WITH total_memories, total_chunks, count(e) AS total_entities
-        OPTIONAL MATCH (:Entity {workspace_id: $workspace_id})-[r]->(:Entity {workspace_id: $workspace_id})
+        OPTIONAL MATCH (:Entity {workspace_id: $workspace_id})-[r]->
+                       (:Entity {workspace_id: $workspace_id})
         WITH total_memories, total_chunks, total_entities, count(r) AS total_relationships
         RETURN total_memories, total_chunks, total_entities, total_relationships
         """
@@ -2355,8 +2358,10 @@ class FalkorDBClient:
             ```python
             count = await client.add_calls_batch(
                 calls=[
-                    {"caller": "mod.A.foo", "callee": "mod.bar", "line": 10, "type": "function", "args": 1},
-                    {"caller": "mod.A.foo", "callee": "mod.baz", "line": 15, "type": "method", "args": 2},
+                    {"caller": "mod.A.foo", "callee": "mod.bar",
+                     "line": 10, "type": "function", "args": 1},
+                    {"caller": "mod.A.foo", "callee": "mod.baz",
+                     "line": 15, "type": "method", "args": 2},
                 ],
                 workspace_id="default"
             )

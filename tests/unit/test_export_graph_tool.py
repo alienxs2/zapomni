@@ -12,7 +12,6 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -22,8 +21,7 @@ from zapomni_core.exceptions import (
     DatabaseError,
     ProcessingError,
 )
-from zapomni_core.exceptions import ValidationError as CoreValidationError
-from zapomni_core.graph.graph_exporter import ExportResult, GraphExporter
+from zapomni_core.graph.graph_exporter import ExportResult
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db import FalkorDBClient
 from zapomni_mcp.tools.export_graph import (

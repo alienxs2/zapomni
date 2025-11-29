@@ -8,11 +8,8 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import sys
-from io import StringIO
 
 import pytest
-import structlog
 
 from zapomni_core.logging_service import LoggingConfig, LoggingService
 
@@ -46,7 +43,7 @@ def test_configure_logging_success():
     LoggingService.configure_logging(level="INFO", format="json")
 
     # Verify state updated
-    assert LoggingService._configured == True
+    assert LoggingService._configured is True
     assert LoggingService._log_level == "INFO"
     assert LoggingService._config is not None
 
@@ -57,7 +54,7 @@ def test_configure_logging_with_config_object():
 
     LoggingService.configure_logging(config=config)
 
-    assert LoggingService._configured == True
+    assert LoggingService._configured is True
     assert LoggingService._log_level == "DEBUG"
     assert "password" in LoggingService._sensitive_keys
     assert "api_key" in LoggingService._sensitive_keys
@@ -69,7 +66,7 @@ def test_configure_logging_invalid_level():
         LoggingService.configure_logging(level="INVALID")
 
     assert "Invalid log level" in str(exc_info.value)
-    assert LoggingService._configured == False  # Should not be configured
+    assert LoggingService._configured is False  # Should not be configured
 
 
 def test_configure_logging_already_configured():

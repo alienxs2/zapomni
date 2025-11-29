@@ -1,12 +1,9 @@
 """Unit tests for zapomni_core.treesitter.parser.factory module."""
 
-import os
-import tempfile
 
 import pytest
 from tree_sitter import Parser
 
-from zapomni_core.treesitter.exceptions import LanguageNotSupportedError
 from zapomni_core.treesitter.parser.base import BaseLanguageParser
 from zapomni_core.treesitter.parser.factory import (
     ParserFactory,
@@ -198,7 +195,7 @@ class TestParserFactoryGetParserForFile:
         ParserFactory.reset()
         assert ParserFactory.is_initialized() is False
 
-        parser = ParserFactory.get_parser_for_file("/test.py")
+        ParserFactory.get_parser_for_file("/test.py")
         assert ParserFactory.is_initialized() is True
 
 

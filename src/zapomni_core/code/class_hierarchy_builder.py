@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Union
 
 from zapomni_core.exceptions import ExtractionError, ValidationError
 from zapomni_core.utils import get_logger
@@ -406,7 +406,7 @@ class ClassHierarchyBuilder:
                 roots=sum(
                     1
                     for c in class_info.base_classes
-                    if not c in class_map
+                    if c not in class_map
                     for class_info in classes
                 ),
             )

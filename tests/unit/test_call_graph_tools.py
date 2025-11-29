@@ -8,12 +8,11 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from zapomni_db.exceptions import DatabaseError
-from zapomni_db.exceptions import ValidationError as DBValidationError
 from zapomni_db.falkordb_client import FalkorDBClient
 from zapomni_mcp.tools.call_graph import (
     GetCalleesRequest,

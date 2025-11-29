@@ -13,11 +13,8 @@ Test Coverage:
 Total: 31+ comprehensive tests
 """
 
-import asyncio
 import uuid
-from datetime import datetime, timezone
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -34,7 +31,6 @@ from zapomni_core.graph.graph_builder import (
     GraphRelationship,
 )
 from zapomni_db import FalkorDBClient
-from zapomni_db.models import Entity as DBEntity
 
 # ============================================================================
 # __init__ TESTS (5 tests)

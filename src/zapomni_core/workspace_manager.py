@@ -424,7 +424,7 @@ class WorkspaceManager:
             raise ValidationError(
                 message=(
                     "Workspace ID must be 1-63 lowercase characters, starting with "
-                    "alphanumeric, containing only lowercase letters, numbers, hyphens, and underscores"
+                    "alphanumeric, containing only letters, numbers, hyphens, underscores"
                 ),
                 error_code="WS_VAL_001",
                 details={"workspace_id": workspace_id},

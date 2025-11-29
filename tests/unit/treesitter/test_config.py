@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.config module."""
 
-import pytest
 
 from zapomni_core.treesitter.config import (
     EXTENSION_TO_LANGUAGE,

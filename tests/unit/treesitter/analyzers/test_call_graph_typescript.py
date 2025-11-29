@@ -252,7 +252,10 @@ function innerCall() {}
         func = make_ts_func(
             name="caller",
             qualified_name="caller",
-            source="function caller() {\n    outerCall();\n    const arrow = () => {\n        innerCall();\n    };\n}",
+            source=(
+                "function caller() {\n    outerCall();\n    const arrow = () => {\n        "
+                "innerCall();\n    };\n}"
+            ),
             start_line=0,
             start_col=0,
             end_line=5,
@@ -281,7 +284,11 @@ function innerCall() {}
         func = make_ts_func(
             name="caller",
             qualified_name="caller",
-            source="function caller() {\n    fetch('/api')\n        .then(response => response.json())\n        .then(data => console.log(data));\n}",
+            source=(
+                "function caller() {\n    fetch('/api')\n        "
+                ".then(response => response.json())\n        "
+                ".then(data => console.log(data));\n}"
+            ),
             start_line=0,
             start_col=0,
             end_line=4,
@@ -310,7 +317,10 @@ function innerCall() {}
         func = make_ts_func(
             name="caller",
             qualified_name="caller",
-            source='function caller() {\n    console.log("Hello");\n    console.error("Error");\n    console.warn("Warning");\n}',
+            source=(
+                'function caller() {\n    console.log("Hello");\n    '
+                'console.error("Error");\n    console.warn("Warning");\n}'
+            ),
             start_line=0,
             start_col=0,
             end_line=4,
@@ -395,7 +405,11 @@ function caller() {
         func = make_ts_func(
             name="caller",
             qualified_name="caller",
-            source='function caller() {\n    console.log("start");\n    const svc = new Service();\n    const data = svc.getData();\n    const result = helper(42);\n    console.log("end");\n}',
+            source=(
+                'function caller() {\n    console.log("start");\n    '
+                "const svc = new Service();\n    const data = svc.getData();\n    "
+                'const result = helper(42);\n    console.log("end");\n}'
+            ),
             start_line=7,
             start_col=0,
             end_line=13,

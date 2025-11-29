@@ -9,7 +9,6 @@ License: MIT
 """
 
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
@@ -309,7 +308,7 @@ class ExportGraphTool:
         # Validate using Pydantic model
         try:
             request = ExportGraphRequest(**arguments)
-        except ValidationError as e:
+        except ValidationError:
             # Re-raise as is for handling upstream
             raise
 

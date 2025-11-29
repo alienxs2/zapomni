@@ -14,18 +14,14 @@ Tests for:
 - PruneMemoryTool
 """
 
-import asyncio
-import json
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from zapomni_db.exceptions import ConnectionError, DatabaseError, ValidationError
+from zapomni_db.exceptions import ValidationError
 from zapomni_db.falkordb_client import FalkorDBClient
-from zapomni_db.models import QueryResult
-from zapomni_mcp.tools.prune_memory import PruneMemoryTool, PruneStrategy
+from zapomni_mcp.tools.prune_memory import PruneMemoryTool
 
 # ============================================================================
 # mark_code_memories_stale TESTS

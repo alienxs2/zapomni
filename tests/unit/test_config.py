@@ -8,12 +8,9 @@ Copyright (c) 2025 Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import os
-import tempfile
-from pathlib import Path
 
 import pytest
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 
 from zapomni_core.config import ZapomniSettings, get_config_summary, validate_configuration
 
@@ -48,11 +45,11 @@ def test_default_configuration():
     assert settings.log_format == "json"
 
     # Feature flags defaults (core features enabled by default)
-    assert settings.enable_hybrid_search == True
-    assert settings.enable_knowledge_graph == True
-    assert settings.enable_code_indexing == True
+    assert settings.enable_hybrid_search is True
+    assert settings.enable_knowledge_graph is True
+    assert settings.enable_code_indexing is True
     assert (
-        settings.enable_semantic_cache == True
+        settings.enable_semantic_cache is True
     )  # Enabled by default for performance (Redis + in-memory fallback)
 
 
@@ -187,7 +184,7 @@ def test_chunk_overlap_warning_over_50_percent(monkeypatch):
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        settings = ZapomniSettings(max_chunk_size=512, chunk_overlap=300)
+        ZapomniSettings(max_chunk_size=512, chunk_overlap=300)
 
         # Check that warning was issued
         assert len(w) > 0
@@ -200,7 +197,7 @@ def test_vector_dimensions_non_standard_warning():
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        settings = ZapomniSettings(vector_dimensions=999)
+        ZapomniSettings(vector_dimensions=999)
 
         # Check that warning was issued
         assert len(w) > 0
@@ -238,19 +235,19 @@ def test_redis_connection_string():
 def test_is_development_true():
     """Test development mode detection (DEBUG log level)."""
     settings = ZapomniSettings(log_level="DEBUG")
-    assert settings.is_development == True
-    assert settings.is_production == False
+    assert settings.is_development is True
+    assert settings.is_production is False
 
 
 def test_is_development_false():
     """Test production mode detection (INFO, WARNING, ERROR)."""
     settings = ZapomniSettings(log_level="INFO")
-    assert settings.is_development == False
-    assert settings.is_production == True
+    assert settings.is_development is False
+    assert settings.is_production is True
 
     settings = ZapomniSettings(log_level="WARNING")
-    assert settings.is_development == False
-    assert settings.is_production == True
+    assert settings.is_development is False
+    assert settings.is_production is True
 
 
 # ============================================================
@@ -285,7 +282,7 @@ def test_data_dir_created(tmp_path):
     data_dir = tmp_path / "data"
     assert not data_dir.exists()
 
-    settings = ZapomniSettings(data_dir=data_dir)
+    ZapomniSettings(data_dir=data_dir)
 
     # Directory should be created
     assert data_dir.exists()
@@ -297,7 +294,7 @@ def test_temp_dir_created(tmp_path):
     temp_dir = tmp_path / "temp"
     assert not temp_dir.exists()
 
-    settings = ZapomniSettings(temp_dir=temp_dir)
+    ZapomniSettings(temp_dir=temp_dir)
 
     # Directory should be created
     assert temp_dir.exists()
@@ -309,7 +306,7 @@ def test_directory_creation_nested(tmp_path):
     nested_dir = tmp_path / "level1" / "level2" / "data"
     assert not nested_dir.exists()
 
-    settings = ZapomniSettings(data_dir=nested_dir)
+    ZapomniSettings(data_dir=nested_dir)
 
     # All parent directories should be created
     assert nested_dir.exists()
@@ -338,8 +335,8 @@ def test_get_config_summary():
     assert summary["database"]["falkordb_port"] == 6381
 
     # Check features section (core features enabled by default)
-    assert summary["features"]["hybrid_search"] == True
-    assert summary["features"]["knowledge_graph"] == True
+    assert summary["features"]["hybrid_search"] is True
+    assert summary["features"]["knowledge_graph"] is True
 
 
 def test_validate_configuration_success(tmp_path):
@@ -347,7 +344,7 @@ def test_validate_configuration_success(tmp_path):
     settings = ZapomniSettings(data_dir=tmp_path / "data")
     is_valid, errors = validate_configuration(settings)
 
-    assert is_valid == True
+    assert is_valid is True
     assert len(errors) == 0
 
 
@@ -362,7 +359,7 @@ def test_validate_configuration_detects_issues(tmp_path):
     is_valid, errors = validate_configuration(settings)
 
     # Should detect that directory is not writable
-    assert is_valid == False
+    assert is_valid is False
     assert len(errors) > 0
 
 
@@ -393,7 +390,7 @@ def test_full_configuration_lifecycle(tmp_path, monkeypatch):
     assert (tmp_path / "temp").exists()
 
     # Verify computed properties
-    assert settings.is_development == True
+    assert settings.is_development is True
     assert "testdb.local:6381" in settings.falkordb_connection_string
 
     # Verify configuration summary

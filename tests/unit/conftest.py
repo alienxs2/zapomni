@@ -9,7 +9,6 @@ License: MIT
 """
 
 import os
-import tempfile
 
 import pytest
 

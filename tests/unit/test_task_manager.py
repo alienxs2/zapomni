@@ -12,7 +12,6 @@ License: MIT
 
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -503,7 +502,7 @@ class TestConcurrency:
 
     @pytest.mark.asyncio
     @pytest.mark.skip(
-        reason="Flaky test due to async race condition - tasks execute before _running_tasks is updated"
+        reason="Flaky test due to async race - tasks execute before _running_tasks is updated"
     )
     async def test_max_concurrent_enforcement(self):
         """Test that max_concurrent limit is respected."""

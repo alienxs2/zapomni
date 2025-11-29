@@ -24,7 +24,7 @@ from zapomni_core.exceptions import (
 from zapomni_core.exceptions import ValidationError as CoreValidationError
 from zapomni_core.memory_processor import MemoryProcessor
 from zapomni_db.models import Entity
-from zapomni_mcp.tools.get_related import GetRelatedRequest, GetRelatedTool
+from zapomni_mcp.tools.get_related import GetRelatedTool
 
 
 class TestGetRelatedToolInit:

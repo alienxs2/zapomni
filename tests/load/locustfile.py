@@ -305,7 +305,7 @@ def on_test_start(environment: Environment, **kwargs: Any) -> None:
     print("ZAPOMNI LOAD TEST STARTED")
     print("=" * 60)
     print(f"Target Host: {environment.host}")
-    print(f"Performance Targets:")
+    print("Performance Targets:")
     print(f"  - P95 Response Time: < {P95_RESPONSE_TIME_MS}ms")
     print(f"  - Max Concurrent Connections: {MAX_CONCURRENT_CONNECTIONS}")
     print(f"  - Stability Test Duration: {STABILITY_TEST_DURATION_MINUTES} minutes")
@@ -330,11 +330,11 @@ def on_test_stop(environment: Environment, **kwargs: Any) -> None:
 
     error_rate = (total_failures / total_requests * 100) if total_requests > 0 else 0
 
-    print(f"\nResults Summary:")
+    print("\nResults Summary:")
     print(f"  Total Requests: {total_requests}")
     print(f"  Total Failures: {total_failures}")
     print(f"  Error Rate: {error_rate:.2f}%")
-    print(f"\nResponse Times:")
+    print("\nResponse Times:")
     print(f"  Average: {avg_response_time:.2f}ms")
     print(f"  P95: {p95_response_time:.2f}ms")
     print(f"  P99: {p99_response_time:.2f}ms")
@@ -412,8 +412,7 @@ class StagesShape:
 
 # For running directly
 if __name__ == "__main__":
-    import os
-    import sys
+    pass
 
     print("Zapomni Load Test")
     print("-" * 40)

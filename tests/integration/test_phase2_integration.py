@@ -22,27 +22,17 @@ License: MIT
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List
 
 import pytest
 
 from zapomni_core.chunking import SemanticChunker
 from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
-from zapomni_core.exceptions import (
-    DatabaseError,
-    EmbeddingError,
-    ExtractionError,
-    ValidationError,
-)
 from zapomni_core.extractors.entity_extractor import EntityExtractor
 from zapomni_core.graph.graph_builder import GraphBuilder
 from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
 from zapomni_db.falkordb_client import FalkorDBClient
 from zapomni_mcp.tools import (
     AddMemoryTool,
-    GetStatsTool,
-    SearchMemoryTool,
 )
 from zapomni_mcp.tools.build_graph import BuildGraphTool
 from zapomni_mcp.tools.get_related import GetRelatedTool
@@ -241,11 +231,13 @@ class TestPhase2FullWorkflow:
         # Step 1: Add memories about Python programming
         test_memories = [
             {
-                "text": "Python is a high-level programming language created by Guido van Rossum in 1991.",
+                "text": "Python is a high-level programming language created by "
+                "Guido van Rossum in 1991.",
                 "metadata": {"tags": ["python", "history"], "source": "documentation"},
             },
             {
-                "text": "Python uses dynamic typing and automatic memory management with garbage collection.",
+                "text": "Python uses dynamic typing and automatic memory management "
+                "with garbage collection.",
                 "metadata": {"tags": ["python", "features"], "source": "documentation"},
             },
             {
@@ -372,7 +364,7 @@ class TestPhase2FullWorkflow:
         - Graph health is "Healthy" with entities
         """
         # Add memory and build graph
-        memory_id = await memory_processor.add_memory(
+        await memory_processor.add_memory(
             text="Python is a programming language created by Guido van Rossum.",
             metadata={"source": "test"},
         )

@@ -407,7 +407,10 @@ func bar(a, b int) {}
         func = make_go_func(
             name="caller",
             qualified_name="main.caller",
-            source='func caller() {\n    fmt.Println("start")\n    foo()\n    bar(1, 2)\n    obj.Method()\n    fmt.Println("end")\n}',
+            source=(
+                'func caller() {\n    fmt.Println("start")\n    foo()\n    '
+                'bar(1, 2)\n    obj.Method()\n    fmt.Println("end")\n}'
+            ),
             start_line=4,
             start_col=0,
             end_line=10,

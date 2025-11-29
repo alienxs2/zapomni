@@ -1,6 +1,5 @@
 """Unit tests for zapomni_core.treesitter.exceptions module."""
 
-import pytest
 
 from zapomni_core.exceptions import ProcessingError
 from zapomni_core.treesitter.exceptions import (
