@@ -19,8 +19,8 @@ from typing import List, Optional, Set
 import structlog
 from tree_sitter import Node, Tree
 
-from .base import BaseCodeExtractor
 from ..models import ASTNodeLocation, CodeElementType, ExtractedCode
+from .base import BaseCodeExtractor
 
 logger = structlog.get_logger(__name__)
 
@@ -31,74 +31,74 @@ logger = structlog.get_logger(__name__)
 # Function-like node types found across various programming languages
 FUNCTION_NODE_TYPES: Set[str] = {
     # Common function definitions
-    "function_definition",      # Python, C, C++, etc.
-    "function_declaration",     # JavaScript, Go, C, etc.
-    "method_definition",        # Python, Ruby, JavaScript
-    "method_declaration",       # Java, C#, Kotlin
-    "function",                 # Lua, Haskell
-    "func_literal",             # Go (anonymous functions)
-    "arrow_function",           # JavaScript, TypeScript
-    "lambda",                   # Python lambda
-    "lambda_expression",        # Java, C#
-    "function_item",            # Rust
-    "fun_spec",                 # Erlang
-    "function_expression",      # JavaScript
-    "generator_function",       # JavaScript (function*)
+    "function_definition",  # Python, C, C++, etc.
+    "function_declaration",  # JavaScript, Go, C, etc.
+    "method_definition",  # Python, Ruby, JavaScript
+    "method_declaration",  # Java, C#, Kotlin
+    "function",  # Lua, Haskell
+    "func_literal",  # Go (anonymous functions)
+    "arrow_function",  # JavaScript, TypeScript
+    "lambda",  # Python lambda
+    "lambda_expression",  # Java, C#
+    "function_item",  # Rust
+    "fun_spec",  # Erlang
+    "function_expression",  # JavaScript
+    "generator_function",  # JavaScript (function*)
     "generator_function_declaration",  # JavaScript
-    "async_function",           # JavaScript (async function)
+    "async_function",  # JavaScript (async function)
     "async_function_declaration",  # JavaScript
-    "method",                   # Ruby, Smalltalk
-    "def",                      # Some languages use 'def' node type
-    "procedure_declaration",    # Pascal, Ada
-    "subroutine",               # Fortran
-    "fn_item",                  # Rust (alternative)
-    "function_literal",         # Kotlin
-    "anonymous_function",       # Various languages
-    "closure_expression",       # Swift
-    "block",                    # Ruby blocks (procs)
+    "method",  # Ruby, Smalltalk
+    "def",  # Some languages use 'def' node type
+    "procedure_declaration",  # Pascal, Ada
+    "subroutine",  # Fortran
+    "fn_item",  # Rust (alternative)
+    "function_literal",  # Kotlin
+    "anonymous_function",  # Various languages
+    "closure_expression",  # Swift
+    "block",  # Ruby blocks (procs)
 }
 
 # Class-like node types found across various programming languages
 CLASS_NODE_TYPES: Set[str] = {
     # Class definitions
-    "class_definition",         # Python
-    "class_declaration",        # Java, JavaScript, TypeScript, C#
-    "class",                    # Ruby
-    "class_specifier",          # C++
+    "class_definition",  # Python
+    "class_declaration",  # Java, JavaScript, TypeScript, C#
+    "class",  # Ruby
+    "class_specifier",  # C++
     # Struct definitions
-    "struct_item",              # Rust
-    "struct_definition",        # C
-    "struct_declaration",       # Go
-    "struct_specifier",         # C, C++
-    "struct",                   # Various languages
+    "struct_item",  # Rust
+    "struct_definition",  # C
+    "struct_declaration",  # Go
+    "struct_specifier",  # C, C++
+    "struct",  # Various languages
     # Interface definitions
-    "interface_declaration",    # Java, TypeScript, Go
-    "interface_definition",     # Various
-    "interface",                # Ruby (module as interface)
-    "protocol",                 # Swift, Objective-C
-    "trait_item",               # Rust
-    "trait_definition",         # Scala
+    "interface_declaration",  # Java, TypeScript, Go
+    "interface_definition",  # Various
+    "interface",  # Ruby (module as interface)
+    "protocol",  # Swift, Objective-C
+    "trait_item",  # Rust
+    "trait_definition",  # Scala
     # Implementation blocks
-    "impl_item",                # Rust
-    "impl_block",               # Rust (alternative)
+    "impl_item",  # Rust
+    "impl_block",  # Rust (alternative)
     # Type definitions
-    "type_declaration",         # Go (type X struct{})
-    "type_definition",          # C (typedef)
-    "type_alias",               # TypeScript, Rust
-    "type_spec",                # Go
+    "type_declaration",  # Go (type X struct{})
+    "type_definition",  # C (typedef)
+    "type_alias",  # TypeScript, Rust
+    "type_spec",  # Go
     # Module definitions (often class-like)
-    "module",                   # Elixir, Ruby, Erlang
-    "module_definition",        # Various
-    "namespace_definition",     # C++
-    "package_declaration",      # Java
+    "module",  # Elixir, Ruby, Erlang
+    "module_definition",  # Various
+    "namespace_definition",  # C++
+    "package_declaration",  # Java
     # Enum definitions
-    "enum_declaration",         # Java, TypeScript
-    "enum_definition",          # Rust
-    "enum_specifier",           # C, C++
-    "enum_item",                # Rust
+    "enum_declaration",  # Java, TypeScript
+    "enum_definition",  # Rust
+    "enum_specifier",  # C, C++
+    "enum_item",  # Rust
     # Object definitions
-    "object_declaration",       # Kotlin, Scala
-    "singleton_class",          # Ruby
+    "object_declaration",  # Kotlin, Scala
+    "singleton_class",  # Ruby
 }
 
 # Node types that indicate the name/identifier of a definition
@@ -107,9 +107,9 @@ NAME_NODE_TYPES: Set[str] = {
     "name",
     "property_identifier",
     "type_identifier",
-    "constant",                 # Ruby constants as class names
-    "simple_identifier",        # Kotlin
-    "word",                     # Some languages
+    "constant",  # Ruby constants as class names
+    "simple_identifier",  # Kotlin
+    "word",  # Some languages
 }
 
 
@@ -428,9 +428,9 @@ class GenericExtractor(BaseCodeExtractor):
                 return child
 
         # Check for named children (tree-sitter specific)
-        if hasattr(node, 'child_by_field_name'):
+        if hasattr(node, "child_by_field_name"):
             # Try common field names
-            for field_name in ('name', 'identifier', 'declarator'):
+            for field_name in ("name", "identifier", "declarator"):
                 field_child = node.child_by_field_name(field_name)
                 if field_child is not None:
                     # The field might be a wrapper, look for identifier inside
@@ -476,7 +476,7 @@ class GenericExtractor(BaseCodeExtractor):
             Source text as string, empty string if extraction fails.
         """
         try:
-            return source[node.start_byte:node.end_byte].decode('utf-8', errors='replace')
+            return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
         except Exception as e:
             self._log.warning(
                 "text_extraction_failed",
@@ -515,7 +515,7 @@ class GenericExtractor(BaseCodeExtractor):
             CodeElementType.METHOD if inside a class, otherwise FUNCTION.
         """
         # Check node type hints
-        if 'method' in node.type.lower():
+        if "method" in node.type.lower():
             return CodeElementType.METHOD
 
         # Check if parent is a class-like node
@@ -539,15 +539,15 @@ class GenericExtractor(BaseCodeExtractor):
         """
         node_type_lower = node.type.lower()
 
-        if 'interface' in node_type_lower or 'protocol' in node_type_lower:
+        if "interface" in node_type_lower or "protocol" in node_type_lower:
             return CodeElementType.INTERFACE
-        elif 'struct' in node_type_lower:
+        elif "struct" in node_type_lower:
             return CodeElementType.STRUCT
-        elif 'enum' in node_type_lower:
+        elif "enum" in node_type_lower:
             return CodeElementType.ENUM
-        elif 'module' in node_type_lower or 'namespace' in node_type_lower:
+        elif "module" in node_type_lower or "namespace" in node_type_lower:
             return CodeElementType.MODULE
-        elif 'trait' in node_type_lower:
+        elif "trait" in node_type_lower:
             return CodeElementType.INTERFACE  # Traits are similar to interfaces
 
         return CodeElementType.CLASS
@@ -563,17 +563,17 @@ class GenericExtractor(BaseCodeExtractor):
             True if the function is async, False otherwise.
         """
         # Check node type
-        if 'async' in node.type.lower():
+        if "async" in node.type.lower():
             return True
 
         # Check for async keyword in children
         for child in node.children:
-            if child.type in ('async', 'async_keyword'):
+            if child.type in ("async", "async_keyword"):
                 return True
             # Check text content
-            if child.type == 'keyword' or child.is_named is False:
+            if child.type == "keyword" or child.is_named is False:
                 try:
-                    if child.text and child.text.decode('utf-8', errors='ignore') == 'async':
+                    if child.text and child.text.decode("utf-8", errors="ignore") == "async":
                         return True
                 except Exception:
                     pass
@@ -651,21 +651,21 @@ class GenericExtractor(BaseCodeExtractor):
         for child in node.children:
             # Python: argument_list after class name contains bases
             if child.type in (
-                'argument_list',
-                'superclass',
-                'base_class_clause',
-                'extends_clause',
-                'implements_clause',
-                'superclasses',
-                'type_parameters',
+                "argument_list",
+                "superclass",
+                "base_class_clause",
+                "extends_clause",
+                "implements_clause",
+                "superclasses",
+                "type_parameters",
             ):
                 for subchild in child.children:
                     if subchild.type in NAME_NODE_TYPES:
                         base_name = self._get_node_text(subchild, source)
-                        if base_name and base_name not in ('(', ')', ','):
+                        if base_name and base_name not in ("(", ")", ","):
                             bases.append(base_name)
                     # Handle dotted names
-                    elif subchild.type in ('type', 'generic_type', 'identifier'):
+                    elif subchild.type in ("type", "generic_type", "identifier"):
                         base_name = self._get_node_text(subchild, source)
                         if base_name:
                             bases.append(base_name)
@@ -676,6 +676,7 @@ class GenericExtractor(BaseCodeExtractor):
 # =============================================================================
 # Auto-registration
 # =============================================================================
+
 
 def _register_generic_extractor() -> None:
     """

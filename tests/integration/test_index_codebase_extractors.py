@@ -126,17 +126,14 @@ class MyClass:
             assert len(result["functions"]) >= 1
 
             # PythonExtractor extracts docstrings
-            hello_func = next(
-                (f for f in result["functions"] if f.name == "hello_world"),
-                None
-            )
+            hello_func = next((f for f in result["functions"] if f.name == "hello_world"), None)
             assert hello_func is not None
             assert hello_func.docstring is not None
             assert "docstring" in hello_func.docstring.lower()
 
     def test_typescript_file_extracts_jsdoc(self, tool):
         """Verify TypeScript files use TypeScriptExtractor (extracts JSDoc)."""
-        ts_code = '''
+        ts_code = """
 /**
  * This is a JSDoc comment that only TypeScriptExtractor extracts.
  * @param name The name parameter
@@ -154,7 +151,7 @@ class Greeter {
         this.message = "Hello";
     }
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as f:
             f.write(ts_code.encode("utf-8"))
             f.flush()
@@ -165,17 +162,14 @@ class Greeter {
             assert len(result["functions"]) >= 1
 
             # TypeScriptExtractor extracts JSDoc
-            greet_func = next(
-                (f for f in result["functions"] if f.name == "greet"),
-                None
-            )
+            greet_func = next((f for f in result["functions"] if f.name == "greet"), None)
             assert greet_func is not None
             assert greet_func.docstring is not None
             assert "JSDoc" in greet_func.docstring or "parameter" in greet_func.docstring.lower()
 
     def test_javascript_file_uses_typescript_extractor(self, tool):
         """Verify JavaScript files use TypeScriptExtractor."""
-        js_code = '''
+        js_code = """
 /**
  * Add two numbers
  * @param {number} a First number
@@ -185,7 +179,7 @@ class Greeter {
 function add(a, b) {
     return a + b;
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(suffix=".js", delete=False) as f:
             f.write(js_code.encode("utf-8"))
             f.flush()
@@ -195,15 +189,12 @@ function add(a, b) {
             assert len(result["errors"]) == 0
             assert len(result["functions"]) >= 1
 
-            add_func = next(
-                (f for f in result["functions"] if f.name == "add"),
-                None
-            )
+            add_func = next((f for f in result["functions"] if f.name == "add"), None)
             assert add_func is not None
 
     def test_go_file_uses_go_extractor(self, tool):
         """Verify Go files use GoExtractor."""
-        go_code = '''
+        go_code = """
 package main
 
 // Add adds two integers and returns the result.
@@ -214,7 +205,7 @@ func Add(a, b int) int {
 func main() {
     println("Hello, World!")
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(suffix=".go", delete=False) as f:
             f.write(go_code.encode("utf-8"))
             f.flush()
@@ -225,10 +216,7 @@ func main() {
             assert len(result["functions"]) >= 2
 
             # GoExtractor extracts doc comments
-            add_func = next(
-                (f for f in result["functions"] if f.name == "Add"),
-                None
-            )
+            add_func = next((f for f in result["functions"] if f.name == "Add"), None)
             assert add_func is not None
             assert add_func.docstring is not None
             assert "adds two integers" in add_func.docstring.lower()

@@ -17,8 +17,8 @@ from typing import List, Optional, Set
 import structlog
 from tree_sitter import Node, Tree
 
-from .base import BaseCodeExtractor
 from ..models import ASTNodeLocation, CodeElementType, ExtractedCode, ParameterInfo
+from .base import BaseCodeExtractor
 
 logger = structlog.get_logger(__name__)
 
@@ -139,15 +139,15 @@ class PythonExtractor(BaseCodeExtractor):
                         # Process decorated class's methods
                         class_name = self._get_class_name(child, source)
                         if class_name:
-                            self._visit_class_methods(child, source, file_path, class_name, results, visited_nodes)
+                            self._visit_class_methods(
+                                child, source, file_path, class_name, results, visited_nodes
+                            )
                 return  # Don't recurse into decorated_definition children normally
 
             # Handle regular function definitions
             if node.type == "function_definition" and node_id not in visited_nodes:
                 visited_nodes.add(node_id)
-                extracted = self._extract_function_node(
-                    node, source, file_path, parent_class, None
-                )
+                extracted = self._extract_function_node(node, source, file_path, parent_class, None)
                 if extracted:
                     results.append(extracted)
                     self._log.debug(
@@ -160,7 +160,9 @@ class PythonExtractor(BaseCodeExtractor):
             if node.type == "class_definition":
                 class_name = self._get_class_name(node, source)
                 if class_name:
-                    self._visit_class_methods(node, source, file_path, class_name, results, visited_nodes)
+                    self._visit_class_methods(
+                        node, source, file_path, class_name, results, visited_nodes
+                    )
                 return  # Don't recurse deeper into classes
 
             # Recurse into children (but not into classes)
@@ -241,9 +243,7 @@ class PythonExtractor(BaseCodeExtractor):
                     if child.type == "class_definition":
                         if id(child) not in visited_nodes:
                             visited_nodes.add(id(child))
-                            extracted = self._extract_class_node(
-                                child, source, file_path, node
-                            )
+                            extracted = self._extract_class_node(child, source, file_path, node)
                             if extracted:
                                 results.append(extracted)
                                 self._log.debug(
@@ -431,8 +431,8 @@ class PythonExtractor(BaseCodeExtractor):
         is_private = self._is_private_name(name)
 
         # Check if abstract (has ABC base or abstractmethod decorator)
-        is_abstract = "ABC" in bases or "ABCMeta" in bases or any(
-            "abstract" in d.lower() for d in decorators
+        is_abstract = (
+            "ABC" in bases or "ABCMeta" in bases or any("abstract" in d.lower() for d in decorators)
         )
 
         return ExtractedCode(
@@ -523,9 +523,7 @@ class PythonExtractor(BaseCodeExtractor):
             return raw_docstring[1:-1].strip()
         return raw_docstring.strip()
 
-    def _extract_decorators(
-        self, decorated_node: Optional[Node], source: bytes
-    ) -> List[str]:
+    def _extract_decorators(self, decorated_node: Optional[Node], source: bytes) -> List[str]:
         """
         Extract decorator names from a decorated definition.
 
@@ -586,9 +584,7 @@ class PythonExtractor(BaseCodeExtractor):
 
         return parameters
 
-    def _extract_single_parameter(
-        self, node: Node, source: bytes
-    ) -> Optional[ParameterInfo]:
+    def _extract_single_parameter(self, node: Node, source: bytes) -> Optional[ParameterInfo]:
         """
         Extract a single parameter from its AST node.
 
@@ -806,6 +802,7 @@ class PythonExtractor(BaseCodeExtractor):
 # =============================================================================
 # Auto-registration
 # =============================================================================
+
 
 def _register_python_extractor() -> None:
     """

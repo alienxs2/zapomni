@@ -1,9 +1,9 @@
 """Unit tests for zapomni_core.treesitter.extractors.base module."""
 
-import pytest
 from typing import List
 from unittest.mock import MagicMock
 
+import pytest
 from tree_sitter import Tree
 
 from zapomni_core.treesitter.extractors.base import BaseCodeExtractor
@@ -25,9 +25,7 @@ class ConcreteExtractor(BaseCodeExtractor):
     def supported_node_types(self) -> tuple[str, ...]:
         return ("function_definition", "class_definition")
 
-    def extract_functions(
-        self, tree: Tree, source: bytes, file_path: str
-    ) -> List[ExtractedCode]:
+    def extract_functions(self, tree: Tree, source: bytes, file_path: str) -> List[ExtractedCode]:
         """Return a mock function for testing."""
         location = ASTNodeLocation(
             start_line=0,
@@ -49,9 +47,7 @@ class ConcreteExtractor(BaseCodeExtractor):
             )
         ]
 
-    def extract_classes(
-        self, tree: Tree, source: bytes, file_path: str
-    ) -> List[ExtractedCode]:
+    def extract_classes(self, tree: Tree, source: bytes, file_path: str) -> List[ExtractedCode]:
         """Return a mock class for testing."""
         location = ASTNodeLocation(
             start_line=5,
@@ -136,7 +132,7 @@ class TestHelperMethods:
         mock_node.start_byte = 0
         mock_node.end_byte = 5
 
-        source = "hello".encode('utf-8')
+        source = "hello".encode("utf-8")
         text = extractor._get_node_text(mock_node, source)
         assert text == "hello"
 

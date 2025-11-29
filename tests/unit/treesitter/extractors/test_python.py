@@ -13,7 +13,6 @@ from tree_sitter_language_pack import get_parser
 from zapomni_core.treesitter.extractors.python import PythonExtractor
 from zapomni_core.treesitter.models import CodeElementType, ParameterInfo
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -68,10 +67,10 @@ class TestExtractFunctionsBasic:
 
     def test_extract_simple_function(self, extractor, parse_python):
         """Test extraction of a simple function."""
-        source = '''
+        source = """
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -81,7 +80,7 @@ def hello():
 
     def test_extract_multiple_functions(self, extractor, parse_python):
         """Test extraction of multiple functions."""
-        source = '''
+        source = """
 def func1():
     pass
 
@@ -90,7 +89,7 @@ def func2():
 
 def func3():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -102,9 +101,9 @@ def func3():
 
     def test_function_has_location(self, extractor, parse_python):
         """Test that extracted function has location info."""
-        source = '''def hello():
+        source = """def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -116,9 +115,9 @@ def func3():
 
     def test_function_has_source_code(self, extractor, parse_python):
         """Test that extracted function has source code."""
-        source = '''def hello():
+        source = """def hello():
     print("Hello")
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -189,10 +188,10 @@ def hello():
 
     def test_function_without_docstring(self, extractor, parse_python):
         """Test function without docstring has None."""
-        source = '''
+        source = """
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -286,10 +285,10 @@ class TestExtractFunctionsParameters:
 
     def test_extract_function_with_params(self, extractor, parse_python):
         """Test extraction of function with parameters."""
-        source = '''
+        source = """
 def add(a, b):
     return a + b
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -301,10 +300,10 @@ def add(a, b):
 
     def test_extract_function_with_typed_params(self, extractor, parse_python):
         """Test extraction of function with type annotations."""
-        source = '''
+        source = """
 def add(a: int, b: int) -> int:
     return a + b
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -318,10 +317,10 @@ def add(a: int, b: int) -> int:
 
     def test_extract_function_with_default_params(self, extractor, parse_python):
         """Test extraction of function with default values."""
-        source = '''
+        source = """
 def greet(name, greeting="Hello"):
     return f"{greeting}, {name}!"
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -335,10 +334,10 @@ def greet(name, greeting="Hello"):
 
     def test_extract_function_with_typed_default_params(self, extractor, parse_python):
         """Test extraction of function with typed default params."""
-        source = '''
+        source = """
 def process(data: list, count: int = 10) -> None:
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -353,10 +352,10 @@ def process(data: list, count: int = 10) -> None:
 
     def test_extract_function_with_args_kwargs(self, extractor, parse_python):
         """Test extraction of function with *args and **kwargs."""
-        source = '''
+        source = """
 def variadic(*args, **kwargs):
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -368,7 +367,7 @@ def variadic(*args, **kwargs):
 
     def test_extract_function_with_complex_type_hints(self, extractor, parse_python):
         """Test extraction of function with complex type hints."""
-        source = '''
+        source = """
 from typing import List, Optional, Dict
 
 def process(
@@ -376,7 +375,7 @@ def process(
     config: Optional[Dict[str, int]] = None
 ) -> List[int]:
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -396,10 +395,10 @@ class TestExtractFunctionsReturnTypes:
 
     def test_extract_function_with_return_type(self, extractor, parse_python):
         """Test extraction of function with return type."""
-        source = '''
+        source = """
 def add(a: int, b: int) -> int:
     return a + b
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -408,10 +407,10 @@ def add(a: int, b: int) -> int:
 
     def test_function_without_return_type(self, extractor, parse_python):
         """Test function without return type has None."""
-        source = '''
+        source = """
 def hello():
     print("Hello")
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -420,10 +419,10 @@ def hello():
 
     def test_function_with_none_return_type(self, extractor, parse_python):
         """Test function with None return type."""
-        source = '''
+        source = """
 def process() -> None:
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -441,11 +440,11 @@ class TestExtractFunctionsDecorators:
 
     def test_extract_decorated_function(self, extractor, parse_python):
         """Test extraction of decorated function."""
-        source = '''
+        source = """
 @decorator
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -454,13 +453,13 @@ def hello():
 
     def test_extract_function_with_multiple_decorators(self, extractor, parse_python):
         """Test extraction of function with multiple decorators."""
-        source = '''
+        source = """
 @decorator1
 @decorator2
 @decorator3
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -473,12 +472,12 @@ def hello():
 
     def test_extract_staticmethod(self, extractor, parse_python):
         """Test extraction of staticmethod decorator."""
-        source = '''
+        source = """
 class MyClass:
     @staticmethod
     def static_func():
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -488,12 +487,12 @@ class MyClass:
 
     def test_extract_classmethod(self, extractor, parse_python):
         """Test extraction of classmethod decorator."""
-        source = '''
+        source = """
 class MyClass:
     @classmethod
     def class_func(cls):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -502,12 +501,12 @@ class MyClass:
 
     def test_extract_property_decorator(self, extractor, parse_python):
         """Test extraction of property decorator."""
-        source = '''
+        source = """
 class MyClass:
     @property
     def value(self):
         return self._value
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -516,14 +515,14 @@ class MyClass:
 
     def test_extract_abstractmethod(self, extractor, parse_python):
         """Test extraction of abstractmethod decorator."""
-        source = '''
+        source = """
 from abc import ABC, abstractmethod
 
 class Base(ABC):
     @abstractmethod
     def process(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -533,11 +532,11 @@ class Base(ABC):
 
     def test_extract_decorator_with_args(self, extractor, parse_python):
         """Test extraction of decorator with arguments."""
-        source = '''
+        source = """
 @decorator(arg1, arg2="value")
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -546,13 +545,13 @@ def hello():
 
     def test_extract_dotted_decorator(self, extractor, parse_python):
         """Test extraction of dotted decorator like functools.wraps."""
-        source = '''
+        source = """
 import functools
 
 @functools.wraps
 def hello():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -570,10 +569,10 @@ class TestExtractFunctionsAsyncGenerators:
 
     def test_extract_async_function(self, extractor, parse_python):
         """Test extraction of async function."""
-        source = '''
+        source = """
 async def fetch_data():
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -582,11 +581,11 @@ async def fetch_data():
 
     def test_extract_async_method(self, extractor, parse_python):
         """Test extraction of async method in class."""
-        source = '''
+        source = """
 class Client:
     async def fetch(self, url):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -596,11 +595,11 @@ class Client:
 
     def test_extract_generator_function(self, extractor, parse_python):
         """Test extraction of generator function."""
-        source = '''
+        source = """
 def generate_numbers(n):
     for i in range(n):
         yield i
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -609,11 +608,11 @@ def generate_numbers(n):
 
     def test_extract_generator_with_yield_from(self, extractor, parse_python):
         """Test extraction of generator with yield from."""
-        source = '''
+        source = """
 def chain(*iterables):
     for it in iterables:
         yield from it
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -622,10 +621,10 @@ def chain(*iterables):
 
     def test_non_generator_function(self, extractor, parse_python):
         """Test that regular function is not marked as generator."""
-        source = '''
+        source = """
 def regular():
     return 42
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -643,11 +642,11 @@ class TestExtractMethods:
 
     def test_method_has_parent_class(self, extractor, parse_python):
         """Test that method has parent_class set."""
-        source = '''
+        source = """
 class Calculator:
     def add(self, a, b):
         return a + b
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -656,11 +655,11 @@ class Calculator:
 
     def test_method_has_correct_type(self, extractor, parse_python):
         """Test that method has CodeElementType.METHOD."""
-        source = '''
+        source = """
 class MyClass:
     def my_method(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -669,11 +668,11 @@ class MyClass:
 
     def test_method_qualified_name(self, extractor, parse_python):
         """Test method qualified_name includes class."""
-        source = '''
+        source = """
 class MyClass:
     def my_method(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -682,11 +681,11 @@ class MyClass:
 
     def test_private_method(self, extractor, parse_python):
         """Test private method detection."""
-        source = '''
+        source = """
 class MyClass:
     def _private_method(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -695,11 +694,11 @@ class MyClass:
 
     def test_dunder_method_not_private(self, extractor, parse_python):
         """Test that dunder methods are not marked as private."""
-        source = '''
+        source = """
 class MyClass:
     def __init__(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -718,10 +717,10 @@ class TestExtractClasses:
 
     def test_extract_simple_class(self, extractor, parse_python):
         """Test extraction of simple class."""
-        source = '''
+        source = """
 class MyClass:
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -744,10 +743,10 @@ class Calculator:
 
     def test_extract_class_with_bases(self, extractor, parse_python):
         """Test extraction of class with base classes."""
-        source = '''
+        source = """
 class Child(Parent):
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -756,10 +755,10 @@ class Child(Parent):
 
     def test_extract_class_with_multiple_bases(self, extractor, parse_python):
         """Test extraction of class with multiple inheritance."""
-        source = '''
+        source = """
 class Child(Parent1, Parent2, Parent3):
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -771,14 +770,14 @@ class Child(Parent1, Parent2, Parent3):
 
     def test_extract_class_methods_list(self, extractor, parse_python):
         """Test that class has methods list."""
-        source = '''
+        source = """
 class Calculator:
     def add(self, a, b):
         return a + b
 
     def subtract(self, a, b):
         return a - b
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -789,12 +788,12 @@ class Calculator:
 
     def test_decorated_class(self, extractor, parse_python):
         """Test extraction of decorated class."""
-        source = '''
+        source = """
 @dataclass
 class Point:
     x: int
     y: int
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -803,11 +802,11 @@ class Point:
 
     def test_nested_class(self, extractor, parse_python):
         """Test extraction of nested class."""
-        source = '''
+        source = """
 class Outer:
     class Inner:
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -818,10 +817,10 @@ class Outer:
 
     def test_private_class(self, extractor, parse_python):
         """Test private class detection."""
-        source = '''
+        source = """
 class _PrivateClass:
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -830,12 +829,12 @@ class _PrivateClass:
 
     def test_abstract_class_with_abc(self, extractor, parse_python):
         """Test abstract class detection with ABC base."""
-        source = '''
+        source = """
 from abc import ABC
 
 class AbstractBase(ABC):
     pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.py")
 
@@ -864,10 +863,10 @@ class TestEdgeCases:
 
     def test_only_comments(self, extractor, parse_python):
         """Test extraction from source with only comments."""
-        source = '''
+        source = """
 # This is a comment
 # Another comment
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
@@ -878,12 +877,12 @@ class TestEdgeCases:
 
     def test_nested_function(self, extractor, parse_python):
         """Test extraction of nested function."""
-        source = '''
+        source = """
 def outer():
     def inner():
         pass
     return inner
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -895,9 +894,9 @@ def outer():
 
     def test_lambda_not_extracted(self, extractor, parse_python):
         """Test that lambda expressions are not extracted as functions."""
-        source = '''
+        source = """
 add = lambda x, y: x + y
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -919,12 +918,12 @@ def привет():
 
     def test_line_count(self, extractor, parse_python):
         """Test line_count is calculated correctly."""
-        source = '''def multi_line():
+        source = """def multi_line():
     line1 = 1
     line2 = 2
     line3 = 3
     return line1 + line2 + line3
-'''
+"""
         tree, source_bytes = parse_python(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.py")
 
@@ -933,14 +932,14 @@ def привет():
 
     def test_extract_all_combined(self, extractor, parse_python):
         """Test extract_all returns both functions and classes."""
-        source = '''
+        source = """
 def standalone():
     pass
 
 class MyClass:
     def method(self):
         pass
-'''
+"""
         tree, source_bytes = parse_python(source)
         all_elements = extractor.extract_all(tree, source_bytes, "/test.py")
 

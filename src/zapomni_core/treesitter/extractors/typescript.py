@@ -22,8 +22,8 @@ from typing import List, Optional, Set
 import structlog
 from tree_sitter import Node, Tree
 
-from .base import BaseCodeExtractor
 from ..models import ASTNodeLocation, CodeElementType, ExtractedCode, ParameterInfo
+from .base import BaseCodeExtractor
 
 logger = structlog.get_logger(__name__)
 
@@ -169,7 +169,10 @@ class TypeScriptExtractor(BaseCodeExtractor):
             if node.type == "export_statement":
                 declaration = node.child_by_field_name("declaration")
                 if declaration:
-                    if declaration.type in ("function_declaration", "generator_function_declaration"):
+                    if declaration.type in (
+                        "function_declaration",
+                        "generator_function_declaration",
+                    ):
                         if id(declaration) not in visited_nodes:
                             visited_nodes.add(id(declaration))
                             extracted = self._extract_function_node(
@@ -181,8 +184,13 @@ class TypeScriptExtractor(BaseCodeExtractor):
                         class_name = self._get_class_name(declaration, source)
                         if class_name:
                             self._visit_class_methods(
-                                declaration, source, file_path, class_name,
-                                results, visited_nodes, node
+                                declaration,
+                                source,
+                                file_path,
+                                class_name,
+                                results,
+                                visited_nodes,
+                                node,
                             )
                     elif declaration.type == "lexical_declaration":
                         # Check for arrow functions in const/let
@@ -233,8 +241,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
                 class_name = self._get_class_name(node, source)
                 if class_name:
                     self._visit_class_methods(
-                        node, source, file_path, class_name,
-                        results, visited_nodes, None
+                        node, source, file_path, class_name, results, visited_nodes, None
                     )
                 return
 
@@ -270,9 +277,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
             if child.type == "method_definition":
                 if id(child) not in visited_nodes:
                     visited_nodes.add(id(child))
-                    extracted = self._extract_method_node(
-                        child, source, file_path, class_name
-                    )
+                    extracted = self._extract_method_node(child, source, file_path, class_name)
                     if extracted:
                         results.append(extracted)
 
@@ -304,12 +309,13 @@ class TypeScriptExtractor(BaseCodeExtractor):
             # Handle export statements
             if node.type == "export_statement":
                 declaration = node.child_by_field_name("declaration")
-                if declaration and declaration.type in ("class_declaration", "abstract_class_declaration"):
+                if declaration and declaration.type in (
+                    "class_declaration",
+                    "abstract_class_declaration",
+                ):
                     if id(declaration) not in visited_nodes:
                         visited_nodes.add(id(declaration))
-                        extracted = self._extract_class_node(
-                            declaration, source, file_path, node
-                        )
+                        extracted = self._extract_class_node(declaration, source, file_path, node)
                         if extracted:
                             results.append(extracted)
                             self._log.debug(
@@ -374,9 +380,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
                 if declaration and declaration.type == "interface_declaration":
                     if id(declaration) not in visited_nodes:
                         visited_nodes.add(id(declaration))
-                        extracted = self._extract_interface_node(
-                            declaration, source, file_path
-                        )
+                        extracted = self._extract_interface_node(declaration, source, file_path)
                         if extracted:
                             results.append(extracted)
                 return
@@ -430,9 +434,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
                 if declaration and declaration.type == "type_alias_declaration":
                     if id(declaration) not in visited_nodes:
                         visited_nodes.add(id(declaration))
-                        extracted = self._extract_type_alias_node(
-                            declaration, source, file_path
-                        )
+                        extracted = self._extract_type_alias_node(declaration, source, file_path)
                         if extracted:
                             results.append(extracted)
                 return
@@ -486,9 +488,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
                 if declaration and declaration.type == "enum_declaration":
                     if id(declaration) not in visited_nodes:
                         visited_nodes.add(id(declaration))
-                        extracted = self._extract_enum_node(
-                            declaration, source, file_path
-                        )
+                        extracted = self._extract_enum_node(declaration, source, file_path)
                         if extracted:
                             results.append(extracted)
                 return
@@ -1149,9 +1149,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
         result = "\n".join(cleaned_lines).strip()
         return result
 
-    def _extract_decorators_from_siblings(
-        self, node: Node, source: bytes
-    ) -> List[str]:
+    def _extract_decorators_from_siblings(self, node: Node, source: bytes) -> List[str]:
         """
         Extract decorators from preceding siblings.
 
@@ -1241,9 +1239,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
 
         return parameters
 
-    def _extract_single_parameter(
-        self, node: Node, source: bytes
-    ) -> Optional[ParameterInfo]:
+    def _extract_single_parameter(self, node: Node, source: bytes) -> Optional[ParameterInfo]:
         """
         Extract a single parameter from its AST node.
 
@@ -1293,7 +1289,10 @@ class TypeScriptExtractor(BaseCodeExtractor):
             for child in node.children:
                 if child.type not in ("identifier", "type_annotation", "?", ":"):
                     # This might be the default value
-                    if child.prev_sibling and self._get_node_text(child.prev_sibling, source) == "=":
+                    if (
+                        child.prev_sibling
+                        and self._get_node_text(child.prev_sibling, source) == "="
+                    ):
                         default_value = self._get_node_text(child, source)
                         break
 
@@ -1618,6 +1617,7 @@ class TypeScriptExtractor(BaseCodeExtractor):
 # =============================================================================
 # Auto-registration
 # =============================================================================
+
 
 def _register_typescript_extractor() -> None:
     """

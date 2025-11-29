@@ -45,8 +45,17 @@ class TestLanguageExtensions:
     def test_popular_languages_present(self):
         """Test that popular languages are present."""
         popular = [
-            "python", "javascript", "typescript", "java", "go",
-            "rust", "c", "cpp", "ruby", "php", "swift",
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "go",
+            "rust",
+            "c",
+            "cpp",
+            "ruby",
+            "php",
+            "swift",
         ]
         for lang in popular:
             assert lang in LANGUAGE_EXTENSIONS, f"{lang} not in LANGUAGE_EXTENSIONS"

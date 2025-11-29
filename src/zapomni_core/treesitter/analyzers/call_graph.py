@@ -32,35 +32,149 @@ logger = structlog.get_logger(__name__)
 # =============================================================================
 
 PYTHON_BUILTINS: Set[str] = {
-    "print", "len", "range", "str", "int", "float", "bool", "list", "dict",
-    "tuple", "set", "frozenset", "type", "isinstance", "issubclass", "id",
-    "hash", "repr", "abs", "min", "max", "sum", "all", "any", "enumerate",
-    "zip", "map", "filter", "sorted", "reversed", "open", "input", "getattr",
-    "setattr", "hasattr", "delattr", "vars", "dir", "callable", "super",
-    "property", "staticmethod", "classmethod", "object", "iter", "next",
-    "slice", "round", "pow", "divmod", "hex", "oct", "bin", "chr", "ord",
-    "format", "ascii", "eval", "exec", "compile", "globals", "locals",
-    "memoryview", "bytearray", "bytes", "complex", "help", "exit", "quit",
+    "print",
+    "len",
+    "range",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "list",
+    "dict",
+    "tuple",
+    "set",
+    "frozenset",
+    "type",
+    "isinstance",
+    "issubclass",
+    "id",
+    "hash",
+    "repr",
+    "abs",
+    "min",
+    "max",
+    "sum",
+    "all",
+    "any",
+    "enumerate",
+    "zip",
+    "map",
+    "filter",
+    "sorted",
+    "reversed",
+    "open",
+    "input",
+    "getattr",
+    "setattr",
+    "hasattr",
+    "delattr",
+    "vars",
+    "dir",
+    "callable",
+    "super",
+    "property",
+    "staticmethod",
+    "classmethod",
+    "object",
+    "iter",
+    "next",
+    "slice",
+    "round",
+    "pow",
+    "divmod",
+    "hex",
+    "oct",
+    "bin",
+    "chr",
+    "ord",
+    "format",
+    "ascii",
+    "eval",
+    "exec",
+    "compile",
+    "globals",
+    "locals",
+    "memoryview",
+    "bytearray",
+    "bytes",
+    "complex",
+    "help",
+    "exit",
+    "quit",
 }
 
 GO_BUILTINS: Set[str] = {
-    "append", "cap", "close", "complex", "copy", "delete", "imag", "len",
-    "make", "new", "panic", "print", "println", "real", "recover",
+    "append",
+    "cap",
+    "close",
+    "complex",
+    "copy",
+    "delete",
+    "imag",
+    "len",
+    "make",
+    "new",
+    "panic",
+    "print",
+    "println",
+    "real",
+    "recover",
 }
 
 RUST_MACROS: Set[str] = {
-    "println", "print", "eprintln", "eprint", "format", "write", "writeln",
-    "vec", "panic", "assert", "assert_eq", "assert_ne", "debug_assert",
-    "debug_assert_eq", "debug_assert_ne", "todo", "unimplemented", "unreachable",
-    "cfg", "env", "option_env", "concat", "stringify", "include", "include_str",
-    "include_bytes", "module_path", "file", "line", "column",
+    "println",
+    "print",
+    "eprintln",
+    "eprint",
+    "format",
+    "write",
+    "writeln",
+    "vec",
+    "panic",
+    "assert",
+    "assert_eq",
+    "assert_ne",
+    "debug_assert",
+    "debug_assert_eq",
+    "debug_assert_ne",
+    "todo",
+    "unimplemented",
+    "unreachable",
+    "cfg",
+    "env",
+    "option_env",
+    "concat",
+    "stringify",
+    "include",
+    "include_str",
+    "include_bytes",
+    "module_path",
+    "file",
+    "line",
+    "column",
 }
 
 JS_TS_BUILTINS: Set[str] = {
-    "console", "parseInt", "parseFloat", "isNaN", "isFinite", "encodeURI",
-    "decodeURI", "encodeURIComponent", "decodeURIComponent", "eval",
-    "setTimeout", "setInterval", "clearTimeout", "clearInterval",
-    "fetch", "require", "import", "alert", "confirm", "prompt",
+    "console",
+    "parseInt",
+    "parseFloat",
+    "isNaN",
+    "isFinite",
+    "encodeURI",
+    "decodeURI",
+    "encodeURIComponent",
+    "decodeURIComponent",
+    "eval",
+    "setTimeout",
+    "setInterval",
+    "clearTimeout",
+    "clearInterval",
+    "fetch",
+    "require",
+    "import",
+    "alert",
+    "confirm",
+    "prompt",
 }
 
 
@@ -109,12 +223,18 @@ class CallGraphAnalyzer:
         "go": {"function_declaration", "method_declaration", "func_literal"},
         "rust": {"function_item", "closure_expression"},
         "typescript": {
-            "function_declaration", "arrow_function", "method_definition",
-            "function_expression", "generator_function_declaration",
+            "function_declaration",
+            "arrow_function",
+            "method_definition",
+            "function_expression",
+            "generator_function_declaration",
         },
         "javascript": {
-            "function_declaration", "arrow_function", "method_definition",
-            "function_expression", "generator_function_declaration",
+            "function_declaration",
+            "arrow_function",
+            "method_definition",
+            "function_expression",
+            "generator_function_declaration",
         },
     }
 
@@ -291,8 +411,10 @@ class CallGraphAnalyzer:
             """Recursively search for matching function node."""
             # Check if this node matches
             if node.type in boundaries:
-                if (node.start_point[0] == location.start_line and
-                    node.start_point[1] == location.start_column):
+                if (
+                    node.start_point[0] == location.start_line
+                    and node.start_point[1] == location.start_column
+                ):
                     return node
 
             # Handle decorated definitions in Python
@@ -302,8 +424,10 @@ class CallGraphAnalyzer:
                     if child.type == "function_definition":
                         # The decorated_definition starts at the decorator,
                         # but we might have stored the location from the decorator
-                        if (node.start_point[0] == location.start_line and
-                            node.start_point[1] == location.start_column):
+                        if (
+                            node.start_point[0] == location.start_line
+                            and node.start_point[1] == location.start_column
+                        ):
                             return child
 
             # Handle impl blocks in Rust
@@ -791,7 +915,7 @@ class CallGraphAnalyzer:
             for child in func_node.children:
                 if child.type == "field_identifier":
                     field_node = child
-                elif child.type not in (".", ):
+                elif child.type not in (".",):
                     if value_node is None:
                         value_node = child
 
@@ -1194,7 +1318,12 @@ class CallGraphAnalyzer:
         parent = node.parent
 
         # Check if parent is a member_expression or attribute (method chain)
-        if parent and parent.type in ("member_expression", "attribute", "selector_expression", "field_expression"):
+        if parent and parent.type in (
+            "member_expression",
+            "attribute",
+            "selector_expression",
+            "field_expression",
+        ):
             return True
 
         # Check if this call's function is another call
@@ -1206,7 +1335,7 @@ class CallGraphAnalyzer:
 
     def _get_node_text(self, node: Node, source: bytes) -> str:
         """Extract text from a tree-sitter node."""
-        return source[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+        return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
     def _create_location(self, node: Node) -> ASTNodeLocation:
         """Create ASTNodeLocation from tree-sitter node."""

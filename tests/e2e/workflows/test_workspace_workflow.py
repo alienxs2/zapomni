@@ -83,8 +83,7 @@ class TestWorkspaceWorkflow:
             )
             response.assert_success("Failed to search in workspace A")
             workspace_a_has_memory = (
-                "unique content" in response.text.lower()
-                or workspace_a in response.text.lower()
+                "unique content" in response.text.lower() or workspace_a in response.text.lower()
             )
 
             # Step 3: Create workspace B
@@ -113,8 +112,7 @@ class TestWorkspaceWorkflow:
             )
             # The search should succeed but not find workspace A's content
             workspace_b_has_a_memory = (
-                "unique content" in response.text.lower()
-                and "workspace-a" in response.text.lower()
+                "unique content" in response.text.lower() and "workspace-a" in response.text.lower()
             )
 
             # Step 6: Switch back to workspace A
@@ -135,9 +133,9 @@ class TestWorkspaceWorkflow:
             # Verify isolation: workspace B should not have seen workspace A's data
             # Note: If workspace A had memory initially, it should still have it after switch back
             if workspace_a_has_memory:
-                assert not workspace_b_has_a_memory, (
-                    "Workspace B should NOT have access to workspace A's memories"
-                )
+                assert (
+                    not workspace_b_has_a_memory
+                ), "Workspace B should NOT have access to workspace A's memories"
 
         finally:
             # Step 8: Cleanup - delete both workspaces
@@ -194,16 +192,16 @@ class TestWorkspaceWorkflow:
             # Step 4: Verify current changed
             response = mcp_client.call_tool("get_current_workspace", {})
             response.assert_success("Failed to get current workspace after switch")
-            assert new_workspace in response.text, (
-                f"Expected current workspace to be {new_workspace}, got: {response.text}"
-            )
+            assert (
+                new_workspace in response.text
+            ), f"Expected current workspace to be {new_workspace}, got: {response.text}"
 
             # Step 5: List workspaces to verify new workspace exists
             response = mcp_client.call_tool("list_workspaces", {})
             response.assert_success("Failed to list workspaces")
-            assert new_workspace in response.text, (
-                f"New workspace {new_workspace} should appear in list"
-            )
+            assert (
+                new_workspace in response.text
+            ), f"New workspace {new_workspace} should appear in list"
 
             # Step 6: Verify we can switch to default workspace
             response = mcp_client.call_tool(
@@ -286,9 +284,9 @@ class TestWorkspaceWorkflow:
             # Step 5: Verify workspace not in list
             response = mcp_client.call_tool("list_workspaces", {})
             response.assert_success("Failed to list workspaces after delete")
-            assert workspace_id not in response.text, (
-                f"Deleted workspace {workspace_id} should not appear in list"
-            )
+            assert (
+                workspace_id not in response.text
+            ), f"Deleted workspace {workspace_id} should not appear in list"
 
         except Exception:
             # Ensure cleanup even on failure

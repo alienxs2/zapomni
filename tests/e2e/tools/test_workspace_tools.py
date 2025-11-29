@@ -101,9 +101,7 @@ class TestCreateWorkspace:
                 },
             )
 
-            response.assert_error(
-                contains=None  # Error message may vary
-            )
+            response.assert_error(contains=None)  # Error message may vary
 
     def test_create_workspace_duplicate_fails(self, mcp_client):
         """Test creating duplicate workspace fails."""
@@ -261,10 +259,7 @@ class TestGetCurrentWorkspace:
         # Should contain workspace info with statistics
         assert "workspace" in response.text.lower()
         # Should include stats (memories, chunks, entities, relationships)
-        assert (
-            "memories" in response.text.lower()
-            or "statistics" in response.text.lower()
-        )
+        assert "memories" in response.text.lower() or "statistics" in response.text.lower()
 
     @pytest.mark.xfail(
         reason="SSE sessions are stateless - workspace state may not persist between connections"
@@ -416,8 +411,7 @@ class TestDeleteWorkspace:
 
         # Should indicate workspace not found or was not found
         assert (
-            "not found" in response.text.lower()
-            or "was not found" in response.text.lower()
+            "not found" in response.text.lower() or "was not found" in response.text.lower()
         ), f"Expected 'not found' message, got: {response.text}"
 
     def test_delete_default_workspace_fails(self, mcp_client):
@@ -432,6 +426,5 @@ class TestDeleteWorkspace:
 
         response.assert_error()
         assert (
-            "default" in response.text.lower()
-            or "cannot delete" in response.text.lower()
+            "default" in response.text.lower() or "cannot delete" in response.text.lower()
         ), f"Expected error about default workspace, got: {response.text}"

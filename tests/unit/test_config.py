@@ -51,7 +51,9 @@ def test_default_configuration():
     assert settings.enable_hybrid_search == True
     assert settings.enable_knowledge_graph == True
     assert settings.enable_code_indexing == True
-    assert settings.enable_semantic_cache == True  # Enabled by default for performance (Redis + in-memory fallback)
+    assert (
+        settings.enable_semantic_cache == True
+    )  # Enabled by default for performance (Redis + in-memory fallback)
 
 
 def test_environment_override(monkeypatch):

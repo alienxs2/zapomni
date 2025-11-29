@@ -288,9 +288,7 @@ class MCPServer:
 
         # Phase 3.5: Add PruneMemoryTool for garbage collection
         if hasattr(memory_processor, "db_client") and memory_processor.db_client is not None:
-            tools.append(
-                PruneMemoryTool(db_client=memory_processor.db_client)
-            )
+            tools.append(PruneMemoryTool(db_client=memory_processor.db_client))
 
         # Phase 3.6: Add Call Graph tools for querying callers/callees
         if hasattr(memory_processor, "db_client") and memory_processor.db_client is not None:
@@ -374,7 +372,9 @@ class MCPServer:
                         if name not in self._tools:
                             self._error_count += 1
                             return CallToolResult(
-                                content=[TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                                content=[
+                                    TextContent(type="text", text=f"Error: Unknown tool '{name}'")
+                                ],
                                 isError=True,
                             )
 

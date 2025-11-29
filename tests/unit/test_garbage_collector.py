@@ -27,7 +27,6 @@ from zapomni_db.falkordb_client import FalkorDBClient
 from zapomni_db.models import QueryResult
 from zapomni_mcp.tools.prune_memory import PruneMemoryTool, PruneStrategy
 
-
 # ============================================================================
 # mark_code_memories_stale TESTS
 # ============================================================================
@@ -54,9 +53,7 @@ class TestMarkCodeMemoriesStale:
         mock_result.rows = [{"marked_count": 5}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         count = await mock_client.mark_code_memories_stale("workspace_1")
 
@@ -69,9 +66,7 @@ class TestMarkCodeMemoriesStale:
         mock_result.rows = [{"marked_count": 0}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         count = await mock_client.mark_code_memories_stale("workspace_1")
 
@@ -81,8 +76,9 @@ class TestMarkCodeMemoriesStale:
     async def test_mark_stale_filters_by_source(self, mock_client, mocker):
         """Test that only code_indexer memories are marked."""
         execute_spy = mocker.patch.object(
-            mock_client, "_execute_cypher",
-            return_value=MagicMock(rows=[{"marked_count": 3}], row_count=1)
+            mock_client,
+            "_execute_cypher",
+            return_value=MagicMock(rows=[{"marked_count": 3}], row_count=1),
         )
 
         await mock_client.mark_code_memories_stale("ws_1")
@@ -96,8 +92,9 @@ class TestMarkCodeMemoriesStale:
     async def test_mark_stale_filters_by_workspace(self, mock_client, mocker):
         """Test that memories are filtered by workspace."""
         execute_spy = mocker.patch.object(
-            mock_client, "_execute_cypher",
-            return_value=MagicMock(rows=[{"marked_count": 2}], row_count=1)
+            mock_client,
+            "_execute_cypher",
+            return_value=MagicMock(rows=[{"marked_count": 2}], row_count=1),
         )
 
         await mock_client.mark_code_memories_stale("my_workspace")
@@ -132,9 +129,7 @@ class TestMarkMemoryFresh:
         mock_result.rows = [{"memory_id": memory_id}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         result = await mock_client.mark_memory_fresh(
             file_path="/path/to/file.py",
@@ -150,9 +145,7 @@ class TestMarkMemoryFresh:
         mock_result.rows = []
         mock_result.row_count = 0
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         result = await mock_client.mark_memory_fresh(
             file_path="/path/to/nonexistent.py",
@@ -165,8 +158,7 @@ class TestMarkMemoryFresh:
     async def test_mark_fresh_exact_file_path_match(self, mock_client, mocker):
         """Test that file_path uses exact match (addresses validation warning)."""
         execute_spy = mocker.patch.object(
-            mock_client, "_execute_cypher",
-            return_value=MagicMock(rows=[], row_count=0)
+            mock_client, "_execute_cypher", return_value=MagicMock(rows=[], row_count=0)
         )
 
         await mock_client.mark_memory_fresh(
@@ -203,9 +195,7 @@ class TestCountStaleMemories:
         mock_result.rows = [{"count": 10}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         count = await mock_client.count_stale_memories("workspace_1")
 
@@ -218,9 +208,7 @@ class TestCountStaleMemories:
         mock_result.rows = [{"count": 0}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         count = await mock_client.count_stale_memories("workspace_1")
 
@@ -280,9 +268,7 @@ class TestGetStaleMemoriesPreview:
                 return count_result
             return preview_result
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", side_effect=mock_execute
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", side_effect=mock_execute)
 
         result = await mock_client.get_stale_memories_preview("workspace_1")
 
@@ -298,9 +284,7 @@ class TestGetStaleMemoriesPreview:
         mock_result.rows = [{"memory_count": 0, "chunk_count": 0}]
         mock_result.row_count = 1
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", return_value=mock_result
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", return_value=mock_result)
 
         result = await mock_client.get_stale_memories_preview("workspace_1")
 
@@ -338,8 +322,9 @@ class TestDeleteStaleMemories:
         preview_result.row_count = 1
 
         mocker.patch.object(
-            mock_client, "get_stale_memories_preview",
-            return_value={"memory_count": 5, "chunk_count": 15, "preview": []}
+            mock_client,
+            "get_stale_memories_preview",
+            return_value={"memory_count": 5, "chunk_count": 15, "preview": []},
         )
         mocker.patch.object(mock_client, "_execute_cypher", return_value=MagicMock())
 
@@ -352,8 +337,9 @@ class TestDeleteStaleMemories:
     async def test_delete_nothing_to_delete(self, mock_client, mocker):
         """Test deletion when no stale memories exist."""
         mocker.patch.object(
-            mock_client, "get_stale_memories_preview",
-            return_value={"memory_count": 0, "chunk_count": 0, "preview": []}
+            mock_client,
+            "get_stale_memories_preview",
+            return_value={"memory_count": 0, "chunk_count": 0, "preview": []},
         )
 
         result = await mock_client.delete_stale_memories("workspace_1", confirm=True)
@@ -400,9 +386,7 @@ class TestGetOrphanedChunksPreview:
                 return count_result
             return preview_result
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", side_effect=mock_execute
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", side_effect=mock_execute)
 
         result = await mock_client.get_orphaned_chunks_preview("workspace_1")
 
@@ -436,8 +420,7 @@ class TestDeleteOrphanedChunks:
     async def test_delete_orphaned_chunks_success(self, mock_client, mocker):
         """Test successful orphaned chunk deletion."""
         mocker.patch.object(
-            mock_client, "get_orphaned_chunks_preview",
-            return_value={"count": 10, "preview": []}
+            mock_client, "get_orphaned_chunks_preview", return_value={"count": 10, "preview": []}
         )
         mocker.patch.object(mock_client, "_execute_cypher", return_value=MagicMock())
 
@@ -483,9 +466,7 @@ class TestGetOrphanedEntitiesPreview:
                 return count_result
             return preview_result
 
-        mocker.patch.object(
-            mock_client, "_execute_cypher", side_effect=mock_execute
-        )
+        mocker.patch.object(mock_client, "_execute_cypher", side_effect=mock_execute)
 
         result = await mock_client.get_orphaned_entities_preview("workspace_1")
 
@@ -520,8 +501,7 @@ class TestDeleteOrphanedEntities:
     async def test_delete_orphaned_entities_success(self, mock_client, mocker):
         """Test successful orphaned entity deletion."""
         mocker.patch.object(
-            mock_client, "get_orphaned_entities_preview",
-            return_value={"count": 7, "preview": []}
+            mock_client, "get_orphaned_entities_preview", return_value={"count": 7, "preview": []}
         )
         mocker.patch.object(mock_client, "_execute_cypher", return_value=MagicMock())
 
@@ -547,12 +527,8 @@ class TestPruneMemoryTool:
         client.get_stale_memories_preview = AsyncMock(
             return_value={"memory_count": 5, "chunk_count": 15, "preview": []}
         )
-        client.get_orphaned_chunks_preview = AsyncMock(
-            return_value={"count": 3, "preview": []}
-        )
-        client.get_orphaned_entities_preview = AsyncMock(
-            return_value={"count": 2, "preview": []}
-        )
+        client.get_orphaned_chunks_preview = AsyncMock(return_value={"count": 3, "preview": []})
+        client.get_orphaned_entities_preview = AsyncMock(return_value={"count": 2, "preview": []})
         client.delete_stale_memories = AsyncMock(
             return_value={"deleted_memories": 5, "deleted_chunks": 15}
         )
@@ -579,10 +555,12 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_dry_run_shows_preview(self, tool):
         """Test dry run shows preview information."""
-        result = await tool.execute({
-            "strategy": "stale_code",
-            "dry_run": True,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "stale_code",
+                "dry_run": True,
+            }
+        )
 
         assert result["isError"] is False
         text = result["content"][0]["text"]
@@ -591,11 +569,13 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_deletion_requires_confirm(self, tool):
         """Test deletion without confirm returns error."""
-        result = await tool.execute({
-            "strategy": "stale_code",
-            "dry_run": False,
-            "confirm": False,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "stale_code",
+                "dry_run": False,
+                "confirm": False,
+            }
+        )
 
         assert result["isError"] is True
         text = result["content"][0]["text"]
@@ -604,11 +584,13 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_deletion_with_confirm(self, tool, mock_db_client):
         """Test deletion works with confirm=True."""
-        result = await tool.execute({
-            "strategy": "stale_code",
-            "dry_run": False,
-            "confirm": True,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "stale_code",
+                "dry_run": False,
+                "confirm": True,
+            }
+        )
 
         assert result["isError"] is False
         mock_db_client.delete_stale_memories.assert_called_once()
@@ -618,11 +600,13 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_all_strategy(self, tool, mock_db_client):
         """Test 'all' strategy runs all deletion types."""
-        result = await tool.execute({
-            "strategy": "all",
-            "dry_run": False,
-            "confirm": True,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "all",
+                "dry_run": False,
+                "confirm": True,
+            }
+        )
 
         assert result["isError"] is False
         mock_db_client.delete_stale_memories.assert_called_once()
@@ -632,11 +616,13 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_orphaned_chunks_strategy(self, tool, mock_db_client):
         """Test orphaned_chunks strategy."""
-        result = await tool.execute({
-            "strategy": "orphaned_chunks",
-            "dry_run": False,
-            "confirm": True,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "orphaned_chunks",
+                "dry_run": False,
+                "confirm": True,
+            }
+        )
 
         assert result["isError"] is False
         mock_db_client.delete_orphaned_chunks.assert_called_once()
@@ -645,11 +631,13 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_orphaned_entities_strategy(self, tool, mock_db_client):
         """Test orphaned_entities strategy."""
-        result = await tool.execute({
-            "strategy": "orphaned_entities",
-            "dry_run": False,
-            "confirm": True,
-        })
+        result = await tool.execute(
+            {
+                "strategy": "orphaned_entities",
+                "dry_run": False,
+                "confirm": True,
+            }
+        )
 
         assert result["isError"] is False
         mock_db_client.delete_orphaned_entities.assert_called_once()
@@ -658,9 +646,11 @@ class TestPruneMemoryTool:
     @pytest.mark.asyncio
     async def test_invalid_strategy(self, tool):
         """Test invalid strategy returns error."""
-        result = await tool.execute({
-            "strategy": "invalid_strategy",
-        })
+        result = await tool.execute(
+            {
+                "strategy": "invalid_strategy",
+            }
+        )
 
         assert result["isError"] is True
 

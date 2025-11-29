@@ -46,15 +46,15 @@ LoggingService.configure_logging(level="INFO", format="json")
 logger = LoggingService.get_logger(__name__)
 
 from zapomni_core.chunking import SemanticChunker
+from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 
 # Now safe to import other zapomni modules (after logging is configured)
 from zapomni_core.config import ZapomniSettings
-from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 from zapomni_core.embeddings.embedding_cache import EmbeddingCache
+from zapomni_core.embeddings.ollama_embedder import OllamaEmbedder
 
 # EntityExtractor is loaded lazily by MemoryProcessor when needed
 from zapomni_core.memory_processor import MemoryProcessor, ProcessorConfig
-from zapomni_core.code.repository_indexer import CodeRepositoryIndexer
 from zapomni_db import FalkorDBClient
 from zapomni_db.pool_config import PoolConfig, RetryConfig
 from zapomni_mcp.config import Settings, SSEConfig
@@ -240,7 +240,9 @@ async def main(args: argparse.Namespace) -> None:
         # STAGE 5: Initialize EmbeddingCache (if Redis enabled)
         # Redis caching significantly improves performance for repeated embeddings
         embedding_cache = None
-        redis_enabled = settings.redis_enabled or os.getenv("REDIS_ENABLED", "false").lower() == "true"
+        redis_enabled = (
+            settings.redis_enabled or os.getenv("REDIS_ENABLED", "false").lower() == "true"
+        )
         enable_semantic_cache = os.getenv("ENABLE_SEMANTIC_CACHE", "true").lower() == "true"
 
         if redis_enabled and enable_semantic_cache:

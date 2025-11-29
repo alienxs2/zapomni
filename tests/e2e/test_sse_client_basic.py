@@ -11,10 +11,10 @@ Tests the SSE client functionality by:
 This script is for development/testing purposes only.
 """
 
-import subprocess
-import time
-import sys
 import os
+import subprocess
+import sys
+import time
 
 # Add parent directory to path to import sse_client
 sys.path.insert(0, os.path.dirname(__file__))
@@ -65,7 +65,7 @@ def test_sse_client():
             print(f"      Active connections: {health.get('active_connections')}")
             print(f"      Uptime: {health.get('uptime_seconds')} seconds")
 
-            if health.get('status') != 'healthy':
+            if health.get("status") != "healthy":
                 print(f"\n[ERROR] Server is not healthy!")
                 return False
 
@@ -84,6 +84,7 @@ def test_sse_client():
         except Exception as e:
             print(f"\n[ERROR] Connection failed: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -112,6 +113,7 @@ def test_sse_client():
         except Exception as e:
             print(f"\n[ERROR] Tool call failed: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 

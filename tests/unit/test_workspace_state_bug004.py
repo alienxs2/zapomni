@@ -17,11 +17,12 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
-from zapomni_mcp.server import MCPServer
+import pytest
+
 from zapomni_db.models import DEFAULT_WORKSPACE_ID
+from zapomni_mcp.server import MCPServer
 
 
 class TestWorkspaceStatePersistence:
@@ -169,8 +170,8 @@ class TestWorkspaceStateIntegration:
     @pytest.mark.asyncio
     async def test_set_current_workspace_tool_stdio_mode(self, server):
         """Test SetCurrentWorkspaceTool updates instance state in stdio mode."""
-        from zapomni_mcp.tools.workspace_tools import SetCurrentWorkspaceTool
         from zapomni_core.workspace_manager import WorkspaceManager
+        from zapomni_mcp.tools.workspace_tools import SetCurrentWorkspaceTool
 
         # Mock workspace manager
         mock_ws_manager = MagicMock(spec=WorkspaceManager)

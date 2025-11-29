@@ -1,11 +1,12 @@
 """Unit tests for zapomni_core.treesitter.parser.registry module."""
 
-import pytest
 from unittest.mock import MagicMock
 
-from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
-from zapomni_core.treesitter.parser.base import BaseLanguageParser
+import pytest
+
 from zapomni_core.treesitter.extractors.base import BaseCodeExtractor
+from zapomni_core.treesitter.parser.base import BaseLanguageParser
+from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 
 
 class MockParser(BaseLanguageParser):

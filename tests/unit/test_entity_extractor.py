@@ -54,6 +54,7 @@ def mock_ollama_client():
             "response": "Python: TECHNOLOGY, Programming language\nGuido van Rossum: PERSON, Creator of Python"
         }
     )
+
     # Add async extract_relationships method
     async def mock_extract_relationships(text, entities):
         return [
@@ -62,9 +63,10 @@ def mock_ollama_client():
                 "target": "Python",
                 "type": "WRITTEN_IN",
                 "confidence": 0.9,
-                "evidence": "written in"
+                "evidence": "written in",
             }
         ]
+
     client.extract_relationships = mock_extract_relationships
     client.base_url = "http://localhost:11434"
     client.timeout = 30

@@ -18,8 +18,7 @@ from typing import List, Optional
 
 import pytest
 
-from tests.e2e.sse_client import MCPSSEClient, MCPResponse
-
+from tests.e2e.sse_client import MCPResponse, MCPSSEClient
 
 # Timeout for concurrent operations (seconds)
 CONCURRENT_TIMEOUT = 60.0
@@ -140,13 +139,16 @@ class TestConcurrentAccess:
                 {"query": f"CONCURRENT_WRITE_{i}_MARKER", "limit": 5},
             )
             if not search_response.is_error and search_response.text:
-                if f"CONCURRENT_WRITE_{i}_MARKER" in search_response.text or "thread" in search_response.text.lower():
+                if (
+                    f"CONCURRENT_WRITE_{i}_MARKER" in search_response.text
+                    or "thread" in search_response.text.lower()
+                ):
                     found_count += 1
 
         # At least some should be found (semantic search may not find all exact matches)
-        assert found_count >= 1, (
-            f"Expected to find at least 1 concurrent write memory, found {found_count}"
-        )
+        assert (
+            found_count >= 1
+        ), f"Expected to find at least 1 concurrent write memory, found {found_count}"
 
     def test_mixed_concurrent_operations(
         self,

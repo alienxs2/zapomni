@@ -3,13 +3,13 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from tree_sitter import Tree
 
-from zapomni_core.treesitter.parser.base import BaseLanguageParser
 from zapomni_core.treesitter.exceptions import LanguageNotSupportedError, ParseError
+from zapomni_core.treesitter.parser.base import BaseLanguageParser
 
 
 class ConcreteParser(BaseLanguageParser):
@@ -110,7 +110,7 @@ class TestParseFile:
     def test_parse_file_success(self):
         """Test parsing an existing file."""
         parser = ConcreteParser()
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def hello(): pass")
             f.flush()
             try:
@@ -137,7 +137,7 @@ class TestParseFile:
     def test_parse_file_permission_denied(self):
         """Test handling of permission denied error."""
         parser = ConcreteParser()
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def hello(): pass")
             f.flush()
             try:
@@ -145,7 +145,9 @@ class TestParseFile:
                 os.chmod(f.name, 0o000)
                 with pytest.raises(ParseError) as exc_info:
                     parser.parse_file(f.name)
-                assert "Permission denied" in str(exc_info.value) or "Failed to read" in str(exc_info.value)
+                assert "Permission denied" in str(exc_info.value) or "Failed to read" in str(
+                    exc_info.value
+                )
             finally:
                 # Restore permissions and delete
                 os.chmod(f.name, 0o644)

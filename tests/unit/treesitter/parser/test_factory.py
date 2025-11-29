@@ -6,13 +6,13 @@ import tempfile
 import pytest
 from tree_sitter import Parser
 
+from zapomni_core.treesitter.exceptions import LanguageNotSupportedError
+from zapomni_core.treesitter.parser.base import BaseLanguageParser
 from zapomni_core.treesitter.parser.factory import (
     ParserFactory,
     UniversalLanguageParser,
 )
 from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
-from zapomni_core.treesitter.parser.base import BaseLanguageParser
-from zapomni_core.treesitter.exceptions import LanguageNotSupportedError
 
 
 class TestUniversalLanguageParser:

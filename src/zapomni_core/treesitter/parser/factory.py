@@ -99,10 +99,7 @@ class UniversalLanguageParser(BaseLanguageParser):
             # get_language() will raise an exception if language not supported
             language = get_language(self._language_name)
             self._parser.language = language
-            self._logger.debug(
-                "Created parser for language",
-                language=self._language_name
-            )
+            self._logger.debug("Created parser for language", language=self._language_name)
         return self._parser
 
     @staticmethod
@@ -178,21 +175,19 @@ class ParserFactory:
                 parser.get_parser()
                 registry.register_parser(language, parser)
                 registered_count += 1
-                cls._logger.debug(
-                    "Registered parser for language",
-                    language=language
-                )
+                cls._logger.debug("Registered parser for language", language=language)
             except Exception as e:
                 skipped_count += 1
                 cls._logger.warning(
                     "Language not available in tree-sitter-language-pack",
                     language=language,
-                    error=str(e)
+                    error=str(e),
                 )
 
         # Register GenericExtractor as fallback
         try:
             from ..extractors.generic import GenericExtractor
+
             registry.register_extractor("generic", GenericExtractor())
             cls._logger.debug("GenericExtractor registered as fallback")
         except ImportError as e:
@@ -203,7 +198,7 @@ class ParserFactory:
             "ParserFactory initialized",
             registered=registered_count,
             skipped=skipped_count,
-            total_languages=len(LANGUAGE_EXTENSIONS)
+            total_languages=len(LANGUAGE_EXTENSIONS),
         )
 
     @classmethod
@@ -239,10 +234,7 @@ class ParserFactory:
             return existing_parser
 
         # Create new parser on demand (lazy creation)
-        cls._logger.debug(
-            "Creating new parser on demand",
-            language=language
-        )
+        cls._logger.debug("Creating new parser on demand", language=language)
         parser = UniversalLanguageParser(language)
         # Verify it works before registering
         parser.get_parser()
@@ -286,9 +278,7 @@ class ParserFactory:
 
         if language is None:
             cls._logger.debug(
-                "No parser found for file extension",
-                file_path=file_path,
-                extension=extension
+                "No parser found for file extension", file_path=file_path, extension=extension
             )
             return None
 
@@ -299,7 +289,7 @@ class ParserFactory:
                 "Failed to get parser for file",
                 file_path=file_path,
                 language=language,
-                error=str(e)
+                error=str(e),
             )
             return None
 

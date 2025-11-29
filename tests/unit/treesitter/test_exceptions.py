@@ -2,13 +2,13 @@
 
 import pytest
 
+from zapomni_core.exceptions import ProcessingError
 from zapomni_core.treesitter.exceptions import (
     ExtractorNotFoundError,
     LanguageNotSupportedError,
     ParseError,
     TreeSitterError,
 )
-from zapomni_core.exceptions import ProcessingError
 
 
 class TestTreeSitterError:

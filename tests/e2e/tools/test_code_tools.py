@@ -193,8 +193,7 @@ class TestIndexCodebase:
         response.assert_error()
         # Should fail because path is a file, not a directory
         assert (
-            "not a directory" in response.text.lower()
-            or "directory" in response.text.lower()
+            "not a directory" in response.text.lower() or "directory" in response.text.lower()
         ), f"Expected directory error, got: {response.text}"
 
     def test_index_codebase_shows_total_lines(self, mcp_client, sample_code_project):
@@ -219,7 +218,4 @@ class TestIndexCodebase:
         response.assert_success("index_codebase should succeed")
 
         # Verify indexing time is reported
-        assert (
-            "Indexing time:" in response.text
-            or "time:" in response.text.lower()
-        )
+        assert "Indexing time:" in response.text or "time:" in response.text.lower()

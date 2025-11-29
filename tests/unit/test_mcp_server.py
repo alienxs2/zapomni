@@ -41,12 +41,16 @@ def mock_core_engine():
     )
     # Add db_client attribute needed by some tools
     mock.db_client = MagicMock()
-    mock.db_client.get_stats = AsyncMock(return_value={
-        "nodes": {"total": 0, "memory": 0, "chunk": 0, "entity": 0, "document": 0},
-        "relationships": {"total": 0, "has_chunk": 0, "mentions": 0, "related_to": 0}
-    })
+    mock.db_client.get_stats = AsyncMock(
+        return_value={
+            "nodes": {"total": 0, "memory": 0, "chunk": 0, "entity": 0, "document": 0},
+            "relationships": {"total": 0, "has_chunk": 0, "mentions": 0, "related_to": 0},
+        }
+    )
     mock.db_client.graph_name = "test_graph"
-    mock.db_client._execute_cypher = AsyncMock(return_value=MagicMock(rows=[], row_count=0, execution_time_ms=0))
+    mock.db_client._execute_cypher = AsyncMock(
+        return_value=MagicMock(rows=[], row_count=0, execution_time_ms=0)
+    )
     return mock
 
 

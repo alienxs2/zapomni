@@ -101,7 +101,9 @@ def mock_embedder():
     embedder = AsyncMock()
     embedder.embed_text = AsyncMock(return_value=[0.1] * 768)  # 768-dimensional embedding
     # embed_batch returns a list of embeddings (one per input text)
-    embedder.embed_batch = AsyncMock(side_effect=lambda texts, **kwargs: [[0.1] * 768 for _ in texts])
+    embedder.embed_batch = AsyncMock(
+        side_effect=lambda texts, **kwargs: [[0.1] * 768 for _ in texts]
+    )
     return embedder
 
 

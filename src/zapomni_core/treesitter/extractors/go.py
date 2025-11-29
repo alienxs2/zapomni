@@ -19,8 +19,8 @@ from typing import List, Optional, Set
 import structlog
 from tree_sitter import Node, Tree
 
-from .base import BaseCodeExtractor
 from ..models import ASTNodeLocation, CodeElementType, ExtractedCode, ParameterInfo
+from .base import BaseCodeExtractor
 
 logger = structlog.get_logger(__name__)
 
@@ -136,9 +136,7 @@ class GoExtractor(BaseCodeExtractor):
             if node.type == "function_declaration":
                 if node_id not in visited_nodes:
                     visited_nodes.add(node_id)
-                    extracted = self._extract_function_node(
-                        node, source, file_path
-                    )
+                    extracted = self._extract_function_node(node, source, file_path)
                     if extracted:
                         results.append(extracted)
                         self._log.debug(
@@ -151,9 +149,7 @@ class GoExtractor(BaseCodeExtractor):
             elif node.type == "method_declaration":
                 if node_id not in visited_nodes:
                     visited_nodes.add(node_id)
-                    extracted = self._extract_method_node(
-                        node, source, file_path
-                    )
+                    extracted = self._extract_method_node(node, source, file_path)
                     if extracted:
                         results.append(extracted)
                         self._log.debug(
@@ -330,9 +326,7 @@ class GoExtractor(BaseCodeExtractor):
         # Check if it's the target type
         if target_type == "struct" and type_node.type == "struct_type":
             visited_nodes.add(node_id)
-            extracted = self._extract_struct_node(
-                type_spec_node, type_decl_node, source, file_path
-            )
+            extracted = self._extract_struct_node(type_spec_node, type_decl_node, source, file_path)
             if extracted:
                 results.append(extracted)
                 self._log.debug(
@@ -785,9 +779,7 @@ class GoExtractor(BaseCodeExtractor):
 
         return parameters
 
-    def _extract_parameter_declaration(
-        self, node: Node, source: bytes
-    ) -> List[ParameterInfo]:
+    def _extract_parameter_declaration(self, node: Node, source: bytes) -> List[ParameterInfo]:
         """
         Extract parameters from a parameter_declaration node.
 
@@ -814,17 +806,17 @@ class GoExtractor(BaseCodeExtractor):
         # Create ParameterInfo for each name
         for name in names:
             if name:
-                parameters.append(ParameterInfo(
-                    name=name,
-                    type_annotation=type_annotation,
-                    default_value=None,
-                ))
+                parameters.append(
+                    ParameterInfo(
+                        name=name,
+                        type_annotation=type_annotation,
+                        default_value=None,
+                    )
+                )
 
         return parameters
 
-    def _extract_variadic_parameter(
-        self, node: Node, source: bytes
-    ) -> Optional[ParameterInfo]:
+    def _extract_variadic_parameter(self, node: Node, source: bytes) -> Optional[ParameterInfo]:
         """
         Extract a variadic parameter (...type).
 
@@ -875,9 +867,7 @@ class GoExtractor(BaseCodeExtractor):
 
         return self._get_node_text(result_node, source)
 
-    def _extract_receiver_type(
-        self, node: Node, source: bytes
-    ) -> tuple[Optional[str], bool]:
+    def _extract_receiver_type(self, node: Node, source: bytes) -> tuple[Optional[str], bool]:
         """
         Extract the receiver type from a method declaration.
 
@@ -927,9 +917,7 @@ class GoExtractor(BaseCodeExtractor):
             return self._get_node_text(type_params_node, source)
         return None
 
-    def _extract_struct_fields(
-        self, type_spec_node: Node, source: bytes
-    ) -> List[str]:
+    def _extract_struct_fields(self, type_spec_node: Node, source: bytes) -> List[str]:
         """
         Extract field names from a struct.
 
@@ -958,9 +946,7 @@ class GoExtractor(BaseCodeExtractor):
 
         return fields
 
-    def _extract_embedded_types(
-        self, type_spec_node: Node, source: bytes
-    ) -> List[str]:
+    def _extract_embedded_types(self, type_spec_node: Node, source: bytes) -> List[str]:
         """
         Extract embedded (anonymous) types from a struct.
 
@@ -996,9 +982,7 @@ class GoExtractor(BaseCodeExtractor):
 
         return embedded
 
-    def _extract_interface_methods(
-        self, type_spec_node: Node, source: bytes
-    ) -> List[str]:
+    def _extract_interface_methods(self, type_spec_node: Node, source: bytes) -> List[str]:
         """
         Extract method signatures from an interface.
 
@@ -1030,9 +1014,7 @@ class GoExtractor(BaseCodeExtractor):
 
         return methods
 
-    def _extract_embedded_interfaces(
-        self, type_spec_node: Node, source: bytes
-    ) -> List[str]:
+    def _extract_embedded_interfaces(self, type_spec_node: Node, source: bytes) -> List[str]:
         """
         Extract embedded interfaces.
 
@@ -1065,6 +1047,7 @@ class GoExtractor(BaseCodeExtractor):
 # =============================================================================
 # Auto-registration
 # =============================================================================
+
 
 def _register_go_extractor() -> None:
     """

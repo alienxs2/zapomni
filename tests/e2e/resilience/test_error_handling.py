@@ -32,9 +32,11 @@ class TestErrorHandling:
         # Should return an error response
         assert response.is_error, f"Expected error for invalid tool, got: {response.text}"
         # The error message should indicate the tool is unknown
-        assert "nonexistent_tool_xyz_12345" in response.text.lower() or "unknown" in response.text.lower() or "not found" in response.text.lower(), (
-            f"Error message should mention the tool name or 'unknown', got: {response.text}"
-        )
+        assert (
+            "nonexistent_tool_xyz_12345" in response.text.lower()
+            or "unknown" in response.text.lower()
+            or "not found" in response.text.lower()
+        ), f"Error message should mention the tool name or 'unknown', got: {response.text}"
 
     def test_missing_required_parameters(self, mcp_client: MCPSSEClient) -> None:
         """Test missing required parameters returns error."""
@@ -47,9 +49,9 @@ class TestErrorHandling:
         # Should return an error about missing parameter
         assert response.is_error, f"Expected error for missing parameter, got: {response.text}"
         error_text = response.text.lower()
-        assert "text" in error_text or "required" in error_text or "missing" in error_text, (
-            f"Error should mention 'text' or 'required', got: {response.text}"
-        )
+        assert (
+            "text" in error_text or "required" in error_text or "missing" in error_text
+        ), f"Error should mention 'text' or 'required', got: {response.text}"
 
     def test_invalid_parameter_types(self, mcp_client: MCPSSEClient) -> None:
         """Test invalid parameter types are handled gracefully."""
@@ -94,7 +96,7 @@ class TestEdgeCases:
         """Test handling of unicode and special characters."""
         # Text with various unicode characters
         unicode_text = (
-            "This text contains emoji: \U0001F4DA\U0001F40D\U0001F680 "
+            "This text contains emoji: \U0001f4da\U0001f40d\U0001f680 "
             "and CJK characters: \u4e2d\u6587\u6d4b\u8bd5 "
             "and Cyrillic: \u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440! "
             "and special chars: <>&\"' \u00e9\u00e8\u00ea \u00f1 \u00df "

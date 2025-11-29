@@ -1072,7 +1072,8 @@ class TestIndexCodebaseToolStoresFileContent:
 
         # Create a Python file with actual content
         python_file = Path(temp_dir) / "example.py"
-        python_file.write_text('''
+        python_file.write_text(
+            '''
 def hello_world():
     """Say hello to the world."""
     print("Hello, World!")
@@ -1085,11 +1086,13 @@ class Calculator:
 
     def subtract(self, a, b):
         return a - b
-''')
+'''
+        )
 
         # Create a TypeScript file
         ts_file = Path(temp_dir) / "utils.ts"
-        ts_file.write_text('''
+        ts_file.write_text(
+            """
 export function formatDate(date: Date): string {
     return date.toISOString();
 }
@@ -1099,7 +1102,8 @@ export interface User {
     name: string;
     email: string;
 }
-''')
+"""
+        )
 
         yield temp_dir
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -1218,9 +1222,7 @@ export interface User {
         assert any("# Language: python" in text for text in stored_texts)
 
     @pytest.mark.asyncio
-    async def test_execute_metadata_includes_language(
-        self, tool, mock_processor, temp_repo_dir
-    ):
+    async def test_execute_metadata_includes_language(self, tool, mock_processor, temp_repo_dir):
         """Test that metadata includes language field."""
         # Execute
         await tool.execute({"repo_path": temp_repo_dir})
@@ -1234,9 +1236,7 @@ export interface User {
         assert any(meta.get("language") == "typescript" for meta in stored_metadata)
 
     @pytest.mark.asyncio
-    async def test_execute_metadata_includes_indexed_at(
-        self, tool, mock_processor, temp_repo_dir
-    ):
+    async def test_execute_metadata_includes_indexed_at(self, tool, mock_processor, temp_repo_dir):
         """Test that metadata includes indexed_at timestamp."""
         # Execute
         await tool.execute({"repo_path": temp_repo_dir})
@@ -1258,7 +1258,12 @@ export interface User {
             empty_file.write_text("")
 
             mock_indexer.index_repository.return_value = {
-                "repository": {"path": temp_dir, "name": "test", "git_url": None, "default_branch": "main"},
+                "repository": {
+                    "path": temp_dir,
+                    "name": "test",
+                    "git_url": None,
+                    "default_branch": "main",
+                },
                 "files": [
                     {
                         "path": str(empty_file),
@@ -1271,7 +1276,12 @@ export interface User {
                         "git_info": {},
                     },
                 ],
-                "statistics": {"total_files": 1, "total_lines": 0, "total_size": 0, "by_extension": {".py": 1}},
+                "statistics": {
+                    "total_files": 1,
+                    "total_lines": 0,
+                    "total_size": 0,
+                    "by_extension": {".py": 1},
+                },
             }
 
             # Execute

@@ -332,7 +332,15 @@ class TestAddMemoryToolFormatting:
         # Setup
         error = ValidationError.from_exception_data(
             "test",
-            [{"type": "value_error", "loc": ("text",), "msg": "field required", "input": {}, "ctx": {"error": "field required"}}]
+            [
+                {
+                    "type": "value_error",
+                    "loc": ("text",),
+                    "msg": "field required",
+                    "input": {},
+                    "ctx": {"error": "field required"},
+                }
+            ],
         )
 
         # Execute

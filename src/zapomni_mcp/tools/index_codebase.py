@@ -28,11 +28,11 @@ logger = structlog.get_logger(__name__)
 
 # Tree-sitter imports for AST parsing
 try:
-    from zapomni_core.treesitter.parser.factory import ParserFactory
-    from zapomni_core.treesitter.extractors import GenericExtractor
-    from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
-    from zapomni_core.treesitter.models import ExtractedCode
     from zapomni_core.treesitter.analyzers.call_graph import CallGraphAnalyzer
+    from zapomni_core.treesitter.extractors import GenericExtractor
+    from zapomni_core.treesitter.models import ExtractedCode
+    from zapomni_core.treesitter.parser.factory import ParserFactory
+    from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 
     TREESITTER_AVAILABLE = True
 except ImportError:
@@ -757,8 +757,8 @@ class IndexCodebaseTool:
         Returns:
             Tuple of (memories_created, functions_found, classes_found, calls_found)
         """
-        from pathlib import Path
         from datetime import datetime, timezone
+        from pathlib import Path
 
         memories_created = 0
         memories_refreshed = 0

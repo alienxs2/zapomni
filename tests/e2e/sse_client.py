@@ -11,13 +11,14 @@ Author: Zapomni Test Suite
 License: MIT
 """
 
+import json
+import queue
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-import json
+
 import httpx
-import threading
-import queue
-import time
 
 
 @dataclass
@@ -30,6 +31,7 @@ class MCPResponse:
         is_error: True if the tool returned an error
         raw: Raw JSON-RPC response from the server
     """
+
     content: List[Dict[str, Any]]
     is_error: bool
     raw: Dict[str, Any]
@@ -80,9 +82,7 @@ class MCPResponse:
 
         if contains is not None:
             if contains not in self.text:
-                raise AssertionError(
-                    f"Expected error to contain '{contains}' but got: {self.text}"
-                )
+                raise AssertionError(f"Expected error to contain '{contains}' but got: {self.text}")
 
 
 class MCPSSEClient:
@@ -310,9 +310,7 @@ class MCPSSEClient:
                 error_detail = response.json()
             except:
                 error_detail = response.text
-            raise RuntimeError(
-                f"HTTP {response.status_code}: {error_detail}"
-            ) from e
+            raise RuntimeError(f"HTTP {response.status_code}: {error_detail}") from e
 
         # Wait for response from SSE stream
         start_time = time.time()
@@ -469,10 +467,7 @@ class MCPSSEClient:
         if "error" in data:
             error = data["error"]
             return MCPResponse(
-                content=[{
-                    "type": "text",
-                    "text": f"Error: {error.get('message', str(error))}"
-                }],
+                content=[{"type": "text", "text": f"Error: {error.get('message', str(error))}"}],
                 is_error=True,
                 raw=data,
             )

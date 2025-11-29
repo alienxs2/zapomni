@@ -13,7 +13,6 @@ from tree_sitter_language_pack import get_parser
 from zapomni_core.treesitter.extractors.go import GoExtractor
 from zapomni_core.treesitter.models import CodeElementType, ParameterInfo
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -68,12 +67,12 @@ class TestExtractFunctionsBasic:
 
     def test_extract_simple_function(self, extractor, parse_go):
         """Test extraction of a simple function."""
-        source = '''
+        source = """
 package main
 
 func hello() {
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -83,7 +82,7 @@ func hello() {
 
     def test_extract_multiple_functions(self, extractor, parse_go):
         """Test extraction of multiple functions."""
-        source = '''
+        source = """
 package main
 
 func func1() {}
@@ -91,7 +90,7 @@ func func1() {}
 func func2() {}
 
 func func3() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -103,10 +102,10 @@ func func3() {}
 
     def test_function_has_location(self, extractor, parse_go):
         """Test that extracted function has location info."""
-        source = '''package main
+        source = """package main
 
 func hello() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -117,12 +116,12 @@ func hello() {}
 
     def test_function_has_source_code(self, extractor, parse_go):
         """Test that extracted function has source code."""
-        source = '''package main
+        source = """package main
 
 func hello() {
     fmt.Println("Hello")
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -141,13 +140,13 @@ class TestExtractFunctionsParameters:
 
     def test_extract_function_with_params(self, extractor, parse_go):
         """Test extraction of function with parameters."""
-        source = '''
+        source = """
 package main
 
 func add(a int, b int) int {
     return a + b
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -161,13 +160,13 @@ func add(a int, b int) int {
 
     def test_extract_function_with_grouped_params(self, extractor, parse_go):
         """Test extraction of function with grouped parameters (a, b int)."""
-        source = '''
+        source = """
 package main
 
 func add(a, b int) int {
     return a + b
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -179,13 +178,13 @@ func add(a, b int) int {
 
     def test_extract_function_with_variadic_params(self, extractor, parse_go):
         """Test extraction of function with variadic parameters."""
-        source = '''
+        source = """
 package main
 
 func sum(nums ...int) int {
     return 0
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -197,11 +196,11 @@ func sum(nums ...int) int {
 
     def test_extract_function_no_params(self, extractor, parse_go):
         """Test extraction of function with no parameters."""
-        source = '''
+        source = """
 package main
 
 func noParams() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -219,13 +218,13 @@ class TestExtractFunctionsReturnTypes:
 
     def test_extract_function_with_return_type(self, extractor, parse_go):
         """Test extraction of function with single return type."""
-        source = '''
+        source = """
 package main
 
 func add(a, b int) int {
     return a + b
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -234,13 +233,13 @@ func add(a, b int) int {
 
     def test_function_without_return_type(self, extractor, parse_go):
         """Test function without return type has None."""
-        source = '''
+        source = """
 package main
 
 func hello() {
     fmt.Println("Hello")
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -249,13 +248,13 @@ func hello() {
 
     def test_function_with_multiple_returns(self, extractor, parse_go):
         """Test function with multiple return values."""
-        source = '''
+        source = """
 package main
 
 func divide(a, b int) (int, error) {
     return a / b, nil
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -267,14 +266,14 @@ func divide(a, b int) (int, error) {
 
     def test_function_with_named_returns(self, extractor, parse_go):
         """Test function with named return values."""
-        source = '''
+        source = """
 package main
 
 func divide(a, b int) (result int, err error) {
     result = a / b
     return
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -295,14 +294,14 @@ class TestExtractFunctionsDocComments:
 
     def test_extract_function_with_doc_comment(self, extractor, parse_go):
         """Test extraction of function with doc comment."""
-        source = '''
+        source = """
 package main
 
 // Add adds two integers and returns the sum.
 func Add(a, b int) int {
     return a + b
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -312,7 +311,7 @@ func Add(a, b int) int {
 
     def test_extract_function_with_multiline_doc(self, extractor, parse_go):
         """Test extraction of function with multiline doc comment."""
-        source = '''
+        source = """
 package main
 
 // Divide divides a by b.
@@ -320,7 +319,7 @@ package main
 func Divide(a, b int) (int, error) {
     return a / b, nil
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -332,11 +331,11 @@ func Divide(a, b int) (int, error) {
 
     def test_function_without_doc_comment(self, extractor, parse_go):
         """Test function without doc comment has None."""
-        source = '''
+        source = """
 package main
 
 func noDoc() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -354,7 +353,7 @@ class TestExtractMethods:
 
     def test_extract_method_with_value_receiver(self, extractor, parse_go):
         """Test extraction of method with value receiver."""
-        source = '''
+        source = """
 package main
 
 type Calculator struct{}
@@ -362,7 +361,7 @@ type Calculator struct{}
 func (c Calculator) Add(a, b int) int {
     return a + b
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -374,7 +373,7 @@ func (c Calculator) Add(a, b int) int {
 
     def test_extract_method_with_pointer_receiver(self, extractor, parse_go):
         """Test extraction of method with pointer receiver."""
-        source = '''
+        source = """
 package main
 
 type Calculator struct {
@@ -384,7 +383,7 @@ type Calculator struct {
 func (c *Calculator) SetValue(v int) {
     c.value = v
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -396,13 +395,13 @@ func (c *Calculator) SetValue(v int) {
 
     def test_method_qualified_name(self, extractor, parse_go):
         """Test method qualified_name includes receiver type."""
-        source = '''
+        source = """
 package main
 
 type MyType struct{}
 
 func (m MyType) Process() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -412,13 +411,13 @@ func (m MyType) Process() {}
 
     def test_method_has_correct_type(self, extractor, parse_go):
         """Test that method has CodeElementType.METHOD."""
-        source = '''
+        source = """
 package main
 
 type MyType struct{}
 
 func (m MyType) Method() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -437,14 +436,14 @@ class TestExtractStructs:
 
     def test_extract_simple_struct(self, extractor, parse_go):
         """Test extraction of simple struct."""
-        source = '''
+        source = """
 package main
 
 type Point struct {
     X int
     Y int
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -454,14 +453,14 @@ type Point struct {
 
     def test_struct_with_fields(self, extractor, parse_go):
         """Test struct fields are extracted."""
-        source = '''
+        source = """
 package main
 
 type Person struct {
     Name string
     Age  int
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -472,7 +471,7 @@ type Person struct {
 
     def test_struct_with_embedded_type(self, extractor, parse_go):
         """Test struct with embedded type."""
-        source = '''
+        source = """
 package main
 
 type Base struct {
@@ -483,7 +482,7 @@ type Extended struct {
     Base
     Name string
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -493,14 +492,14 @@ type Extended struct {
 
     def test_struct_with_doc_comment(self, extractor, parse_go):
         """Test struct with doc comment."""
-        source = '''
+        source = """
 package main
 
 // Config represents application configuration.
 type Config struct {
     Port int
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -510,11 +509,11 @@ type Config struct {
 
     def test_empty_struct(self, extractor, parse_go):
         """Test extraction of empty struct."""
-        source = '''
+        source = """
 package main
 
 type Empty struct{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -533,13 +532,13 @@ class TestExtractInterfaces:
 
     def test_extract_simple_interface(self, extractor, parse_go):
         """Test extraction of simple interface."""
-        source = '''
+        source = """
 package main
 
 type Reader interface {
     Read(p []byte) (n int, err error)
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -549,14 +548,14 @@ type Reader interface {
 
     def test_interface_with_methods(self, extractor, parse_go):
         """Test interface method extraction."""
-        source = '''
+        source = """
 package main
 
 type ReadWriter interface {
     Read(p []byte) (n int, err error)
     Write(p []byte) (n int, err error)
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -567,7 +566,7 @@ type ReadWriter interface {
 
     def test_interface_with_embedded_interface(self, extractor, parse_go):
         """Test interface with embedded interface."""
-        source = '''
+        source = """
 package main
 
 type Reader interface {
@@ -578,7 +577,7 @@ type ReadCloser interface {
     Reader
     Close() error
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -588,14 +587,14 @@ type ReadCloser interface {
 
     def test_interface_with_doc_comment(self, extractor, parse_go):
         """Test interface with doc comment."""
-        source = '''
+        source = """
 package main
 
 // Stringer is the interface implemented by types that can convert themselves to a string.
 type Stringer interface {
     String() string
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -605,11 +604,11 @@ type Stringer interface {
 
     def test_empty_interface(self, extractor, parse_go):
         """Test extraction of empty interface."""
-        source = '''
+        source = """
 package main
 
 type Any interface{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -619,13 +618,13 @@ type Any interface{}
 
     def test_interface_is_abstract(self, extractor, parse_go):
         """Test that interfaces are marked as abstract."""
-        source = '''
+        source = """
 package main
 
 type Service interface {
     Process()
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -643,11 +642,11 @@ class TestPrivateDetection:
 
     def test_lowercase_function_is_private(self, extractor, parse_go):
         """Test that lowercase function is marked as private."""
-        source = '''
+        source = """
 package main
 
 func privateFunc() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -656,11 +655,11 @@ func privateFunc() {}
 
     def test_uppercase_function_is_public(self, extractor, parse_go):
         """Test that uppercase function is not marked as private."""
-        source = '''
+        source = """
 package main
 
 func PublicFunc() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -669,11 +668,11 @@ func PublicFunc() {}
 
     def test_lowercase_struct_is_private(self, extractor, parse_go):
         """Test that lowercase struct is marked as private."""
-        source = '''
+        source = """
 package main
 
 type privateStruct struct{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -682,11 +681,11 @@ type privateStruct struct{}
 
     def test_uppercase_struct_is_public(self, extractor, parse_go):
         """Test that uppercase struct is not marked as private."""
-        source = '''
+        source = """
 package main
 
 type PublicStruct struct{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -695,11 +694,11 @@ type PublicStruct struct{}
 
     def test_lowercase_interface_is_private(self, extractor, parse_go):
         """Test that lowercase interface is marked as private."""
-        source = '''
+        source = """
 package main
 
 type privateInterface interface{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -708,13 +707,13 @@ type privateInterface interface{}
 
     def test_uppercase_method_is_public(self, extractor, parse_go):
         """Test that uppercase method is not marked as private."""
-        source = '''
+        source = """
 package main
 
 type T struct{}
 
 func (t T) PublicMethod() {}
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -733,13 +732,13 @@ class TestGenerics:
 
     def test_generic_function(self, extractor, parse_go):
         """Test extraction of generic function."""
-        source = '''
+        source = """
 package main
 
 func Map[T, U any](slice []T, fn func(T) U) []U {
     return nil
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -753,13 +752,13 @@ func Map[T, U any](slice []T, fn func(T) U) []U {
 
     def test_generic_struct(self, extractor, parse_go):
         """Test extraction of generic struct."""
-        source = '''
+        source = """
 package main
 
 type Box[T any] struct {
     value T
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -772,14 +771,14 @@ type Box[T any] struct {
 
     def test_generic_interface(self, extractor, parse_go):
         """Test extraction of generic interface."""
-        source = '''
+        source = """
 package main
 
 type Container[T any] interface {
     Get() T
     Set(T)
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
 
@@ -813,9 +812,9 @@ class TestEdgeCases:
 
     def test_only_package_declaration(self, extractor, parse_go):
         """Test extraction from source with only package declaration."""
-        source = '''
+        source = """
 package main
-'''
+"""
         tree, source_bytes = parse_go(source)
 
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
@@ -828,14 +827,14 @@ package main
 
     def test_line_count(self, extractor, parse_go):
         """Test line_count is calculated correctly."""
-        source = '''package main
+        source = """package main
 
 func multiLine() {
     line1 := 1
     line2 := 2
     line3 := 3
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -844,7 +843,7 @@ func multiLine() {
 
     def test_extract_all_combined(self, extractor, parse_go):
         """Test extract_all returns functions, structs, and interfaces."""
-        source = '''
+        source = """
 package main
 
 func standalone() {}
@@ -856,7 +855,7 @@ type MyStruct struct {
 type MyInterface interface {
     Method()
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         all_elements = extractor.extract_all(tree, source_bytes, "/test.go")
 
@@ -868,13 +867,13 @@ type MyInterface interface {
 
     def test_extract_classes_returns_structs_and_interfaces(self, extractor, parse_go):
         """Test extract_classes returns both structs and interfaces."""
-        source = '''
+        source = """
 package main
 
 type MyStruct struct{}
 
 type MyInterface interface{}
-'''
+"""
         tree, source_bytes = parse_go(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.go")
 
@@ -885,7 +884,7 @@ type MyInterface interface{}
 
     def test_multiple_type_declarations(self, extractor, parse_go):
         """Test extraction from multiple type declarations."""
-        source = '''
+        source = """
 package main
 
 type (
@@ -897,7 +896,7 @@ type (
         Name() string
     }
 )
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.go")
@@ -918,13 +917,13 @@ class TestComplexFeatures:
 
     def test_function_with_slice_params(self, extractor, parse_go):
         """Test function with slice parameters."""
-        source = '''
+        source = """
 package main
 
 func process(data []byte) []byte {
     return data
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -936,13 +935,13 @@ func process(data []byte) []byte {
 
     def test_function_with_map_params(self, extractor, parse_go):
         """Test function with map parameters."""
-        source = '''
+        source = """
 package main
 
 func lookup(m map[string]int, key string) int {
     return m[key]
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -952,13 +951,13 @@ func lookup(m map[string]int, key string) int {
 
     def test_function_with_channel_params(self, extractor, parse_go):
         """Test function with channel parameters."""
-        source = '''
+        source = """
 package main
 
 func send(ch chan int, value int) {
     ch <- value
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -969,13 +968,13 @@ func send(ch chan int, value int) {
 
     def test_function_with_func_params(self, extractor, parse_go):
         """Test function with function type parameters."""
-        source = '''
+        source = """
 package main
 
 func apply(fn func(int) int, value int) int {
     return fn(value)
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.go")
 
@@ -985,14 +984,14 @@ func apply(fn func(int) int, value int) int {
 
     def test_struct_with_pointer_field(self, extractor, parse_go):
         """Test struct with pointer field."""
-        source = '''
+        source = """
 package main
 
 type Node struct {
     Value int
     Next  *Node
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 
@@ -1003,7 +1002,7 @@ type Node struct {
 
     def test_struct_with_embedded_pointer(self, extractor, parse_go):
         """Test struct with embedded pointer type."""
-        source = '''
+        source = """
 package main
 
 type Base struct {
@@ -1014,7 +1013,7 @@ type Extended struct {
     *Base
     Name string
 }
-'''
+"""
         tree, source_bytes = parse_go(source)
         structs = extractor.extract_structs(tree, source_bytes, "/test.go")
 

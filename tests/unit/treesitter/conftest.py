@@ -11,8 +11,8 @@ from zapomni_core.treesitter.models import (
     ParameterInfo,
     ParseResult,
 )
-from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 from zapomni_core.treesitter.parser.factory import ParserFactory
+from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 
 
 @pytest.fixture
@@ -104,7 +104,7 @@ def python_tree(python_source_code) -> Tree:
 @pytest.fixture
 def javascript_source_code():
     """Sample JavaScript source code for testing."""
-    return b'''
+    return b"""
 function greet(name) {
     console.log("Hello, " + name);
 }
@@ -124,7 +124,7 @@ class Person {
 async function fetchData() {
     return await fetch("/api/data");
 }
-'''
+"""
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ def javascript_tree(javascript_source_code) -> Tree:
 @pytest.fixture
 def rust_source_code():
     """Sample Rust source code for testing."""
-    return b'''
+    return b"""
 fn main() {
     println!("Hello, World!");
 }
@@ -164,7 +164,7 @@ impl Point {
 trait Drawable {
     fn draw(&self);
 }
-'''
+"""
 
 
 @pytest.fixture

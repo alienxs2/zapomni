@@ -13,6 +13,7 @@ License: MIT
 """
 
 import time
+
 import pytest
 
 from tests.e2e.sse_client import MCPSSEClient
@@ -23,9 +24,7 @@ from tests.e2e.sse_client import MCPSSEClient
 class TestMemoryWorkflow:
     """Integration tests for memory operations workflow."""
 
-    def test_full_memory_lifecycle(
-        self, mcp_client: MCPSSEClient, clean_workspace: str
-    ) -> None:
+    def test_full_memory_lifecycle(self, mcp_client: MCPSSEClient, clean_workspace: str) -> None:
         """
         Test complete memory lifecycle: add -> search -> update -> delete.
 
@@ -58,9 +57,9 @@ class TestMemoryWorkflow:
             {"query": "Python programming language", "limit": 5},
         )
         response.assert_success("Failed to search for memory")
-        assert "Python" in response.text or "python" in response.text.lower(), (
-            f"Expected to find Python memory, got: {response.text}"
-        )
+        assert (
+            "Python" in response.text or "python" in response.text.lower()
+        ), f"Expected to find Python memory, got: {response.text}"
 
         # Step 3: Add related memory about JavaScript
         response = mcp_client.call_tool(
@@ -86,9 +85,9 @@ class TestMemoryWorkflow:
         # Both languages should be in results (semantic search)
         text_lower = response.text.lower()
         # At least one should be found
-        assert "python" in text_lower or "javascript" in text_lower, (
-            f"Expected to find programming language memories, got: {response.text}"
-        )
+        assert (
+            "python" in text_lower or "javascript" in text_lower
+        ), f"Expected to find programming language memories, got: {response.text}"
 
         # Step 5: Get stats to verify memories exist
         response = mcp_client.call_tool("get_stats", {})
@@ -96,9 +95,7 @@ class TestMemoryWorkflow:
         # Stats should show memories
         assert "memories" in response.text.lower() or "total" in response.text.lower()
 
-    def test_memory_search_relevance(
-        self, mcp_client: MCPSSEClient, clean_workspace: str
-    ) -> None:
+    def test_memory_search_relevance(self, mcp_client: MCPSSEClient, clean_workspace: str) -> None:
         """
         Test that search returns relevant results.
 
@@ -217,14 +214,10 @@ class TestMemoryWorkflow:
         text_lower = response.text.lower()
         # DevOps content should be present
         assert (
-            "docker" in text_lower
-            or "kubernetes" in text_lower
-            or "container" in text_lower
+            "docker" in text_lower or "kubernetes" in text_lower or "container" in text_lower
         ), f"Expected DevOps content with tag filter, got: {response.text}"
 
-    def test_bulk_memory_operations(
-        self, mcp_client: MCPSSEClient, clean_workspace: str
-    ) -> None:
+    def test_bulk_memory_operations(self, mcp_client: MCPSSEClient, clean_workspace: str) -> None:
         """
         Test adding and searching multiple memories.
 
@@ -270,13 +263,12 @@ class TestMemoryWorkflow:
         # Should find multiple results
         text_lower = response.text.lower()
         found_items = sum(
-            1 for keyword in ["postgresql", "mongodb", "redis", "elasticsearch"]
+            1
+            for keyword in ["postgresql", "mongodb", "redis", "elasticsearch"]
             if keyword in text_lower
         )
         # At least some should be found
-        assert found_items >= 1, (
-            f"Expected to find database memories, got: {response.text}"
-        )
+        assert found_items >= 1, f"Expected to find database memories, got: {response.text}"
 
         # Verify stats show the memories
         response = mcp_client.call_tool("get_stats", {})

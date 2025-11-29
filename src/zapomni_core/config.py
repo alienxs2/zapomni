@@ -62,7 +62,10 @@ class ZapomniSettings(BaseSettings):
     )
 
     falkordb_port: int = Field(
-        default=6381, ge=1, le=65535, description="FalkorDB server port (6381 to avoid conflict with Redis)"
+        default=6381,
+        ge=1,
+        le=65535,
+        description="FalkorDB server port (6381 to avoid conflict with Redis)",
     )
 
     falkordb_password: Optional[SecretStr] = Field(
@@ -250,9 +253,7 @@ class ZapomniSettings(BaseSettings):
         default=True, description="Enable entity extraction and knowledge graph"
     )
 
-    enable_code_indexing: bool = Field(
-        default=True, description="Enable AST-based code indexing"
-    )
+    enable_code_indexing: bool = Field(default=True, description="Enable AST-based code indexing")
 
     enable_semantic_cache: bool = Field(
         default=True, description="Enable semantic embedding cache (Redis + in-memory fallback)"

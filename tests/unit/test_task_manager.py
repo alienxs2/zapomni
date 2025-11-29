@@ -502,7 +502,9 @@ class TestConcurrency:
     """Tests for concurrent task execution."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky test due to async race condition - tasks execute before _running_tasks is updated")
+    @pytest.mark.skip(
+        reason="Flaky test due to async race condition - tasks execute before _running_tasks is updated"
+    )
     async def test_max_concurrent_enforcement(self):
         """Test that max_concurrent limit is respected."""
         manager = TaskManager(max_concurrent=2)

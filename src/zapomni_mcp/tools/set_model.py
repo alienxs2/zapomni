@@ -174,9 +174,7 @@ class SetModelTool:
         if not model_name:
             logger.warning("set_model_empty_name")
             return {
-                "content": [
-                    {"type": "text", "text": "Error: model_name cannot be empty"}
-                ],
+                "content": [{"type": "text", "text": "Error: model_name cannot be empty"}],
                 "isError": True,
             }
 

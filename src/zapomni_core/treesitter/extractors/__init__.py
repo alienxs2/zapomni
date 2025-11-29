@@ -42,29 +42,29 @@ from .generic import (
     NAME_NODE_TYPES,
     GenericExtractor,
 )
-from .python import PythonExtractor, SPECIAL_DECORATORS
-from .typescript import (
-    TypeScriptExtractor,
-    TYPESCRIPT_FUNCTION_TYPES,
-    TYPESCRIPT_CLASS_TYPES,
-    TYPESCRIPT_TYPE_TYPES,
-    TYPESCRIPT_SPECIAL_DECORATORS,
-)
 from .go import (
-    GoExtractor,
     GO_FUNCTION_TYPES,
-    GO_TYPE_TYPES,
-    GO_STRUCT_TYPES,
     GO_INTERFACE_TYPES,
+    GO_STRUCT_TYPES,
+    GO_TYPE_TYPES,
+    GoExtractor,
 )
+from .python import SPECIAL_DECORATORS, PythonExtractor
 from .rust import (
-    RustExtractor,
+    RUST_ENUM_TYPES,
     RUST_FUNCTION_TYPES,
+    RUST_IMPL_TYPES,
+    RUST_MACRO_TYPES,
     RUST_STRUCT_TYPES,
     RUST_TRAIT_TYPES,
-    RUST_ENUM_TYPES,
-    RUST_MACRO_TYPES,
-    RUST_IMPL_TYPES,
+    RustExtractor,
+)
+from .typescript import (
+    TYPESCRIPT_CLASS_TYPES,
+    TYPESCRIPT_FUNCTION_TYPES,
+    TYPESCRIPT_SPECIAL_DECORATORS,
+    TYPESCRIPT_TYPE_TYPES,
+    TypeScriptExtractor,
 )
 
 __all__ = [

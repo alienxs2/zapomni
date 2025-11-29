@@ -7,7 +7,6 @@ for working with supported programming languages.
 
 from typing import Dict, Optional, Set, Tuple
 
-
 # =============================================================================
 # LANGUAGE EXTENSIONS MAPPING
 # =============================================================================
@@ -32,7 +31,6 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
     "php": (".php",),
     "swift": (".swift",),
     "scala": (".scala", ".sc"),
-
     # -------------------------------------------------------------------------
     # Web Technologies
     # -------------------------------------------------------------------------
@@ -42,7 +40,6 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
     "json": (".json",),
     "yaml": (".yaml", ".yml"),
     "xml": (".xml",),
-
     # -------------------------------------------------------------------------
     # Scripting Languages
     # -------------------------------------------------------------------------
@@ -51,7 +48,6 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
     "lua": (".lua",),
     "perl": (".pl", ".pm"),
     "r": (".r", ".R"),
-
     # -------------------------------------------------------------------------
     # Systems Programming
     # -------------------------------------------------------------------------
@@ -63,7 +59,6 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
     "clojure": (".clj", ".cljs", ".cljc"),
     "ocaml": (".ml", ".mli"),
     "fsharp": (".fs", ".fsi", ".fsx"),
-
     # -------------------------------------------------------------------------
     # Data & Configuration
     # -------------------------------------------------------------------------
@@ -72,7 +67,6 @@ LANGUAGE_EXTENSIONS: Dict[str, Tuple[str, ...]] = {
     "toml": (".toml",),
     "dockerfile": ("Dockerfile",),
     "makefile": ("Makefile", "makefile"),
-
     # -------------------------------------------------------------------------
     # Other Languages
     # -------------------------------------------------------------------------
@@ -109,15 +103,14 @@ LANGUAGES_WITH_EXTRACTORS: Set[str] = {
 # Note: .h maps to both "c" and "cpp", last one wins (cpp)
 
 EXTENSION_TO_LANGUAGE: Dict[str, str] = {
-    ext: lang
-    for lang, extensions in LANGUAGE_EXTENSIONS.items()
-    for ext in extensions
+    ext: lang for lang, extensions in LANGUAGE_EXTENSIONS.items() for ext in extensions
 }
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def get_language_by_extension(extension: str) -> Optional[str]:
     """
@@ -214,6 +207,7 @@ def is_supported_extension(extension: str) -> bool:
 # =============================================================================
 # MODULE STATISTICS (for introspection)
 # =============================================================================
+
 
 def get_config_stats() -> Dict[str, int]:
     """

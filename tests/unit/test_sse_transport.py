@@ -250,7 +250,9 @@ class TestMessagesEndpoint:
         assert response.status_code == 400
         # The SDK's handle_post_message is being called
 
-    @pytest.mark.skip(reason="SessionManager integration removed - MCP SDK manages sessions internally")
+    @pytest.mark.skip(
+        reason="SessionManager integration removed - MCP SDK manages sessions internally"
+    )
     @pytest.mark.asyncio
     async def test_messages_increments_request_count(self, mock_mcp_server, sse_config):
         """Should increment request count on message."""
@@ -361,7 +363,9 @@ class TestCORSConfiguration:
 class TestErrorHandling:
     """Test suite for error handling in SSE transport."""
 
-    @pytest.mark.skip(reason="SessionManager integration removed - MCP SDK manages sessions internally")
+    @pytest.mark.skip(
+        reason="SessionManager integration removed - MCP SDK manages sessions internally"
+    )
     @pytest.mark.asyncio
     async def test_messages_handles_transport_error(self, mock_mcp_server, sse_config):
         """Should return 500 on transport error."""
@@ -389,7 +393,9 @@ class TestErrorHandling:
             data = response.json()
             assert "error" in data
 
-    @pytest.mark.skip(reason="SessionManager integration removed - MCP SDK manages sessions internally")
+    @pytest.mark.skip(
+        reason="SessionManager integration removed - MCP SDK manages sessions internally"
+    )
     @pytest.mark.asyncio
     async def test_messages_increments_error_count_on_error(self, mock_mcp_server, sse_config):
         """Should increment error count on transport error."""
@@ -452,7 +458,9 @@ class TestSessionManagerIntegration:
     when migrating to MCP SDK's SseServerTransport, which manages sessions internally.
     """
 
-    @pytest.mark.skip(reason="SessionManager integration removed - MCP SDK manages sessions internally")
+    @pytest.mark.skip(
+        reason="SessionManager integration removed - MCP SDK manages sessions internally"
+    )
     @pytest.mark.asyncio
     async def test_session_manager_heartbeat_interval(self, mock_mcp_server):
         """Should configure SessionManager with correct heartbeat interval."""
@@ -465,7 +473,9 @@ class TestSessionManagerIntegration:
         session_manager = mock_mcp_server._session_manager
         assert session_manager._heartbeat_interval == 60
 
-    @pytest.mark.skip(reason="SessionManager integration removed - MCP SDK manages sessions internally")
+    @pytest.mark.skip(
+        reason="SessionManager integration removed - MCP SDK manages sessions internally"
+    )
     @pytest.mark.asyncio
     async def test_health_reflects_active_sessions(self, mock_mcp_server, sse_config):
         """Should reflect active sessions in health endpoint."""

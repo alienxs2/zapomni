@@ -22,7 +22,6 @@ from zapomni_core.treesitter.models import (
     ExtractedCode,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -89,9 +88,9 @@ class TestSimpleFunctionCall:
 
     def test_simple_function_call(self, analyzer, parse_python):
         """Test extraction of simple function call: foo()"""
-        source = '''def caller():
+        source = """def caller():
     foo()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -124,9 +123,9 @@ class TestFunctionCallWithArgs:
 
     def test_function_call_with_args(self, analyzer, parse_python):
         """Test extraction of function call with positional arguments: foo(a, b, c)"""
-        source = '''def caller():
+        source = """def caller():
     foo(a, b, c)
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -156,9 +155,9 @@ class TestMethodCall:
 
     def test_method_call(self, analyzer, parse_python):
         """Test extraction of method call: obj.method()"""
-        source = '''def caller():
+        source = """def caller():
     obj.method()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -188,9 +187,9 @@ class TestChainedMethodCall:
 
     def test_chained_method_call(self, analyzer, parse_python):
         """Test extraction of chained method call: obj.foo().bar()"""
-        source = '''def caller():
+        source = """def caller():
     obj.foo().bar()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -224,9 +223,9 @@ class TestNestedCall:
 
     def test_nested_call(self, analyzer, parse_python):
         """Test extraction of nested call: foo(bar())"""
-        source = '''def caller():
+        source = """def caller():
     foo(bar())
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -256,9 +255,9 @@ class TestAwaitCall:
 
     def test_await_call(self, analyzer, parse_python):
         """Test extraction of await call: await async_func()"""
-        source = '''async def caller():
+        source = """async def caller():
     await async_func()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -287,11 +286,11 @@ class TestCallInClassMethod:
 
     def test_call_in_class_method(self, analyzer, parse_python):
         """Test extraction of calls inside class method"""
-        source = '''class MyClass:
+        source = """class MyClass:
     def method(self):
         self.other_method()
         helper_func()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         # The method starts at line 1 (0-indexed)
@@ -329,9 +328,9 @@ class TestConstructorCall:
 
     def test_constructor_call(self, analyzer, parse_python):
         """Test extraction of constructor call: MyClass()"""
-        source = '''def caller():
+        source = """def caller():
     obj = MyClass()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -361,10 +360,10 @@ class TestBuiltinCall:
 
     def test_builtin_call(self, analyzer, parse_python):
         """Test extraction of builtin calls: print(), len()"""
-        source = '''def caller():
+        source = """def caller():
     print("hello")
     x = len(items)
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -400,10 +399,10 @@ class TestLambdaIgnored:
 
     def test_lambda_ignored(self, analyzer, parse_python):
         """Test that calls inside lambda are not attributed to parent function"""
-        source = '''def caller():
+        source = """def caller():
     func = lambda x: inner_call(x)
     outer_call()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -434,9 +433,9 @@ class TestCallWithKwargs:
 
     def test_call_with_kwargs(self, analyzer, parse_python):
         """Test extraction of function call with kwargs: foo(a=1, b=2)"""
-        source = '''def caller():
+        source = """def caller():
     foo(a=1, b=2)
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -465,9 +464,9 @@ class TestCallInComprehension:
 
     def test_call_in_comprehension(self, analyzer, parse_python):
         """Test extraction of calls inside list comprehension: [f(x) for x in items]"""
-        source = '''def caller():
+        source = """def caller():
     result = [f(x) for x in items]
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -496,10 +495,10 @@ class TestSuperCall:
 
     def test_super_call(self, analyzer, parse_python):
         """Test extraction of super() call: super().__init__()"""
-        source = '''class Child(Parent):
+        source = """class Child(Parent):
     def __init__(self):
         super().__init__()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         # Method starts at line 1
@@ -541,14 +540,14 @@ class TestMultipleCallsInFunction:
 
     def test_multiple_calls_in_function(self, analyzer, parse_python):
         """Test extraction of multiple calls (5+) in a function"""
-        source = '''def caller():
+        source = """def caller():
     call1()
     call2(a)
     obj.call3()
     call4(x, y)
     result = call5(z)
     call6()
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(
@@ -582,11 +581,11 @@ class TestNoCallsEmptyFunction:
 
     def test_no_calls_empty_function(self, analyzer, parse_python):
         """Test extraction from function with no calls"""
-        source = '''def caller():
+        source = """def caller():
     x = 1
     y = 2
     return x + y
-'''
+"""
         tree, source_bytes = parse_python(source)
 
         func = create_extracted_function(

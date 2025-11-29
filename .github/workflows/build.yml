@@ -63,7 +63,7 @@ print('Server module loaded successfully')
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: dist-${{ matrix.python-version }}
+          name: dist-3.10
           path: dist/
 
   publish-pypi:

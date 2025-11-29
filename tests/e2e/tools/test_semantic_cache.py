@@ -151,9 +151,7 @@ class TestSemanticCache:
         # (If cache is working, at least some hits should occur)
         # Note: Don't require specific hit rate as it depends on system state
 
-    def test_cache_hit_rate_increases(
-        self, mcp_client, clean_workspace, semantic_cache_enabled
-    ):
+    def test_cache_hit_rate_increases(self, mcp_client, clean_workspace, semantic_cache_enabled):
         """
         Test that cache hit rate increases with repeated operations.
 

@@ -13,7 +13,6 @@ import tempfile
 
 import pytest
 
-
 # Environment variables that affect ZapomniSettings defaults
 CONFIG_ENV_VARS = [
     "FALKORDB_HOST",

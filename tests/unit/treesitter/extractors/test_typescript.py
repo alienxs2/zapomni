@@ -14,7 +14,6 @@ from tree_sitter_language_pack import get_parser
 from zapomni_core.treesitter.extractors.typescript import TypeScriptExtractor
 from zapomni_core.treesitter.models import CodeElementType, ParameterInfo
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -91,11 +90,11 @@ class TestExtractFunctionsBasic:
 
     def test_extract_simple_function(self, extractor, parse_typescript):
         """Test extraction of a simple function."""
-        source = '''
+        source = """
 function hello() {
     console.log("Hello");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -105,11 +104,11 @@ function hello() {
 
     def test_extract_multiple_functions(self, extractor, parse_typescript):
         """Test extraction of multiple functions."""
-        source = '''
+        source = """
 function func1() {}
 function func2() {}
 function func3() {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -121,8 +120,8 @@ function func3() {}
 
     def test_function_has_location(self, extractor, parse_typescript):
         """Test that extracted function has location info."""
-        source = '''function hello() {}
-'''
+        source = """function hello() {}
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -134,10 +133,10 @@ function func3() {}
 
     def test_function_has_source_code(self, extractor, parse_typescript):
         """Test that extracted function has source code."""
-        source = '''function hello() {
+        source = """function hello() {
     console.log("Hello");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -156,12 +155,12 @@ class TestExtractFunctionsJSDoc:
 
     def test_extract_function_with_jsdoc(self, extractor, parse_typescript):
         """Test extraction of function with JSDoc."""
-        source = '''
+        source = """
 /** Say hello. */
 function hello() {
     console.log("Hello");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -170,7 +169,7 @@ function hello() {
 
     def test_extract_function_with_multiline_jsdoc(self, extractor, parse_typescript):
         """Test extraction of function with multiline JSDoc."""
-        source = '''
+        source = """
 /**
  * Calculate the sum of x and y.
  *
@@ -181,7 +180,7 @@ function hello() {
 function add(x: number, y: number): number {
     return x + y;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -194,9 +193,9 @@ function add(x: number, y: number): number {
 
     def test_function_without_jsdoc(self, extractor, parse_typescript):
         """Test function without JSDoc has None."""
-        source = '''
+        source = """
 function hello() {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -214,11 +213,11 @@ class TestExtractFunctionsParameters:
 
     def test_extract_function_with_params(self, extractor, parse_typescript):
         """Test extraction of function with parameters."""
-        source = '''
+        source = """
 function add(a: number, b: number): number {
     return a + b;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -232,11 +231,11 @@ function add(a: number, b: number): number {
 
     def test_extract_function_with_optional_params(self, extractor, parse_typescript):
         """Test extraction of function with optional parameters."""
-        source = '''
+        source = """
 function greet(name: string, greeting?: string): string {
     return greeting ? `${greeting}, ${name}!` : `Hello, ${name}!`;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -248,11 +247,11 @@ function greet(name: string, greeting?: string): string {
 
     def test_extract_function_with_rest_params(self, extractor, parse_typescript):
         """Test extraction of function with rest parameters."""
-        source = '''
+        source = """
 function sum(...numbers: number[]): number {
     return numbers.reduce((a, b) => a + b, 0);
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -273,11 +272,11 @@ class TestExtractFunctionsReturnTypes:
 
     def test_extract_function_with_return_type(self, extractor, parse_typescript):
         """Test extraction of function with return type."""
-        source = '''
+        source = """
 function add(a: number, b: number): number {
     return a + b;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -286,11 +285,11 @@ function add(a: number, b: number): number {
 
     def test_function_without_return_type(self, extractor, parse_typescript):
         """Test function without return type has None."""
-        source = '''
+        source = """
 function hello() {
     console.log("Hello");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -299,11 +298,11 @@ function hello() {
 
     def test_function_with_void_return_type(self, extractor, parse_typescript):
         """Test function with void return type."""
-        source = '''
+        source = """
 function process(): void {
     console.log("Processing");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -312,11 +311,11 @@ function process(): void {
 
     def test_function_with_promise_return_type(self, extractor, parse_typescript):
         """Test function with Promise return type."""
-        source = '''
+        source = """
 async function fetchData(): Promise<string> {
     return "data";
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -334,11 +333,11 @@ class TestExtractFunctionsAsyncGenerators:
 
     def test_extract_async_function(self, extractor, parse_typescript):
         """Test extraction of async function."""
-        source = '''
+        source = """
 async function fetchData() {
     return await fetch("url");
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -347,13 +346,13 @@ async function fetchData() {
 
     def test_extract_generator_function(self, extractor, parse_typescript):
         """Test extraction of generator function."""
-        source = '''
+        source = """
 function* generateNumbers() {
     yield 1;
     yield 2;
     yield 3;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -362,11 +361,11 @@ function* generateNumbers() {
 
     def test_non_async_function(self, extractor, parse_typescript):
         """Test that regular function is not marked as async."""
-        source = '''
+        source = """
 function regular() {
     return 42;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -384,9 +383,9 @@ class TestExtractArrowFunctions:
 
     def test_extract_arrow_function(self, extractor, parse_typescript):
         """Test extraction of arrow function."""
-        source = '''
+        source = """
 const multiply = (a: number, b: number): number => a * b;
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -396,12 +395,12 @@ const multiply = (a: number, b: number): number => a * b;
 
     def test_extract_arrow_function_with_body(self, extractor, parse_typescript):
         """Test extraction of arrow function with block body."""
-        source = '''
+        source = """
 const calculate = (x: number): number => {
     const result = x * 2;
     return result;
 };
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -410,11 +409,11 @@ const calculate = (x: number): number => {
 
     def test_extract_async_arrow_function(self, extractor, parse_typescript):
         """Test extraction of async arrow function."""
-        source = '''
+        source = """
 const fetchUser = async (id: string): Promise<User> => {
     return await api.getUser(id);
 };
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -433,13 +432,13 @@ class TestExtractMethods:
 
     def test_method_has_parent_class(self, extractor, parse_typescript):
         """Test that method has parent_class set."""
-        source = '''
+        source = """
 class Calculator {
     add(a: number, b: number): number {
         return a + b;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -448,11 +447,11 @@ class Calculator {
 
     def test_method_has_correct_type(self, extractor, parse_typescript):
         """Test that method has CodeElementType.METHOD."""
-        source = '''
+        source = """
 class MyClass {
     myMethod(): void {}
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -461,11 +460,11 @@ class MyClass {
 
     def test_method_qualified_name(self, extractor, parse_typescript):
         """Test method qualified_name includes class."""
-        source = '''
+        source = """
 class MyClass {
     myMethod(): void {}
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -474,13 +473,13 @@ class MyClass {
 
     def test_static_method(self, extractor, parse_typescript):
         """Test static method detection."""
-        source = '''
+        source = """
 class Utils {
     static format(value: string): string {
         return value.trim();
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -489,11 +488,11 @@ class Utils {
 
     def test_private_method(self, extractor, parse_typescript):
         """Test private method detection."""
-        source = '''
+        source = """
 class Service {
     private internalProcess(): void {}
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -502,13 +501,13 @@ class Service {
 
     def test_getter_method(self, extractor, parse_typescript):
         """Test getter method detection."""
-        source = '''
+        source = """
 class Person {
     get fullName(): string {
         return `${this.firstName} ${this.lastName}`;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -517,13 +516,13 @@ class Person {
 
     def test_setter_method(self, extractor, parse_typescript):
         """Test setter method detection."""
-        source = '''
+        source = """
 class Person {
     set age(value: number) {
         this._age = value;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -541,9 +540,9 @@ class TestExtractClasses:
 
     def test_extract_simple_class(self, extractor, parse_typescript):
         """Test extraction of simple class."""
-        source = '''
+        source = """
 class MyClass {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -553,14 +552,14 @@ class MyClass {}
 
     def test_extract_class_with_jsdoc(self, extractor, parse_typescript):
         """Test extraction of class with JSDoc."""
-        source = '''
+        source = """
 /** A simple calculator class. */
 class Calculator {
     add(a: number, b: number): number {
         return a + b;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -569,9 +568,9 @@ class Calculator {
 
     def test_extract_class_with_extends(self, extractor, parse_typescript):
         """Test extraction of class with extends."""
-        source = '''
+        source = """
 class Child extends Parent {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -580,9 +579,9 @@ class Child extends Parent {}
 
     def test_extract_class_with_implements(self, extractor, parse_typescript):
         """Test extraction of class with implements."""
-        source = '''
+        source = """
 class UserService implements IUserService {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -591,12 +590,12 @@ class UserService implements IUserService {}
 
     def test_extract_class_methods_list(self, extractor, parse_typescript):
         """Test that class has methods list."""
-        source = '''
+        source = """
 class Calculator {
     add(a: number, b: number): number { return a + b; }
     subtract(a: number, b: number): number { return a - b; }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -607,11 +606,11 @@ class Calculator {
 
     def test_extract_abstract_class(self, extractor, parse_typescript):
         """Test extraction of abstract class."""
-        source = '''
+        source = """
 abstract class BaseService {
     abstract process(): void;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -629,12 +628,12 @@ class TestExtractInterfaces:
 
     def test_extract_simple_interface(self, extractor, parse_typescript):
         """Test extraction of simple interface."""
-        source = '''
+        source = """
 interface IUser {
     name: string;
     age: number;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.ts")
 
@@ -644,12 +643,12 @@ interface IUser {
 
     def test_extract_interface_with_jsdoc(self, extractor, parse_typescript):
         """Test extraction of interface with JSDoc."""
-        source = '''
+        source = """
 /** User interface. */
 interface IUser {
     name: string;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.ts")
 
@@ -658,11 +657,11 @@ interface IUser {
 
     def test_extract_interface_with_extends(self, extractor, parse_typescript):
         """Test extraction of interface with extends."""
-        source = '''
+        source = """
 interface IAdmin extends IUser {
     permissions: string[];
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.ts")
 
@@ -671,9 +670,9 @@ interface IAdmin extends IUser {
 
     def test_interface_is_abstract(self, extractor, parse_typescript):
         """Test that interfaces are marked as abstract."""
-        source = '''
+        source = """
 interface IService {}
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         interfaces = extractor.extract_interfaces(tree, source_bytes, "/test.ts")
 
@@ -691,9 +690,9 @@ class TestExtractTypeAliases:
 
     def test_extract_simple_type_alias(self, extractor, parse_typescript):
         """Test extraction of simple type alias."""
-        source = '''
+        source = """
 type ID = string;
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         types = extractor.extract_types(tree, source_bytes, "/test.ts")
 
@@ -703,9 +702,9 @@ type ID = string;
 
     def test_extract_union_type_alias(self, extractor, parse_typescript):
         """Test extraction of union type alias."""
-        source = '''
+        source = """
 type Status = "active" | "inactive" | "pending";
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         types = extractor.extract_types(tree, source_bytes, "/test.ts")
 
@@ -714,10 +713,10 @@ type Status = "active" | "inactive" | "pending";
 
     def test_extract_type_alias_with_jsdoc(self, extractor, parse_typescript):
         """Test extraction of type alias with JSDoc."""
-        source = '''
+        source = """
 /** User status type. */
 type Status = "active" | "inactive";
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         types = extractor.extract_types(tree, source_bytes, "/test.ts")
 
@@ -735,13 +734,13 @@ class TestExtractEnums:
 
     def test_extract_simple_enum(self, extractor, parse_typescript):
         """Test extraction of simple enum."""
-        source = '''
+        source = """
 enum Color {
     Red,
     Green,
     Blue
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         enums = extractor.extract_enums(tree, source_bytes, "/test.ts")
 
@@ -751,14 +750,14 @@ enum Color {
 
     def test_extract_enum_members(self, extractor, parse_typescript):
         """Test extraction of enum members."""
-        source = '''
+        source = """
 enum Direction {
     Up,
     Down,
     Left,
     Right
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         enums = extractor.extract_enums(tree, source_bytes, "/test.ts")
 
@@ -771,14 +770,14 @@ enum Direction {
 
     def test_extract_enum_with_jsdoc(self, extractor, parse_typescript):
         """Test extraction of enum with JSDoc."""
-        source = '''
+        source = """
 /** Color enumeration. */
 enum Color {
     Red,
     Green,
     Blue
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         enums = extractor.extract_enums(tree, source_bytes, "/test.ts")
 
@@ -787,12 +786,12 @@ enum Color {
 
     def test_extract_const_enum(self, extractor, parse_typescript):
         """Test extraction of const enum."""
-        source = '''
+        source = """
 const enum HttpStatus {
     OK = 200,
     NotFound = 404
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         enums = extractor.extract_enums(tree, source_bytes, "/test.ts")
 
@@ -810,11 +809,11 @@ class TestExportHandling:
 
     def test_extract_exported_function(self, extractor, parse_typescript):
         """Test extraction of exported function."""
-        source = '''
+        source = """
 export function greet(name: string): string {
     return `Hello, ${name}!`;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -823,13 +822,13 @@ export function greet(name: string): string {
 
     def test_extract_exported_class(self, extractor, parse_typescript):
         """Test extraction of exported class."""
-        source = '''
+        source = """
 export class UserService {
     getUser(id: string): User {
         return {} as User;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -838,9 +837,9 @@ export class UserService {
 
     def test_extract_exported_arrow_function(self, extractor, parse_typescript):
         """Test extraction of exported arrow function."""
-        source = '''
+        source = """
 export const multiply = (a: number, b: number): number => a * b;
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -858,11 +857,11 @@ class TestJavaScriptSupport:
 
     def test_extract_javascript_function(self, extractor, parse_javascript):
         """Test extraction from JavaScript file."""
-        source = '''
+        source = """
 function hello() {
     console.log("Hello");
 }
-'''
+"""
         tree, source_bytes = parse_javascript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.js")
 
@@ -871,13 +870,13 @@ function hello() {
 
     def test_extract_javascript_class(self, extractor, parse_javascript):
         """Test extraction of JavaScript class."""
-        source = '''
+        source = """
 class Calculator {
     add(a, b) {
         return a + b;
     }
 }
-'''
+"""
         tree, source_bytes = parse_javascript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.js")
 
@@ -908,10 +907,10 @@ class TestEdgeCases:
 
     def test_only_comments(self, extractor, parse_typescript):
         """Test extraction from source with only comments."""
-        source = '''
+        source = """
 // This is a comment
 /* Another comment */
-'''
+"""
         tree, source_bytes = parse_typescript(source)
 
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
@@ -922,13 +921,13 @@ class TestEdgeCases:
 
     def test_line_count(self, extractor, parse_typescript):
         """Test line_count is calculated correctly."""
-        source = '''function multiLine(): void {
+        source = """function multiLine(): void {
     const line1 = 1;
     const line2 = 2;
     const line3 = 3;
     console.log(line1 + line2 + line3);
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -937,7 +936,7 @@ class TestEdgeCases:
 
     def test_extract_all_combined(self, extractor, parse_typescript):
         """Test extract_all returns all element types."""
-        source = '''
+        source = """
 function standalone(): void {}
 
 class MyClass {
@@ -954,7 +953,7 @@ enum Status {
     Active,
     Inactive
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         all_elements = extractor.extract_all(tree, source_bytes, "/test.ts")
 
@@ -969,11 +968,11 @@ enum Status {
 
     def test_generic_function(self, extractor, parse_typescript):
         """Test extraction of generic function."""
-        source = '''
+        source = """
 function identity<T>(arg: T): T {
     return arg;
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         functions = extractor.extract_functions(tree, source_bytes, "/test.ts")
 
@@ -982,7 +981,7 @@ function identity<T>(arg: T): T {
 
     def test_generic_class(self, extractor, parse_typescript):
         """Test extraction of generic class."""
-        source = '''
+        source = """
 class Container<T> {
     private value: T;
 
@@ -990,7 +989,7 @@ class Container<T> {
         this.value = value;
     }
 }
-'''
+"""
         tree, source_bytes = parse_typescript(source)
         classes = extractor.extract_classes(tree, source_bytes, "/test.ts")
 
@@ -1008,10 +1007,9 @@ class TestRegistryIntegration:
 
     def test_extractor_registered_for_typescript(self):
         """Test that TypeScriptExtractor can be registered for typescript."""
-        from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
-
         # Import the module to trigger auto-registration
         from zapomni_core.treesitter.extractors import typescript  # noqa: F401
+        from zapomni_core.treesitter.parser.registry import LanguageParserRegistry
 
         registry = LanguageParserRegistry()
         # Manually register since tests reset the registry

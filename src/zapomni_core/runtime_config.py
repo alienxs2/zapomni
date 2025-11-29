@@ -50,9 +50,7 @@ class RuntimeConfig:
         DO NOT call directly - use get_instance() instead.
         """
         if RuntimeConfig._instance is not None:
-            raise RuntimeError(
-                "RuntimeConfig is a singleton. Use RuntimeConfig.get_instance()"
-            )
+            raise RuntimeError("RuntimeConfig is a singleton. Use RuntimeConfig.get_instance()")
 
         # Runtime-configurable parameters
         self._llm_model = "qwen2.5:latest"  # Default Ollama LLM model

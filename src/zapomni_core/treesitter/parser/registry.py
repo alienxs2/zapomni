@@ -13,15 +13,15 @@ Usage:
     parser = registry.get_parser("python")
 """
 
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import structlog
 
 from ..config import get_language_by_extension
 
 if TYPE_CHECKING:
-    from .base import BaseLanguageParser
     from ..extractors.base import BaseCodeExtractor
+    from .base import BaseLanguageParser
 
 
 class LanguageParserRegistry:

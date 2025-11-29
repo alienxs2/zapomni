@@ -35,20 +35,12 @@ class PruneMemoryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     workspace_id: str = Field(
-        default="",
-        description="Workspace to prune (empty = current workspace)"
+        default="", description="Workspace to prune (empty = current workspace)"
     )
-    dry_run: bool = Field(
-        default=True,
-        description="Preview mode - show what would be deleted"
-    )
-    confirm: bool = Field(
-        default=False,
-        description="Required true for actual deletion"
-    )
+    dry_run: bool = Field(default=True, description="Preview mode - show what would be deleted")
+    confirm: bool = Field(default=False, description="Required true for actual deletion")
     strategy: PruneStrategy = Field(
-        default=PruneStrategy.STALE_CODE,
-        description="GC strategy to apply"
+        default=PruneStrategy.STALE_CODE, description="GC strategy to apply"
     )
 
 
@@ -269,9 +261,9 @@ class PruneMemoryTool:
                 chunks_to_delete=stale["chunk_count"] + orphan_chunks["count"],
                 entities_to_delete=orphan_entities["count"],
                 preview=(
-                    stale["preview"][:10] +
-                    orphan_chunks["preview"][:5] +
-                    orphan_entities["preview"][:5]
+                    stale["preview"][:10]
+                    + orphan_chunks["preview"][:5]
+                    + orphan_entities["preview"][:5]
                 ),
                 message="Dry run complete. Set dry_run=false and confirm=true to delete.",
             )
@@ -319,12 +311,8 @@ class PruneMemoryTool:
 
         if strategy == PruneStrategy.ALL:
             # Execute all strategies
-            stale_result = await self.db_client.delete_stale_memories(
-                workspace_id, confirm=True
-            )
-            chunk_result = await self.db_client.delete_orphaned_chunks(
-                workspace_id, confirm=True
-            )
+            stale_result = await self.db_client.delete_stale_memories(workspace_id, confirm=True)
+            chunk_result = await self.db_client.delete_orphaned_chunks(workspace_id, confirm=True)
             entity_result = await self.db_client.delete_orphaned_entities(
                 workspace_id, confirm=True
             )
@@ -345,9 +333,7 @@ class PruneMemoryTool:
             )
 
         elif strategy == PruneStrategy.STALE_CODE:
-            result = await self.db_client.delete_stale_memories(
-                workspace_id, confirm=True
-            )
+            result = await self.db_client.delete_stale_memories(workspace_id, confirm=True)
             return PruneResultResponse(
                 strategy="stale_code",
                 deleted_memories=result["deleted_memories"],
@@ -359,9 +345,7 @@ class PruneMemoryTool:
             )
 
         elif strategy == PruneStrategy.ORPHANED_CHUNKS:
-            count = await self.db_client.delete_orphaned_chunks(
-                workspace_id, confirm=True
-            )
+            count = await self.db_client.delete_orphaned_chunks(workspace_id, confirm=True)
             return PruneResultResponse(
                 strategy="orphaned_chunks",
                 deleted_chunks=count,
@@ -369,9 +353,7 @@ class PruneMemoryTool:
             )
 
         elif strategy == PruneStrategy.ORPHANED_ENTITIES:
-            count = await self.db_client.delete_orphaned_entities(
-                workspace_id, confirm=True
-            )
+            count = await self.db_client.delete_orphaned_entities(workspace_id, confirm=True)
             return PruneResultResponse(
                 strategy="orphaned_entities",
                 deleted_entities=count,

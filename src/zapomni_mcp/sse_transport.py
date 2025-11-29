@@ -30,7 +30,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.routing import Route, Mount
+from starlette.routing import Mount, Route
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from zapomni_mcp.config import SSEConfig
@@ -358,6 +358,7 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
     async def handle_dashboard(request: Request) -> Response:
         """Serve dashboard HTML page."""
         from pathlib import Path
+
         dashboard_path = Path(__file__).parent / "ui" / "dashboard.html"
         if dashboard_path.exists():
             return Response(dashboard_path.read_text(), media_type="text/html")
@@ -377,7 +378,9 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             RETURN m, r, c
             LIMIT $limit
             """
-            result = await db_client._execute_cypher(cypher, {"workspace_id": workspace_id, "limit": limit})
+            result = await db_client._execute_cypher(
+                cypher, {"workspace_id": workspace_id, "limit": limit}
+            )
 
             nodes = []
             edges = []
@@ -386,49 +389,43 @@ def create_sse_app(mcp_server: "MCPServer", config: SSEConfig) -> Starlette:
             for row in result.rows:
                 # Extract Memory node
                 m_node = row.get("m")
-                if m_node and hasattr(m_node, 'properties'):
+                if m_node and hasattr(m_node, "properties"):
                     m_props = m_node.properties
                     m_id = str(m_props.get("id", "unknown"))
                     if m_id not in seen_nodes:
-                        nodes.append({
-                            "id": m_id,
-                            "label": f"Memory {m_id[:8]}",
-                            "type": "Memory"
-                        })
+                        nodes.append({"id": m_id, "label": f"Memory {m_id[:8]}", "type": "Memory"})
                         seen_nodes.add(m_id)
 
                 # Extract Chunk node
                 c_node = row.get("c")
-                if c_node and hasattr(c_node, 'properties'):
+                if c_node and hasattr(c_node, "properties"):
                     c_props = c_node.properties
                     c_id = str(c_props.get("id", "unknown"))
                     if c_id not in seen_nodes:
-                        nodes.append({
-                            "id": c_id,
-                            "label": f"Chunk {c_id[:8]}",
-                            "type": "Chunk"
-                        })
+                        nodes.append({"id": c_id, "label": f"Chunk {c_id[:8]}", "type": "Chunk"})
                         seen_nodes.add(c_id)
 
                 # Add edge if both nodes exist
                 if m_node and c_node:
-                    edges.append({
-                        "id": f"{m_id}-{c_id}",
-                        "source": m_id,
-                        "target": c_id,
-                        "type": "HAS_CHUNK"
-                    })
+                    edges.append(
+                        {
+                            "id": f"{m_id}-{c_id}",
+                            "source": m_id,
+                            "target": c_id,
+                            "type": "HAS_CHUNK",
+                        }
+                    )
 
             return Response(
                 json.dumps({"nodes": nodes, "edges": edges, "workspace": workspace_id}),
-                media_type="application/json"
+                media_type="application/json",
             )
         except Exception as e:
             bound_logger.error("graph_api_error", error=str(e))
             return Response(
                 json.dumps({"nodes": [], "edges": [], "error": str(e)}),
                 media_type="application/json",
-                status_code=500
+                status_code=500,
             )
 
     # Define routes

@@ -13,8 +13,8 @@ License: MIT
 """
 
 import json
-import time
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -64,16 +64,12 @@ class TestGraphWorkflow:
         status_text = response.text.lower()
         # Should have some nodes/entities
         assert (
-            "node" in status_text
-            or "entit" in status_text
-            or "graph" in status_text
+            "node" in status_text or "entit" in status_text or "graph" in status_text
         ), f"Expected graph status info, got: {response.text}"
 
         # Step 3: Try to get related entities (if entities were extracted)
         # First, export graph to see what entities exist
-        with tempfile.NamedTemporaryFile(
-            suffix=".json", delete=False, mode="w"
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as tmp:
             tmp_path = tmp.name
 
         try:
@@ -151,9 +147,7 @@ class TestGraphWorkflow:
         export_results = {}
 
         for format_name, extension in formats_to_test:
-            with tempfile.NamedTemporaryFile(
-                suffix=extension, delete=False, mode="w"
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(suffix=extension, delete=False, mode="w") as tmp:
                 tmp_path = tmp.name
 
             try:
@@ -180,9 +174,9 @@ class TestGraphWorkflow:
                 Path(tmp_path).unlink(missing_ok=True)
 
         # At least JSON export should work
-        assert export_results.get("json", False) or any(export_results.values()), (
-            f"At least one export format should succeed. Results: {export_results}"
-        )
+        assert export_results.get("json", False) or any(
+            export_results.values()
+        ), f"At least one export format should succeed. Results: {export_results}"
 
     def test_incremental_graph_building(
         self, mcp_client: MCPSSEClient, clean_workspace: str
@@ -296,9 +290,9 @@ class TestGraphWorkflow:
             {"query": "Marie Curie Nobel Prize", "limit": 5},
         )
         response.assert_success("Failed to search memory")
-        assert "curie" in response.text.lower() or "nobel" in response.text.lower(), (
-            f"Expected to find Marie Curie memory, got: {response.text}"
-        )
+        assert (
+            "curie" in response.text.lower() or "nobel" in response.text.lower()
+        ), f"Expected to find Marie Curie memory, got: {response.text}"
 
         # Step 4: Verify graph status
         response = mcp_client.call_tool("graph_status", {})

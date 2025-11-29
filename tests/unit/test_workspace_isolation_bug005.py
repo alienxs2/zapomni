@@ -10,7 +10,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from unittest.mock import AsyncMock, Mock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -121,7 +121,9 @@ class TestSearchMemoryToolWorkspaceResolution:
         return server
 
     @pytest.mark.asyncio
-    async def test_search_memory_accepts_mcp_server_parameter(self, mock_processor, mock_mcp_server):
+    async def test_search_memory_accepts_mcp_server_parameter(
+        self, mock_processor, mock_mcp_server
+    ):
         """Test that SearchMemoryTool accepts mcp_server parameter."""
         from zapomni_mcp.tools.search_memory import SearchMemoryTool
 
@@ -231,8 +233,7 @@ class TestWorkspaceIsolationEndToEnd:
 
         # Step 1-2: Add memory in project-a context
         add_tool = AddMemoryTool(
-            memory_processor=mock_processor,
-            mcp_server=mock_mcp_server_project_a
+            memory_processor=mock_processor, mcp_server=mock_mcp_server_project_a
         )
         await add_tool.execute({"text": "secret data"})
 
@@ -242,8 +243,7 @@ class TestWorkspaceIsolationEndToEnd:
 
         # Step 3-4: Search in project-b context
         search_tool = SearchMemoryTool(
-            memory_processor=mock_processor,
-            mcp_server=mock_mcp_server_project_b
+            memory_processor=mock_processor, mcp_server=mock_mcp_server_project_b
         )
         await search_tool.execute({"query": "secret"})
 

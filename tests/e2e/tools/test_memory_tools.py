@@ -220,7 +220,10 @@ class TestDeleteMemory:
         )
 
         delete_response.assert_success("delete_memory with confirm=True should succeed")
-        assert "deleted successfully" in delete_response.text.lower() or "Deleted" in delete_response.text
+        assert (
+            "deleted successfully" in delete_response.text.lower()
+            or "Deleted" in delete_response.text
+        )
 
         # Step 3: Verify deletion - search should not find it
         time.sleep(0.5)
@@ -232,7 +235,9 @@ class TestDeleteMemory:
         # Should not find the deleted memory or show no results
         search_response.assert_success()
 
-    def test_delete_memory_without_confirm_fails(self, mcp_client, clean_workspace, sample_memory_text):
+    def test_delete_memory_without_confirm_fails(
+        self, mcp_client, clean_workspace, sample_memory_text
+    ):
         """Test that deletion without confirm=True fails as a safety measure."""
         # First add a memory to have a valid ID
         add_response = mcp_client.call_tool(
@@ -255,7 +260,10 @@ class TestDeleteMemory:
         )
 
         delete_response.assert_error()
-        assert "confirm" in delete_response.text.lower() or "confirmation" in delete_response.text.lower()
+        assert (
+            "confirm" in delete_response.text.lower()
+            or "confirmation" in delete_response.text.lower()
+        )
 
     def test_delete_memory_invalid_id_fails(self, mcp_client, clean_workspace):
         """Test that deletion with non-existent UUID returns error or not found."""

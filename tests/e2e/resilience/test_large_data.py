@@ -43,7 +43,7 @@ class TestLargeData:
         )
 
         # Repeat to get ~12KB (approximately 24 repetitions * 500 chars = 12000 chars)
-        large_text = (base_paragraph * 24)
+        large_text = base_paragraph * 24
 
         # Verify size
         assert len(large_text) > 10000, f"Large text should be >10KB, got {len(large_text)} chars"

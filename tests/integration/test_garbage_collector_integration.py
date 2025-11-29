@@ -35,6 +35,7 @@ def falkordb_available():
     port = int(os.environ.get("FALKORDB_PORT", 6381))
     try:
         import redis
+
         r = redis.Redis(host=host, port=port)
         r.ping()
         return True
@@ -42,10 +43,7 @@ def falkordb_available():
         return False
 
 
-pytestmark = pytest.mark.skipif(
-    not falkordb_available(),
-    reason="FalkorDB not available"
-)
+pytestmark = pytest.mark.skipif(not falkordb_available(), reason="FalkorDB not available")
 
 
 @pytest.fixture
@@ -212,10 +210,7 @@ class TestDeltaIndexingWorkflow:
         preview = await db_client.get_stale_memories_preview(workspace_id)
         assert preview["memory_count"] == 1
         # Verify the stale memory is for file3.py
-        assert any(
-            "file3.py" in (p.get("file_path") or "")
-            for p in preview["preview"]
-        )
+        assert any("file3.py" in (p.get("file_path") or "") for p in preview["preview"])
 
 
 class TestDeletionSafety:
@@ -302,11 +297,13 @@ class TestPruneMemoryToolIntegration:
 
         tool = PruneMemoryTool(db_client=db_client)
 
-        result = await tool.execute({
-            "workspace_id": workspace_id,
-            "strategy": "stale_code",
-            "dry_run": True,
-        })
+        result = await tool.execute(
+            {
+                "workspace_id": workspace_id,
+                "strategy": "stale_code",
+                "dry_run": True,
+            }
+        )
 
         assert result["isError"] is False
         text = result["content"][0]["text"]
@@ -321,10 +318,12 @@ class TestPruneMemoryToolIntegration:
 
         # Test dry run for each strategy
         for strategy in ["stale_code", "orphaned_chunks", "orphaned_entities", "all"]:
-            result = await tool.execute({
-                "workspace_id": workspace_id,
-                "strategy": strategy,
-                "dry_run": True,
-            })
+            result = await tool.execute(
+                {
+                    "workspace_id": workspace_id,
+                    "strategy": strategy,
+                    "dry_run": True,
+                }
+            )
 
             assert result["isError"] is False, f"Strategy {strategy} failed"

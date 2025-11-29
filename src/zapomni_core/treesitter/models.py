@@ -54,12 +54,10 @@ class ParameterInfo(BaseModel):
 
     name: str = Field(..., min_length=1, description="Parameter name")
     type_annotation: Optional[str] = Field(
-        default=None,
-        description="Type annotation if present (e.g., 'str', 'int', 'List[str]')"
+        default=None, description="Type annotation if present (e.g., 'str', 'int', 'List[str]')"
     )
     default_value: Optional[str] = Field(
-        default=None,
-        description="Default value as string if present"
+        default=None, description="Default value as string if present"
     )
 
 
@@ -76,9 +74,7 @@ class ExtractedCode(BaseModel):
     # Identity
     name: str = Field(..., min_length=1, description="Element name (e.g., 'calculate_total')")
     qualified_name: str = Field(
-        ...,
-        min_length=1,
-        description="Fully qualified name (e.g., 'module.ClassName.method')"
+        ..., min_length=1, description="Fully qualified name (e.g., 'module.ClassName.method')"
     )
     element_type: CodeElementType = Field(..., description="Type of code element")
 
@@ -92,31 +88,19 @@ class ExtractedCode(BaseModel):
     docstring: Optional[str] = Field(default=None, description="Docstring if present")
 
     # Class-related
-    parent_class: Optional[str] = Field(
-        default=None,
-        description="Parent class name for methods"
-    )
-    methods: List[str] = Field(
-        default_factory=list,
-        description="Method names for classes"
-    )
-    bases: List[str] = Field(
-        default_factory=list,
-        description="Base class names for classes"
-    )
+    parent_class: Optional[str] = Field(default=None, description="Parent class name for methods")
+    methods: List[str] = Field(default_factory=list, description="Method names for classes")
+    bases: List[str] = Field(default_factory=list, description="Base class names for classes")
 
     # Function/method-related
     parameters: List[ParameterInfo] = Field(
-        default_factory=list,
-        description="Function/method parameters"
+        default_factory=list, description="Function/method parameters"
     )
     return_type: Optional[str] = Field(
-        default=None,
-        description="Return type annotation if present"
+        default=None, description="Return type annotation if present"
     )
     decorators: List[str] = Field(
-        default_factory=list,
-        description="Decorator names (e.g., ['staticmethod', 'property'])"
+        default_factory=list, description="Decorator names (e.g., ['staticmethod', 'property'])"
     )
 
     # Flags
@@ -125,8 +109,7 @@ class ExtractedCode(BaseModel):
     is_static: bool = Field(default=False, description="Whether method is static")
     is_abstract: bool = Field(default=False, description="Whether method is abstract")
     is_private: bool = Field(
-        default=False,
-        description="Whether element is private (e.g., starts with _)"
+        default=False, description="Whether element is private (e.g., starts with _)"
     )
 
     # Metrics
@@ -145,32 +128,24 @@ class ParseResult(BaseModel):
     file_path: str = Field(..., min_length=1, description="Absolute path to parsed file")
     language: str = Field(..., min_length=1, description="Detected programming language")
     functions: List[ExtractedCode] = Field(
-        default_factory=list,
-        description="Extracted top-level functions"
+        default_factory=list, description="Extracted top-level functions"
     )
     classes: List[ExtractedCode] = Field(
-        default_factory=list,
-        description="Extracted classes with their methods"
+        default_factory=list, description="Extracted classes with their methods"
     )
-    parse_time_ms: float = Field(
-        ...,
-        ge=0,
-        description="Time taken to parse file in milliseconds"
-    )
-    errors: List[str] = Field(
-        default_factory=list,
-        description="Any parsing errors or warnings"
-    )
+    parse_time_ms: float = Field(..., ge=0, description="Time taken to parse file in milliseconds")
+    errors: List[str] = Field(default_factory=list, description="Any parsing errors or warnings")
 
 
 class CallType(str, Enum):
     """Type of function/method call."""
-    FUNCTION = "function"       # Direct function call: foo()
-    METHOD = "method"           # Method call: obj.method()
-    CONSTRUCTOR = "constructor" # Class instantiation: MyClass()
-    STATIC = "static"           # Static method: Type::method() or Class.method()
-    MACRO = "macro"             # Rust macros: println!()
-    BUILTIN = "builtin"         # Built-in functions: print(), len()
+
+    FUNCTION = "function"  # Direct function call: foo()
+    METHOD = "method"  # Method call: obj.method()
+    CONSTRUCTOR = "constructor"  # Class instantiation: MyClass()
+    STATIC = "static"  # Static method: Type::method() or Class.method()
+    MACRO = "macro"  # Rust macros: println!()
+    BUILTIN = "builtin"  # Built-in functions: print(), len()
 
 
 class FunctionCall(BaseModel, frozen=True):
