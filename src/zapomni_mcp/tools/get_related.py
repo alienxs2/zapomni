@@ -246,7 +246,7 @@ class GetRelatedTool:
 
         return request
 
-    def _format_response(self, entity_id: str, results: list) -> Dict[str, Any]:
+    def _format_response(self, entity_id: str, results: List[Any]) -> Dict[str, Any]:
         """
         Format related entities as MCP response.
 

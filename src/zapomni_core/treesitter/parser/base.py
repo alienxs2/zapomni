@@ -109,7 +109,7 @@ class BaseLanguageParser(ABC):
             Configured tree-sitter Parser for this language.
         """
         if self._parser is None:
-            self._parser = get_parser(self.language_name)
+            self._parser = get_parser(self.language_name)  # type: ignore[arg-type]
             self._log.debug("parser_initialized", language=self.language_name)
         return self._parser
 

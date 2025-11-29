@@ -775,7 +775,7 @@ class MCPServer:
                         session_id=session_id,
                         workspace_id=workspace_id,
                     )
-                    return workspace_id
+                    return str(workspace_id)
             except Exception as e:
                 self._logger.warning(
                     "failed_to_get_session_workspace",
@@ -810,7 +810,7 @@ class MCPServer:
         """
         # SSE mode: use session manager
         if session_id and self._session_manager is not None:
-            return self._session_manager.set_workspace_id(session_id, workspace_id)
+            return bool(self._session_manager.set_workspace_id(session_id, workspace_id))
 
         # stdio mode: use instance-level state
         self._default_workspace_id = workspace_id
@@ -827,7 +827,7 @@ class MCPServer:
         Registers handlers for SIGINT (Ctrl+C) and SIGTERM (kill).
         """
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: Any) -> None:
             """Handle shutdown signals."""
             self._logger.info("Received shutdown signal", signal=signum)
             self.shutdown()

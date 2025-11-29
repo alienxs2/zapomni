@@ -111,7 +111,12 @@ class GetStatsTool:
         if self._session_manager is not None:
             return self._session_manager
         if self._mcp_server is not None and hasattr(self._mcp_server, "_session_manager"):
-            return self._mcp_server._session_manager
+            manager = self._mcp_server._session_manager
+            if manager is not None:
+                from zapomni_mcp.session_manager import SessionManager
+
+                if isinstance(manager, SessionManager):
+                    return manager
         return None
 
     async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:

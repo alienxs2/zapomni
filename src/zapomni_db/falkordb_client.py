@@ -2555,7 +2555,7 @@ class FalkorDBClient:
         qualified_name: str,
         workspace_id: str = DEFAULT_WORKSPACE_ID,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Get functions called by the given function.
 

@@ -262,7 +262,7 @@ class OllamaLLMClient:
                         error_code="EXTR_003",
                         details={"response": data},
                     )
-                return data["response"]
+                return str(data["response"])
 
             elif response.status_code == 404:
                 raise ExtractionError(
@@ -595,10 +595,15 @@ class OllamaLLMClient:
             logger.debug("ollama_llm_health_check_failed", error=str(e))
             return False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "OllamaLLMClient":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
+    ) -> None:
         """Async context manager exit - cleanup client."""
         await self.client.aclose()

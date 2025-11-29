@@ -9,7 +9,7 @@ License: MIT
 """
 
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -285,7 +285,7 @@ class BuildGraphTool:
             raise ValidationError.from_exception_data(
                 "BuildGraphRequest",
                 [
-                    {
+                    {  # type: ignore[typeddict-unknown-key]
                         "type": "value_error",
                         "loc": ("text",),
                         "msg": "text cannot be empty or contain only whitespace",
@@ -298,7 +298,7 @@ class BuildGraphTool:
 
         return text, options
 
-    async def _extract_entities(self, text: str, confidence_threshold: float) -> Tuple[list, float]:
+    async def _extract_entities(self, text: str, confidence_threshold: float) -> Tuple[List[Any], float]:
         """
         Extract entities from text using EntityExtractor.
 
@@ -355,7 +355,7 @@ class BuildGraphTool:
                 original_exception=e,
             )
 
-    async def _build_graph(self, entities: list, text: str) -> Dict[str, Any]:
+    async def _build_graph(self, entities: List[Any], text: str) -> Dict[str, Any]:
         """
         Build knowledge graph from extracted entities.
 

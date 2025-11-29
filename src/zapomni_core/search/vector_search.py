@@ -9,7 +9,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import structlog
 
@@ -259,7 +259,7 @@ class VectorSearch:
                 has_filters=filters is not None,
             )
 
-            return results
+            return cast(List[SearchResult], results)
 
         except DatabaseError as e:
             logger.error("vector_search_failed", error=str(e), query=query[:100])

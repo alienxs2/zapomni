@@ -470,7 +470,7 @@ class TaskManager:
     async def _execute_task_wrapper(
         self,
         task_id: str,
-        coro: Coroutine,
+        coro: Coroutine[Any, Any, Any],
     ) -> None:
         """
         Wrapper that executes a task and manages its lifecycle.
@@ -491,7 +491,7 @@ class TaskManager:
     async def _execute_task(
         self,
         task_id: str,
-        coro: Coroutine,
+        coro: Coroutine[Any, Any, Any],
     ) -> None:
         """
         Execute a task coroutine and update its status.

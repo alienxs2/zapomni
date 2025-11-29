@@ -440,7 +440,7 @@ class ASTCodeChunker:
         logger.info(f"Chunked file into {len(chunks)} line-based chunks")
         return chunks
 
-    def extract_functions(self, ast_tree: ast.Module) -> List[ast.FunctionDef]:
+    def extract_functions(self, ast_tree: ast.Module) -> List[Union[ast.FunctionDef, ast.AsyncFunctionDef]]:
         """
         Extract all function definitions from an AST tree.
 

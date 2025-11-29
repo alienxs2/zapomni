@@ -12,7 +12,7 @@ import logging
 import sys
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import structlog
 from structlog.types import Processor
@@ -220,7 +220,7 @@ class LoggingService:
         logger = structlog.get_logger(name)
         cls._loggers[name] = logger
 
-        return logger
+        return cast(structlog.BoundLogger, logger)
 
     @classmethod
     def log_operation(

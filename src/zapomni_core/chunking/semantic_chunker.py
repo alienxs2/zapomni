@@ -32,7 +32,7 @@ try:  # pragma: no cover - third-party import
 
     _LANGCHAIN_AVAILABLE = True
 except Exception:  # pragma: no cover - environment without langchain
-    RecursiveCharacterTextSplitter = None  # type: ignore[assignment]
+    RecursiveCharacterTextSplitter = None
     _LANGCHAIN_AVAILABLE = False
 
 

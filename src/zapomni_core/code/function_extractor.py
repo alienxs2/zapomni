@@ -603,10 +603,10 @@ class FunctionExtractor:
                 parameters[arg_idx].default = ast.unparse(default)
 
         # Add keyword-only defaults
-        for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults or []):
+        for arg, kw_default in zip(args_node.kwonlyargs, args_node.kw_defaults or []):
             for param in parameters:
-                if param.name == arg.arg and default is not None:
-                    param.default = ast.unparse(default)
+                if param.name == arg.arg and kw_default is not None:
+                    param.default = ast.unparse(kw_default)
 
         return parameters
 

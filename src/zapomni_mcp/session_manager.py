@@ -55,7 +55,7 @@ class ConnectionMetrics:
     total_requests_processed: int = 0
     total_errors: int = 0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> Dict[str, int]:
         """Convert metrics to dictionary."""
         return {
             "total_connections_created": self.total_connections_created,
@@ -146,7 +146,7 @@ class SessionManager:
 
         # Heartbeat configuration
         self._heartbeat_interval = heartbeat_interval
-        self._heartbeat_tasks: Dict[str, asyncio.Task] = {}
+        self._heartbeat_tasks: Dict[str, asyncio.Task[None]] = {}
 
         # Connection metrics
         self._metrics = ConnectionMetrics()

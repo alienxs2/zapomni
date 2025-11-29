@@ -34,7 +34,7 @@ try:
     HAS_NETWORKX = True
 except ImportError:
     HAS_NETWORKX = False
-    nx = None  # type: ignore[assignment]
+    nx = None
 
 
 # ============================================================================

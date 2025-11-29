@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-import fitz
+import fitz  # type: ignore[import-untyped]
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_core.utils import get_logger

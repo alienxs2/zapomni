@@ -13,6 +13,8 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+from typing import Any
+
 from .config import (
     ZapomniSettings,
     get_config_summary,
@@ -38,7 +40,7 @@ from .logging_service import (
 from .runtime_config import RuntimeConfig
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     """Lazy import for components to avoid circular imports."""
     if name == "code_processor":
         from .processors import code_processor

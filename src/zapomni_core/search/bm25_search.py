@@ -13,7 +13,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import structlog
 from rank_bm25 import BM25Okapi
@@ -317,7 +317,7 @@ class BM25Search:
 
         # STEP 8: SORT BY SCORE DESCENDING
 
-        results.sort(key=lambda x: x["score"], reverse=True)
+        results.sort(key=lambda x: cast(float, x["score"]), reverse=True)
 
         # STEP 9: APPLY LIMIT
 

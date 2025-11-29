@@ -11,7 +11,7 @@ License: MIT
 
 import asyncio
 import math
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -403,7 +403,7 @@ class OllamaEmbedder:
                             details={"index": i, "expected": self.dimensions, "got": len(emb)},
                         )
 
-                return embeddings
+                return cast(List[List[float]], embeddings)
 
             elif response.status_code == 404:
                 # Model not found or batch API not supported - will fallback
@@ -572,7 +572,7 @@ class OllamaEmbedder:
                         error_code="EMB_001",
                         details={"response": data},
                     )
-                return data["embedding"]
+                return cast(List[float], data["embedding"])
 
             elif response.status_code == 404:
                 raise EmbeddingError(
@@ -721,10 +721,15 @@ class OllamaEmbedder:
                     details={"index": i, "value": str(val)},
                 )
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "OllamaEmbedder":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
+    ) -> None:
         """Async context manager exit - cleanup client."""
         await self.client.aclose()

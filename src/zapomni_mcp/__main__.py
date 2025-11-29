@@ -331,7 +331,7 @@ async def main(args: argparse.Namespace) -> None:
         # Attach code_indexer if code indexing is enabled
         if enable_code_indexing:
             logger.info("Initializing CodeRepositoryIndexer")
-            processor.code_indexer = CodeRepositoryIndexer()
+            processor.code_indexer = CodeRepositoryIndexer()  # type: ignore[attr-defined]
             logger.info("CodeRepositoryIndexer attached to MemoryProcessor")
 
         # STAGE 6: Create MCP server

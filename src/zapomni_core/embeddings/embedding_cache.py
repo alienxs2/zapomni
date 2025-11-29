@@ -255,7 +255,7 @@ class EmbeddingCache:
                             embedding_dims=len(embedding),
                         )
 
-                        return embedding
+                        return list(embedding)
 
                     except json.JSONDecodeError as e:
                         logger.error(
@@ -606,7 +606,7 @@ class EmbeddingCache:
         """
         try:
             # Clear Redis if available
-            if self.use_redis:
+            if self.use_redis and self.redis_client is not None:
                 try:
                     await self.redis_client.flushdb()
                     logger.info("embedding_cache_redis_cleared")
@@ -623,11 +623,16 @@ class EmbeddingCache:
             logger.error("embedding_cache_clear_failed", error=str(e))
             raise
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "EmbeddingCache":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
+    ) -> None:
         """Async context manager exit - cleanup."""
         # No cleanup needed for cache (client managed separately)
         pass
