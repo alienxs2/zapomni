@@ -236,7 +236,7 @@ class EmbeddingCache:
         self.stats["total_requests"] += 1
 
         # Try Redis first
-        if self.use_redis:
+        if self.use_redis and self.redis_client is not None:
             try:
                 cached_data = await self.redis_client.get(cache_key)
 
@@ -404,7 +404,7 @@ class EmbeddingCache:
             embedding_json = json.dumps(embedding)
 
             # Try to store in Redis if available
-            if self.use_redis:
+            if self.use_redis and self.redis_client is not None:
                 try:
                     await self.redis_client.set(
                         cache_key,

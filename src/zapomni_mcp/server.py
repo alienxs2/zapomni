@@ -14,12 +14,23 @@ import signal
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Sequence, cast
 
 import structlog
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import CallToolResult, TextContent, Tool
+from mcp.types import (
+    AudioContent,
+    CallToolResult,
+    EmbeddedResource,
+    ImageContent,
+    ResourceLink,
+    TextContent,
+    Tool,
+)
+
+# Type alias for MCP content types
+MCPContent = TextContent | ImageContent | AudioContent | ResourceLink | EmbeddedResource
 
 from zapomni_core.exceptions import ValidationError as ZapomniValidationError  # noqa: F401
 from zapomni_core.workspace_manager import WorkspaceManager
@@ -261,7 +272,7 @@ class MCPServer:
                 )
 
         # Instantiate all standard tools with MemoryProcessor
-        tools = [
+        tools: list[MCPTool] = [
             # Phase 1: Core tools (with mcp_server for workspace resolution)
             AddMemoryTool(memory_processor=memory_processor, mcp_server=self),
             SearchMemoryTool(memory_processor=memory_processor, mcp_server=self),
@@ -363,8 +374,10 @@ class MCPServer:
             # Register tools with MCP server
             for tool in self._tools.values():
 
-                @self._server.call_tool()
-                async def handle_call_tool(name: str, arguments: dict) -> CallToolResult:
+                @self._server.call_tool()  # type: ignore[misc]
+                async def handle_call_tool(
+                    name: str, arguments: dict[str, Any]
+                ) -> CallToolResult:
                     """Handle tool call from MCP client."""
                     self._request_count += 1
 
@@ -372,9 +385,10 @@ class MCPServer:
                         if name not in self._tools:
                             self._error_count += 1
                             return CallToolResult(
-                                content=[
-                                    TextContent(type="text", text=f"Error: Unknown tool '{name}'")
-                                ],
+                                content=cast(
+                                    list[MCPContent],
+                                    [TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                                ),
                                 isError=True,
                             )
 
@@ -386,7 +400,7 @@ class MCPServer:
                         is_error = result.get("isError", False)
 
                         # Convert content dicts to TextContent objects
-                        content = []
+                        content: list[MCPContent] = []
                         for item in content_data:
                             if item.get("type") == "text":
                                 content.append(TextContent(type="text", text=item.get("text", "")))
@@ -397,11 +411,14 @@ class MCPServer:
                         self._error_count += 1
                         self._logger.error("Tool execution error", tool=name, error=str(e))
                         return CallToolResult(
-                            content=[TextContent(type="text", text=f"Error: {str(e)}")],
+                            content=cast(
+                                list[MCPContent],
+                                [TextContent(type="text", text=f"Error: {str(e)}")],
+                            ),
                             isError=True,
                         )
 
-                @self._server.list_tools()
+                @self._server.list_tools()  # type: ignore[misc, no-untyped-call]
                 async def handle_list_tools() -> list[Tool]:
                     """List all available tools."""
                     return [
@@ -431,7 +448,7 @@ class MCPServer:
         self,
         host: str = "127.0.0.1",
         port: int = 8000,
-        cors_origins: list[str] = None,
+        cors_origins: list[str] | None = None,
     ) -> None:
         """
         Start the MCP server with SSE transport.
@@ -486,8 +503,10 @@ class MCPServer:
         )
 
         # Register tools with MCP server (same as stdio mode)
-        @self._server.call_tool()
-        async def handle_call_tool(name: str, arguments: dict) -> CallToolResult:
+        @self._server.call_tool()  # type: ignore[misc]
+        async def handle_call_tool(
+            name: str, arguments: dict[str, Any]
+        ) -> CallToolResult:
             """Handle tool call from MCP client."""
             self._request_count += 1
 
@@ -495,7 +514,10 @@ class MCPServer:
                 if name not in self._tools:
                     self._error_count += 1
                     return CallToolResult(
-                        content=[TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                        content=cast(
+                            list[MCPContent],
+                            [TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                        ),
                         isError=True,
                     )
 
@@ -507,7 +529,7 @@ class MCPServer:
                 is_error = result.get("isError", False)
 
                 # Convert content dicts to TextContent objects
-                content = []
+                content: list[MCPContent] = []
                 for item in content_data:
                     if item.get("type") == "text":
                         content.append(TextContent(type="text", text=item.get("text", "")))
@@ -518,11 +540,14 @@ class MCPServer:
                 self._error_count += 1
                 self._logger.error("Tool execution error", tool=name, error=str(e))
                 return CallToolResult(
-                    content=[TextContent(type="text", text=f"Error: {str(e)}")],
+                    content=cast(
+                        list[MCPContent],
+                        [TextContent(type="text", text=f"Error: {str(e)}")],
+                    ),
                     isError=True,
                 )
 
-        @self._server.list_tools()
+        @self._server.list_tools()  # type: ignore[misc, no-untyped-call]
         async def handle_list_tools() -> list[Tool]:
             """List all available tools."""
             return [

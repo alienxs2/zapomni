@@ -19,7 +19,7 @@ import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, Any, List, Optional, Set
 
 import structlog
 from spacy.language import Language
@@ -559,7 +559,9 @@ class EntityExtractor:
 
         return refined_entities
 
-    def _run_async_refine(self, text: str, entities_dict: List[dict]) -> List[dict]:
+    def _run_async_refine(
+        self, text: str, entities_dict: List[dict[str, Any]]
+    ) -> List[dict[str, Any]]:
         """
         Run entity refinement async call from sync context.
 
@@ -570,16 +572,19 @@ class EntityExtractor:
         # Store client config for recreation in thread
         from zapomni_core.runtime_config import RuntimeConfig
 
+        if self.ollama_client is None:
+            raise ValueError("LLM client not initialized")
+
         base_url = self.ollama_client.base_url
         model_name = RuntimeConfig.get_instance().llm_model
         timeout = self.ollama_client.timeout
         temperature = self.ollama_client.temperature
 
-        def run_in_new_loop():
+        def run_in_new_loop() -> List[dict[str, Any]]:
             """Run in a new event loop with fresh client."""
             from zapomni_core.llm import OllamaLLMClient
 
-            async def do_refine():
+            async def do_refine() -> List[dict[str, Any]]:
                 # Create fresh client in this thread's event loop
                 client = OllamaLLMClient(
                     base_url=base_url,
@@ -608,9 +613,13 @@ class EntityExtractor:
                 return future.result(timeout=120)
         except RuntimeError:
             # No running loop - safe to use existing client
+            if self.ollama_client is None:
+                raise ValueError("LLM client not initialized")
             return asyncio.run(self.ollama_client.refine_entities(text, entities_dict))
 
-    def _run_async_relationships(self, text: str, entities_dict: List[dict]) -> List[dict]:
+    def _run_async_relationships(
+        self, text: str, entities_dict: List[dict[str, Any]]
+    ) -> List[dict[str, Any]]:
         """
         Run relationship extraction async call from sync context.
 
@@ -621,16 +630,19 @@ class EntityExtractor:
         # Store client config for recreation in thread
         from zapomni_core.runtime_config import RuntimeConfig
 
+        if self.ollama_client is None:
+            raise ValueError("LLM client not initialized")
+
         base_url = self.ollama_client.base_url
         model_name = RuntimeConfig.get_instance().llm_model
         timeout = self.ollama_client.timeout
         temperature = self.ollama_client.temperature
 
-        def run_in_new_loop():
+        def run_in_new_loop() -> List[dict[str, Any]]:
             """Run in a new event loop with fresh client."""
             from zapomni_core.llm import OllamaLLMClient
 
-            async def do_extract():
+            async def do_extract() -> List[dict[str, Any]]:
                 # Create fresh client in this thread's event loop
                 client = OllamaLLMClient(
                     base_url=base_url,
@@ -659,6 +671,8 @@ class EntityExtractor:
                 return future.result(timeout=120)
         except RuntimeError:
             # No running loop - safe to use existing client
+            if self.ollama_client is None:
+                raise ValueError("LLM client not initialized")
             return asyncio.run(self.ollama_client.extract_relationships(text, entities_dict))
 
     def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:

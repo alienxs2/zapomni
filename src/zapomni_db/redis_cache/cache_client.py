@@ -198,7 +198,7 @@ class RedisClient:
             self._logger.error("unexpected_error_during_init", error=str(e))
             raise redis.ConnectionError(f"Unexpected error during connection init: {e}")
 
-    def _ensure_client(self) -> Redis:  # type: ignore[type-arg]
+    def _ensure_client(self) -> Redis:
         """Ensure client is initialized and return it."""
         if self.client is None:
             raise CacheError("Redis client is not initialized")
@@ -433,9 +433,11 @@ class RedisClient:
         while retry_count <= self.MAX_RETRIES:
             try:
                 # Delete key from Redis
-                result = client.delete(key)
+                delete_result = client.delete(key)
+                # Sync client returns int directly, cast to satisfy mypy
+                result_count: int = int(delete_result)  # type: ignore[arg-type]
 
-                if int(result) > 0:
+                if result_count > 0:
                     self._logger.debug("cache_deleted", key=key)
                     return True
                 else:
@@ -485,8 +487,10 @@ class RedisClient:
 
         try:
             client = self._ensure_client()
-            result = client.exists(key)
-            return int(result) > 0
+            exists_result = client.exists(key)
+            # Sync client returns int directly, cast to satisfy mypy
+            result_count: int = int(exists_result)  # type: ignore[arg-type]
+            return result_count > 0
 
         except redis.RedisError as e:
             self._logger.error("redis_error_exists", key=key, error=str(e))
@@ -586,25 +590,27 @@ class RedisClient:
         try:
             # Get INFO from Redis
             client = self._ensure_client()
-            info_dict = client.info()
+            info_result = client.info()
+            # Cast to dict since we're using sync client (not async)
+            info_dict: Dict[str, Any] = dict(info_result)  # type: ignore[arg-type]
 
             # Extract memory info
-            used_memory = info_dict.get("used_memory", 0)
+            used_memory: int = info_dict.get("used_memory", 0)
             used_memory_mb = used_memory / (1024 * 1024)
-            used_memory_human = info_dict.get("used_memory_human", "0B")
+            used_memory_human: str = info_dict.get("used_memory_human", "0B")
 
             # Get keyspace info for current db
             keyspace_key = f"db{self.db}"
-            keyspace_info = info_dict.get("keyspace", {})
-            db_info = keyspace_info.get(keyspace_key, {})
-            total_keys = db_info.get("keys", 0)
+            keyspace_info: Dict[str, Any] = info_dict.get("keyspace", {})
+            db_info: Dict[str, Any] = keyspace_info.get(keyspace_key, {})
+            total_keys: int = db_info.get("keys", 0)
 
             # Get memory config
-            maxmemory = info_dict.get("maxmemory", 0)
+            maxmemory: int = info_dict.get("maxmemory", 0)
             maxmemory_mb = maxmemory / (1024 * 1024) if maxmemory > 0 else 0.0
 
             # Get eviction policy
-            eviction_policy = info_dict.get("maxmemory_policy", "noeviction")
+            eviction_policy: str = info_dict.get("maxmemory_policy", "noeviction")
 
             result = {
                 "used_memory_mb": used_memory_mb,
