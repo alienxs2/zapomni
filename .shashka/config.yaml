@@ -5,7 +5,7 @@ project:
   name: "zapomni"
   description: "Local-first MCP memory server for AI agents with 41-language AST support"
   type: "mcp-server"
-  version: "v0.6.0-dev"
+  version: "v0.6.0"
   repository: "https://github.com/alienxs2/zapomni"
   stack:
     languages: ["Python 3.11+"]
@@ -19,7 +19,7 @@ language:
 
 # Session tracking
 session:
-  current: 19
+  current: 20
   last_date: "2025-11-29"
 
 # Bug tracking - ALL FIXED!
@@ -30,7 +30,7 @@ bugs:
 
 # Milestones
 milestones:
-  current: "v0.6.0 - Code Intelligence (IN PROGRESS)"
+  current: "v0.6.0 - Code Intelligence (COMPLETE)"
   next: "v0.7.0 - Search Excellence"
 
 # v0.6.0 Progress
@@ -38,5 +38,5 @@ v060_progress:
   completed:
     - "#22 GoExtractor (55 tests)"
     - "#23 RustExtractor (55 tests)"
-  todo:
-    - "#24 CallGraphAnalyzer"
+    - "#24 CallGraphAnalyzer (74 tests)"
+  todo: []

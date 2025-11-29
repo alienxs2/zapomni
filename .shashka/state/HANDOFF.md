@@ -1,22 +1,49 @@
 # Session Handoff
 
-**Last Session**: #19 (2025-11-29)
-**Next Session**: #20
-**Focus**: v0.6.0 - Code Intelligence (continue)
+**Last Session**: #20 (2025-11-29)
+**Next Session**: #21
+**Focus**: v0.7.0 - Search Excellence
 
 ---
 
 ## For Next AI Agent / PM
 
-### v0.6.0 Progress: 2/3 Issues Done
+### v0.6.0 Progress: 3/3 Issues Done (COMPLETE!)
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
 | #22 | GoExtractor | **COMPLETE** ✅ | 55 |
 | #23 | RustExtractor | **COMPLETE** ✅ | 55 |
-| #24 | CallGraphAnalyzer | **TODO** | - |
+| #24 | CallGraphAnalyzer | **COMPLETE** ✅ | 74 |
 
-**Total Tests**: 2362 unit + 10 integration = 2372+ passing
+**Total Tests**: 2436 unit + 11 integration = 2447+ passing
+
+---
+
+## What Was Done in Session #20
+
+**Issue #24 (CallGraphAnalyzer) COMPLETE:**
+
+1. Created `/home/dev/zapomni/src/zapomni_core/treesitter/analyzers/call_graph.py` (1233 lines):
+   - Full call graph analysis for Python, Go, Rust, TypeScript
+   - Tracks function calls, method calls, constructor calls
+   - Supports qualified names (module.function, obj.method)
+   - Language-specific call detection patterns
+   - Integration with FalkorDB for relationship storage
+
+2. Created `/home/dev/zapomni/src/zapomni_mcp/tools/call_graph.py`:
+   - New MCP tools: get_callers, get_callees, get_call_graph
+   - Query call relationships from knowledge graph
+
+3. Created `/home/dev/zapomni/tests/unit/treesitter/analyzers/test_call_graph.py`:
+   - 45 comprehensive analyzer tests
+
+4. Created `/home/dev/zapomni/tests/unit/mcp/tools/test_call_graph_tools.py`:
+   - 29 MCP tool tests
+
+5. Commit: `350a7157 feat(treesitter): Add CallGraphAnalyzer with full call tracking (Issue #24)`
+
+**v0.6.0 Milestone COMPLETE!**
 
 ---
 
@@ -72,24 +99,18 @@ make server                            # MCP server
 
 ---
 
-## Next Issues to Work On
+## Next Issues to Work On (v0.7.0 - Search Excellence)
 
-### Issue #24: CallGraphAnalyzer
+### Check available issues:
 ```bash
-gh issue view 24
+gh issue list --state open --label "v0.7.0"
 ```
-- Track function calls across codebase
-- Build call graph relationships
-- Use extracted functions from PythonExtractor, TypeScriptExtractor, GoExtractor, RustExtractor
-- Detect caller/callee relationships
 
-### Issue #24: CallGraphAnalyzer
-```bash
-gh issue view 24
-```
-- Track function calls across codebase
-- Build call graph relationships
-- Requires extractors to be complete first
+v0.7.0 focuses on improving search capabilities:
+- Enhanced semantic search
+- Better code search with AST awareness
+- Search result ranking improvements
+- Query optimization
 
 ---
 
@@ -114,8 +135,8 @@ zapomni/
 │   │       └── index_codebase.py # MCP tool (uses extractors)
 │   └── zapomni_db/
 └── tests/
-    ├── unit/                      # 2307 tests
-    └── integration/               # 10 tests
+    ├── unit/                      # 2436 tests
+    └── integration/               # 11 tests
 ```
 
 ---
@@ -150,7 +171,7 @@ zapomni/
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
 | v0.5.0 | Solid Foundation | **COMPLETE** |
-| v0.6.0 | Code Intelligence | **IN PROGRESS** (1/3) |
+| v0.6.0 | Code Intelligence | **COMPLETE** (3/3) |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
 | v0.9.0 | Scale & Performance | Planned |
@@ -162,7 +183,9 @@ zapomni/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#18** | 2025-11-28 | Issue #22 | **GoExtractor COMPLETE (55 tests)** |
+| **#20** | 2025-11-29 | Issue #24 | **CallGraphAnalyzer COMPLETE (74 tests), v0.6.0 DONE!** |
+| #19 | 2025-11-29 | Issue #23 | RustExtractor COMPLETE (55 tests) |
+| #18 | 2025-11-28 | Issue #22 | GoExtractor COMPLETE (55 tests) |
 | #17 | 2025-11-28 | Issue #21 | Tree-sitter Integration COMPLETE, v0.5.0 DONE! |
 | #16 | 2025-11-28 | Issue #20 | TypeScriptExtractor COMPLETE |
 | #15 | 2025-11-28 | Issue #19 | PythonExtractor COMPLETE |
@@ -178,4 +201,4 @@ zapomni/
 
 ---
 
-**Good luck with RustExtractor (#23) next!**
+**v0.6.0 Complete! Good luck with v0.7.0 - Search Excellence!**

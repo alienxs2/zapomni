@@ -1,34 +1,58 @@
 # Project Snapshot
 
 **Project**: Zapomni
-**Version**: v0.6.0-dev
-**Status**: v0.6.0 IN PROGRESS - RustExtractor done (2/3)
-**Last Updated**: 2025-11-29 (Session #19)
+**Version**: v0.6.0
+**Status**: v0.6.0 COMPLETE - All Code Intelligence features done (3/3)
+**Last Updated**: 2025-11-29 (Session #20)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| Unit Tests | 2362 passed, 11 skipped |
-| Integration Tests | 10 passed |
+| Unit Tests | 2436 passed, 11 skipped |
+| Integration Tests | 11 passed |
 | E2E Tests | 88 passed, 1 xfailed |
 | Tree-sitter | 41 languages, 449 tests |
 | PythonExtractor | 58 tests, full AST support |
 | TypeScriptExtractor | 60 tests, full AST support |
 | GoExtractor | 55 tests, full AST support |
-| **RustExtractor** | **55 tests, full AST support** ✅ NEW |
+| RustExtractor | 55 tests, full AST support |
+| **CallGraphAnalyzer** | **74 tests, full call tracking** ✅ NEW |
 | Known Bugs | **0 remaining** |
 | Fixed Bugs | **7** (Issues #12-18) |
-| Open Issues | 9 (features only) |
+| Open Issues | 8 (features only) |
 | Open PRs | 0 |
 
-## v0.6.0 Progress - Code Intelligence
+## v0.6.0 Progress - Code Intelligence (COMPLETE)
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
 | #22 | GoExtractor | **COMPLETE** ✅ | 55 |
 | #23 | RustExtractor | **COMPLETE** ✅ | 55 |
-| #24 | CallGraphAnalyzer | Planned | - |
+| #24 | CallGraphAnalyzer | **COMPLETE** ✅ | 74 |
+
+## Session #20 Summary
+
+**Issue #24 (CallGraphAnalyzer) COMPLETE:**
+- Full call graph analysis for Python, Go, Rust, TypeScript
+- CallGraphAnalyzer class (1233 lines) with language-specific call detection
+- Tracks function calls, method calls, constructor calls
+- Supports qualified names (module.function, obj.method)
+- 45 comprehensive analyzer tests
+- 29 MCP tools tests (get_callers, get_callees, get_call_graph)
+- Integration with FalkorDB for relationship storage
+- New MCP tools: get_callers, get_callees, get_call_graph
+
+**Commit:** `350a7157`
+**Files Changed:** 19 (+5050 lines)
+- `src/zapomni_core/treesitter/analyzers/call_graph.py` (1233 lines) - Core analyzer
+- `src/zapomni_mcp/tools/call_graph.py` - MCP tool implementations
+- `tests/unit/treesitter/analyzers/test_call_graph.py` (45 tests)
+- `tests/unit/mcp/tools/test_call_graph_tools.py` (29 tests)
+
+**v0.6.0 Milestone COMPLETE!**
+
+---
 
 ## Session #19 Summary
 
@@ -126,12 +150,15 @@ zapomni/
 │   │   │       ├── generic.py     # Universal fallback
 │   │   │       ├── python.py      # Python-specific ✅
 │   │   │       ├── typescript.py  # TypeScript/JS ✅
-│   │   │       └── go.py          # Go-specific ✅ NEW
+│   │   │       ├── go.py          # Go-specific ✅
+│   │   │       └── rust.py        # Rust-specific ✅
+│   │   │   └── analyzers/
+│   │   │       └── call_graph.py  # CallGraphAnalyzer ✅ NEW
 │   │   └── memory_processor.py ✅
 │   ├── zapomni_mcp/        # MCP server (17 tools) ✅
 │   ├── zapomni_db/         # FalkorDB + Redis clients
 │   └── zapomni_cli/        # CLI tools + Git hooks
-└── tests/                  # 2307+ unit tests
+└── tests/                  # 2436+ unit tests
 ```
 
 ## Roadmap to v1.0
@@ -140,7 +167,7 @@ zapomni/
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
 | v0.5.0 | Solid Foundation | **COMPLETE** (3/3 done) |
-| v0.6.0 | Code Intelligence | **IN PROGRESS** (1/3 done) |
+| v0.6.0 | Code Intelligence | **COMPLETE** (3/3 done) |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
 | v0.9.0 | Scale & Performance | Planned |
@@ -148,11 +175,9 @@ zapomni/
 
 ## Next Steps
 
-v0.6.0 in progress. Next issues:
-- **#23** - RustExtractor (fn, impl, traits, macros)
-- **#24** - CallGraphAnalyzer (track function calls)
+v0.6.0 COMPLETE! Next milestone: v0.7.0 - Search Excellence
 
-Run `gh issue list --state open` to see available issues.
+Run `gh issue list --state open` to see available issues for v0.7.0.
 
 ## Key Documents
 

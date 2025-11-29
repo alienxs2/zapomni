@@ -1,8 +1,8 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-11-29 (Session #19)
-**Project Status**: v0.6.0 IN PROGRESS | RustExtractor done (2/3)
-**Version**: v0.6.0-dev
+**Last Updated**: 2025-11-29 (Session #20)
+**Project Status**: v0.6.0 COMPLETE | All Code Intelligence done (3/3)
+**Version**: v0.6.0
 **Branch**: `main`
 
 ---
@@ -11,21 +11,34 @@
 
 ### Current State Summary
 
-**v0.6.0 Progress: 2/3 (66%)**
+**v0.6.0 Progress: 3/3 (100%) - COMPLETE!**
 - Issue #22: GoExtractor - **COMPLETE** (55 tests) ✅
 - Issue #23: RustExtractor - **COMPLETE** (55 tests) ✅
-- Issue #24: CallGraphAnalyzer - **TODO**
+- Issue #24: CallGraphAnalyzer - **COMPLETE** (74 tests) ✅
 
 **Test Status:**
-- Unit Tests: **2362 passed**, 11 skipped
-- Integration Tests: **10 passed**
+- Unit Tests: **2436 passed**, 11 skipped
+- Integration Tests: **11 passed**
 - E2E Tests: 88 passed, 1 xfailed
 - Tree-sitter: 41 languages, 449 tests
 - Extractors: Python (58), TypeScript (60), Go (55), Rust (55)
+- CallGraphAnalyzer: 74 tests (45 analyzer + 29 MCP tools)
+
+### What was done in Session #20:
+
+1. **CallGraphAnalyzer** (Session #20) - v0.6.0 COMPLETE!
+   - Full call graph analysis for Python, Go, Rust, TypeScript
+   - CallGraphAnalyzer class (1233 lines) with language-specific call detection
+   - Tracks function calls, method calls, constructor calls
+   - Supports qualified names (module.function, obj.method)
+   - 45 comprehensive analyzer tests
+   - 29 MCP tools tests (get_callers, get_callees, get_call_graph)
+   - Integration with FalkorDB for relationship storage
+   - 74 tests total, commit `350a7157`
 
 ### What was done in Session #19:
 
-1. **RustExtractor** (Session #19)
+2. **RustExtractor** (Session #19)
    - Full Rust AST support
    - Functions (fn) with parameters and return types
    - impl blocks with method extraction
@@ -70,23 +83,20 @@
 
 ---
 
-## NEXT: Issue #24 - CallGraphAnalyzer
+## NEXT: v0.7.0 - Search Excellence
 
-**Goal**: Track function calls across codebase and build call graph
+**v0.6.0 is COMPLETE!** Next milestone focuses on search improvements.
 
-**Features to implement:**
-- Detect function/method call sites in source code
-- Build caller/callee relationships
-- Integrate with existing extractors (Python, TypeScript, Go, Rust)
-- Store call graph in FalkorDB knowledge graph
-- Support cross-file call tracking
-- Handle dynamic calls where possible
+**Check available issues:**
+```bash
+gh issue list --state open --label "v0.7.0"
+```
 
-**Target**: 30+ tests
-
-**Reference:**
-- Use tree-sitter call_expression nodes
-- Leverage existing ExtractedCode data from extractors
+**v0.7.0 focuses on:**
+- Enhanced semantic search
+- Better code search with AST awareness
+- Search result ranking improvements
+- Query optimization
 
 ---
 
@@ -100,7 +110,9 @@ src/zapomni_core/treesitter/
 │   ├── python.py         # PythonExtractor - DONE
 │   ├── typescript.py     # TypeScriptExtractor - DONE
 │   ├── go.py             # GoExtractor - DONE
-│   └── rust.py           # RustExtractor - DONE ✅
+│   └── rust.py           # RustExtractor - DONE
+├── analyzers/
+│   └── call_graph.py     # CallGraphAnalyzer - DONE ✅
 ├── parser/
 │   └── registry.py       # LanguageParserRegistry
 └── models.py             # ExtractedCode, etc.
@@ -112,8 +124,8 @@ src/zapomni_core/treesitter/
 cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
-make test                     # Should see 2307 passed
-gh issue view 23              # View Issue #23 details
+make test                     # Should see 2436 passed
+gh issue list --state open    # View available issues
 ```
 
 ---
@@ -182,13 +194,14 @@ src/
 
 ---
 
-## v0.6.0 PROGRESS CHECKLIST
+## v0.6.0 PROGRESS CHECKLIST (COMPLETE!)
 
 - [x] Issue #22: GoExtractor - **COMPLETE** (55 tests)
 - [x] Issue #23: RustExtractor - **COMPLETE** (55 tests)
-- [ ] Issue #24: CallGraphAnalyzer - **TODO**
-- [x] All tests passing (2362 unit + 10 integration)
+- [x] Issue #24: CallGraphAnalyzer - **COMPLETE** (74 tests)
+- [x] All tests passing (2436 unit + 11 integration)
 - [x] Documentation updated
+- [x] **v0.6.0 MILESTONE COMPLETE!**
 
 ---
 
@@ -196,7 +209,8 @@ src/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#19** | 2025-11-29 | Issue #23 | **RustExtractor COMPLETE (55 tests)** |
+| **#20** | 2025-11-29 | Issue #24 | **CallGraphAnalyzer COMPLETE (74 tests), v0.6.0 DONE!** |
+| #19 | 2025-11-29 | Issue #23 | RustExtractor COMPLETE (55 tests) |
 | #18 | 2025-11-28 | Issue #22 | GoExtractor COMPLETE (55 tests) |
 | #17 | 2025-11-28 | Issue #21 | Tree-sitter Integration COMPLETE |
 | #16 | 2025-11-28 | Issue #20 | TypeScriptExtractor COMPLETE |
@@ -213,4 +227,4 @@ src/
 
 ---
 
-**Good luck, AI Agent! Focus on Issue #24 (CallGraphAnalyzer) to complete v0.6.0!**
+**v0.6.0 Complete! Good luck with v0.7.0 - Search Excellence!**
