@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence
 
 from zapomni_core.exceptions import ProcessingError, ValidationError
 from zapomni_db.models import Chunk
@@ -26,7 +26,9 @@ except Exception:  # pragma: no cover - environment without tiktoken
     _TIKTOKEN_AVAILABLE = False
 
 try:  # pragma: no cover - third-party import
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain.text_splitter import (  # type: ignore[import-not-found]
+        RecursiveCharacterTextSplitter,
+    )
 
     _LANGCHAIN_AVAILABLE = True
 except Exception:  # pragma: no cover - environment without langchain
@@ -138,7 +140,7 @@ class SemanticChunker:
         self.separators: List[str] = separators or ["\n\n", "\n", ". ", "! ", "? "]
 
         if _TIKTOKEN_AVAILABLE:  # pragma: no cover - external dependency
-            self.tokenizer = tiktoken.get_encoding("cl100k_base")  # type: ignore[arg-type]
+            self.tokenizer: Any = tiktoken.get_encoding("cl100k_base")
         else:
             self.tokenizer = SimpleTokenizer()
 

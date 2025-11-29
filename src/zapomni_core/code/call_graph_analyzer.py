@@ -29,12 +29,12 @@ logger = structlog.get_logger()
 
 # Optional NetworkX support for advanced graph operations
 try:
-    import networkx as nx
+    import networkx as nx  # type: ignore[import-untyped]
 
     HAS_NETWORKX = True
 except ImportError:
     HAS_NETWORKX = False
-    nx = None  # type: ignore
+    nx = None  # type: ignore[assignment]
 
 
 # ============================================================================
@@ -447,7 +447,7 @@ class CallGraphAnalyzer:
                     col_offset=node.col_offset,
                     args=args,
                     decorators=decorators,
-                    docstring=docstring,
+                    docstring=str(docstring) if docstring is not None else None,
                 )
 
                 functions[node.name] = func_def
@@ -524,6 +524,7 @@ class CallGraphAnalyzer:
                 """Initialize call visitor."""
                 self.current_function = "<module>"
                 self.calls_list: List[FunctionCall] = []
+                self.imports: Dict[str, ImportMapping] = {}
 
             def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
                 """Visit a function definition."""

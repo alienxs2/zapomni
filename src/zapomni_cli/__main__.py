@@ -14,7 +14,7 @@ from pathlib import Path
 from zapomni_cli.install_hooks import install_hooks_command
 
 
-def main():
+def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(prog="zapomni", description="Zapomni MCP Server CLI")
 

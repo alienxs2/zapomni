@@ -48,7 +48,7 @@ class Memory(BaseModel):
 
     @field_validator("chunks")
     @classmethod
-    def validate_chunks(cls, v):
+    def validate_chunks(cls, v: List[str]) -> List[str]:
         """Ensure chunks are not empty."""
         if not v:
             raise ValueError("chunks list cannot be empty")
@@ -56,7 +56,7 @@ class Memory(BaseModel):
 
     @field_validator("embeddings")
     @classmethod
-    def validate_embeddings(cls, v):
+    def validate_embeddings(cls, v: List[List[float]]) -> List[List[float]]:
         """Ensure embeddings are not empty."""
         if not v:
             raise ValueError("embeddings list cannot be empty")

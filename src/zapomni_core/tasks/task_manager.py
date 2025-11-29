@@ -152,11 +152,13 @@ class TaskManager:
         self._task_ttl = task_ttl
         self.tasks: Dict[str, TaskInfo] = {}
         self._running_tasks: Set[str] = set()
-        self._asyncio_tasks: Dict[str, asyncio.Task] = {}
+        self._asyncio_tasks: Dict[str, asyncio.Task[Any]] = {}
         # Queue can hold up to max_concurrent pending tasks
-        self._queue: asyncio.Queue[tuple[str, Coroutine]] = asyncio.Queue(maxsize=max_concurrent)
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._worker_tasks: Set[asyncio.Task] = set()
+        self._queue: asyncio.Queue[tuple[str, Coroutine[Any, Any, Any]]] = asyncio.Queue(
+            maxsize=max_concurrent
+        )
+        self._cleanup_task: Optional[asyncio.Task[None]] = None
+        self._worker_tasks: Set[asyncio.Task[None]] = set()
 
         logger.info(
             "TaskManager initialized",
@@ -167,7 +169,7 @@ class TaskManager:
     async def submit_task(
         self,
         task_id: str,
-        coro: Coroutine,
+        coro: Coroutine[Any, Any, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """

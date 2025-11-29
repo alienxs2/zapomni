@@ -7,6 +7,8 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
+from typing import Any
+
 from zapomni_core.exceptions import ZapomniError
 
 
@@ -26,7 +28,7 @@ class TaskError(ZapomniError):
         correlation_id: UUID for tracing
     """
 
-    def __init__(self, message: str, error_code: str = "TASK_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "TASK_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = False
 
@@ -39,7 +41,7 @@ class TaskNotFoundError(TaskError):
     Not transient (invalid task ID should not be retried).
     """
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message=message, error_code="TASK_003", **kwargs)
         self.is_transient = False
 
@@ -52,6 +54,6 @@ class TaskQueueFullError(TaskError):
     Transient (can retry after task completion).
     """
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message=message, error_code="TASK_002", **kwargs)
         self.is_transient = True

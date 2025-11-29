@@ -371,7 +371,7 @@ class ZapomniSettings(BaseSettings):
 
     @field_validator("chunk_overlap")
     @classmethod
-    def validate_chunk_overlap(cls, v: int, info) -> int:
+    def validate_chunk_overlap(cls, v: int, info: Any) -> int:
         """
         Validate chunk overlap is reasonable relative to chunk_size.
 

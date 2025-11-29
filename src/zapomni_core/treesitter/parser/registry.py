@@ -53,6 +53,7 @@ class LanguageParserRegistry:
     """
 
     _instance: Optional["LanguageParserRegistry"] = None
+    _initialized: bool = False
 
     def __new__(cls) -> "LanguageParserRegistry":
         """

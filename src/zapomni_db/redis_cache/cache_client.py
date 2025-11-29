@@ -198,6 +198,12 @@ class RedisClient:
             self._logger.error("unexpected_error_during_init", error=str(e))
             raise redis.ConnectionError(f"Unexpected error during connection init: {e}")
 
+    def _ensure_client(self) -> Redis:  # type: ignore[type-arg]
+        """Ensure client is initialized and return it."""
+        if self.client is None:
+            raise CacheError("Redis client is not initialized")
+        return self.client
+
     def ping(self) -> bool:
         """
         Test Redis connectivity with ping command.
@@ -209,7 +215,8 @@ class RedisClient:
             CacheError: If ping fails after retries
         """
         try:
-            response = self.client.ping()
+            client = self._ensure_client()
+            response = client.ping()
             self._logger.debug("ping_success", response=str(response))
             return response is True or response == b"PONG" or response == "PONG"
         except redis.RedisError as e:
@@ -256,10 +263,11 @@ class RedisClient:
 
         retry_count = 0
 
+        client = self._ensure_client()
         while retry_count <= self.MAX_RETRIES:
             try:
                 # Get value from Redis
-                data = self.client.get(key)
+                data = client.get(key)
 
                 if data is None:
                     self._logger.debug("cache_miss", key=key)
@@ -292,6 +300,8 @@ class RedisClient:
             except Exception as e:
                 self._logger.error("unexpected_error_get", key=key, error=str(e))
                 raise CacheError(f"Unexpected error during GET: {e}")
+
+        return None  # Should not reach here, but satisfy mypy
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """
@@ -348,11 +358,12 @@ class RedisClient:
             raise
 
         retry_count = 0
+        client = self._ensure_client()
 
         while retry_count <= self.MAX_RETRIES:
             try:
                 # Set in Redis with EX (expiration in seconds)
-                result = self.client.set(key, serialized, ex=effective_ttl)
+                result = client.set(key, serialized, ex=effective_ttl)
 
                 if result:
                     self._logger.debug("cache_set", key=key, ttl=effective_ttl)
@@ -381,6 +392,8 @@ class RedisClient:
             except Exception as e:
                 self._logger.error("unexpected_error_set", key=key, error=str(e))
                 raise CacheError(f"Unexpected error during SET: {e}")
+
+        return False  # Should not reach here, but satisfy mypy
 
     def delete(self, key: str) -> bool:
         """
@@ -415,13 +428,14 @@ class RedisClient:
             raise ValueError("key must be non-empty string")
 
         retry_count = 0
+        client = self._ensure_client()
 
         while retry_count <= self.MAX_RETRIES:
             try:
                 # Delete key from Redis
-                result = self.client.delete(key)
+                result = client.delete(key)
 
-                if result > 0:
+                if int(result) > 0:
                     self._logger.debug("cache_deleted", key=key)
                     return True
                 else:
@@ -449,6 +463,8 @@ class RedisClient:
                 self._logger.error("unexpected_error_delete", key=key, error=str(e))
                 raise CacheError(f"Unexpected error during DELETE: {e}")
 
+        return False  # Should not reach here, but satisfy mypy
+
     def exists(self, key: str) -> bool:
         """
         Check if key exists in cache.
@@ -468,8 +484,9 @@ class RedisClient:
             raise ValueError("key must be non-empty string")
 
         try:
-            result = self.client.exists(key)
-            return result > 0
+            client = self._ensure_client()
+            result = client.exists(key)
+            return int(result) > 0
 
         except redis.RedisError as e:
             self._logger.error("redis_error_exists", key=key, error=str(e))
@@ -519,8 +536,9 @@ class RedisClient:
 
         try:
             # Use scan_iter for cursor-based iteration
+            client = self._ensure_client()
             keys = []
-            for key in self.client.scan_iter(match=pattern, count=count):
+            for key in client.scan_iter(match=pattern, count=count):
                 keys.append(key if isinstance(key, str) else key.decode())
 
             self._logger.debug("scan_complete", pattern=pattern, count=len(keys))
@@ -567,7 +585,8 @@ class RedisClient:
         """
         try:
             # Get INFO from Redis
-            info_dict = self.client.info()
+            client = self._ensure_client()
+            info_dict = client.info()
 
             # Extract memory info
             used_memory = info_dict.get("used_memory", 0)

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from statistics import mean, quantiles
 from typing import Dict, List, Optional
 
-import psutil
+import psutil  # type: ignore[import-untyped]
 
 
 @dataclass

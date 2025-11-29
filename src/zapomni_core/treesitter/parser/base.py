@@ -61,7 +61,7 @@ class BaseLanguageParser(ABC):
         # Validate language is supported
         try:
             # Test that language exists in tree-sitter-language-pack
-            _ = get_language(self.language_name)
+            _ = get_language(self.language_name)  # type: ignore[arg-type]
             self._log.debug("language_validated", language=self.language_name)
         except Exception as e:
             self._log.error(

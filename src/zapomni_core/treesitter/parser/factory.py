@@ -97,7 +97,7 @@ class UniversalLanguageParser(BaseLanguageParser):
         if self._parser is None:
             self._parser = Parser()
             # get_language() will raise an exception if language not supported
-            language = get_language(self._language_name)
+            language = get_language(self._language_name)  # type: ignore[arg-type]
             self._parser.language = language
             self._logger.debug("Created parser for language", language=self._language_name)
         return self._parser

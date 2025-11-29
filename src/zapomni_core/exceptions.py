@@ -95,7 +95,7 @@ class ValidationError(ZapomniError):
     Not transient (user input errors should not be retried).
     """
 
-    def __init__(self, message: str, error_code: str = "VAL_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "VAL_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = False
 
@@ -112,7 +112,7 @@ class ProcessingError(ZapomniError):
     Not transient by default (processing logic errors).
     """
 
-    def __init__(self, message: str, error_code: str = "PROC_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "PROC_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = False
 
@@ -130,7 +130,7 @@ class EmbeddingError(ZapomniError):
     Transient (network/timeout issues are retryable).
     """
 
-    def __init__(self, message: str, error_code: str = "EMB_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "EMB_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = True  # Retryable
 
@@ -147,7 +147,7 @@ class ExtractionError(ZapomniError):
     Transient (LLM errors often transient).
     """
 
-    def __init__(self, message: str, error_code: str = "EXTR_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "EXTR_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = True  # Retryable
 
@@ -165,7 +165,7 @@ class SearchError(ZapomniError):
     Not transient by default.
     """
 
-    def __init__(self, message: str, error_code: str = "SEARCH_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "SEARCH_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = False
 
@@ -180,7 +180,7 @@ class DatabaseError(ZapomniError):
     Not transient by default (most DB errors are not retryable).
     """
 
-    def __init__(self, message: str, error_code: str = "DB_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "DB_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = False
 
@@ -198,7 +198,7 @@ class ConnectionError(DatabaseError):
     Transient (network issues are retryable).
     """
 
-    def __init__(self, message: str, error_code: str = "CONN_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "CONN_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = True  # Retryable
 
@@ -217,8 +217,8 @@ class QueryError(DatabaseError):
     """
 
     def __init__(
-        self, message: str, error_code: str = "QUERY_001", is_timeout: bool = False, **kwargs
-    ):
+        self, message: str, error_code: str = "QUERY_001", is_timeout: bool = False, **kwargs: Any
+    ) -> None:
         """
         Initialize QueryError.
 
@@ -244,6 +244,6 @@ class TimeoutError(ZapomniError):
     Transient (timeouts are retryable).
     """
 
-    def __init__(self, message: str, error_code: str = "TIMEOUT_001", **kwargs):
+    def __init__(self, message: str, error_code: str = "TIMEOUT_001", **kwargs: Any) -> None:
         super().__init__(message=message, error_code=error_code, **kwargs)
         self.is_transient = True  # Retryable

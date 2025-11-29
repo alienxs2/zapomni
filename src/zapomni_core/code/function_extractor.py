@@ -32,7 +32,7 @@ logger = structlog.get_logger()
 
 # Try to import radon for complexity calculation (optional)
 try:
-    from radon.complexity import ComplexityVisitor
+    from radon.complexity import ComplexityVisitor  # type: ignore[import-untyped]
 
     RADON_AVAILABLE = True
 except ImportError:
@@ -340,7 +340,7 @@ class FunctionExtractor:
             start_idx = node.body[0].lineno - 1 if node.body else node.lineno
             end_idx = node.end_lineno  # end_lineno is inclusive
 
-            if start_idx < 0 or end_idx > len(lines):
+            if start_idx < 0 or end_idx is None or end_idx > len(lines):
                 logger.warning(
                     "invalid_line_numbers",
                     start=start_idx,
@@ -411,7 +411,8 @@ class FunctionExtractor:
 
         try:
             visitor = ComplexityVisitor.from_function(node)
-            return visitor.complexity
+            complexity = visitor.complexity
+            return int(complexity) if complexity is not None else None
 
         except Exception as e:
             logger.warning(
@@ -604,7 +605,7 @@ class FunctionExtractor:
         # Add keyword-only defaults
         for arg, default in zip(args_node.kwonlyargs, args_node.kw_defaults or []):
             for param in parameters:
-                if param.name == arg.arg and default:
+                if param.name == arg.arg and default is not None:
                     param.default = ast.unparse(default)
 
         return parameters

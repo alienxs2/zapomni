@@ -9,7 +9,7 @@ License: MIT
 """
 
 import threading
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import structlog
 
@@ -124,7 +124,7 @@ class RuntimeConfig:
                 new_model=model_name,
             )
 
-    def get_all_config(self) -> dict:
+    def get_all_config(self) -> Dict[str, Any]:
         """
         Get all runtime configuration as dictionary.
 

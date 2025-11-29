@@ -8,7 +8,7 @@ Author: Goncharenko Anton aka alienxs2
 License: MIT
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from zapomni_core.exceptions import ProcessingError
 
@@ -41,8 +41,8 @@ class TreeSitterError(ProcessingError):
         self,
         message: str = "Tree-sitter operation failed",
         error_code: str = "TS_001",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize TreeSitterError.
 
@@ -81,8 +81,8 @@ class LanguageNotSupportedError(TreeSitterError):
         language: str,
         message: Optional[str] = None,
         error_code: str = "TS_002",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize LanguageNotSupportedError.
 
@@ -131,8 +131,8 @@ class ParseError(TreeSitterError):
         parse_details: Optional[str] = None,
         message: Optional[str] = None,
         error_code: str = "TS_003",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize ParseError.
 
@@ -189,8 +189,8 @@ class ExtractorNotFoundError(TreeSitterError):
         language: str,
         message: Optional[str] = None,
         error_code: str = "TS_004",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize ExtractorNotFoundError.
 

@@ -41,11 +41,11 @@ class CodeMetadata:
     line_start: int
     line_end: int
     docstring: Optional[str] = None
-    decorators: List[str] = None
+    decorators: Optional[List[str]] = None
     is_private: bool = False
     is_async: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values for optional fields."""
         if self.decorators is None:
             self.decorators = []
@@ -450,7 +450,7 @@ class ASTCodeChunker:
         Returns:
             List of FunctionDef and AsyncFunctionDef nodes
         """
-        functions: List[ast.FunctionDef] = []
+        functions: List[Union[ast.FunctionDef, ast.AsyncFunctionDef]] = []
 
         for node in ast.walk(ast_tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

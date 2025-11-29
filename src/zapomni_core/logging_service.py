@@ -12,7 +12,7 @@ import logging
 import sys
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import structlog
 from structlog.types import Processor
@@ -44,7 +44,7 @@ class LoggingConfig:
     sanitize_sensitive: bool = True
     sensitive_keys: set[str] = field(default_factory=set)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.sensitive_keys:
             self.sensitive_keys = {
                 "password",
@@ -451,7 +451,7 @@ class LoggingService:
         if not isinstance(data, dict):
             return data
 
-        sanitized = {}
+        sanitized: Dict[str, Any] = {}
 
         for key, value in data.items():
             # Check if key is sensitive

@@ -59,7 +59,7 @@ class VectorSearch:
         ```
     """
 
-    def __init__(self, db_client, embedder):
+    def __init__(self, db_client: Any, embedder: Any) -> None:
         """
         Initialize VectorSearch with dependencies.
 

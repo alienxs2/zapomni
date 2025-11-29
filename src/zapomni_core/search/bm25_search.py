@@ -64,7 +64,7 @@ class BM25Search:
         ```
     """
 
-    def __init__(self, db_client):
+    def __init__(self, db_client: Any) -> None:
         """
         Initialize BM25Search with dependencies.
 
@@ -309,10 +309,10 @@ class BM25Search:
             normalized_scores = [(s - min_score) / (max_score - min_score) for s in scores]
 
         # STEP 7: CREATE RESULTS WITH SCORES AND INDICES
-
+        documents = self._documents or []
         results = [
-            {"text": self._documents[i], "score": normalized_scores[i], "index": i}
-            for i in range(len(self._documents))
+            {"text": documents[i], "score": normalized_scores[i], "index": i}
+            for i in range(len(documents))
         ]
 
         # STEP 8: SORT BY SCORE DESCENDING

@@ -69,7 +69,7 @@ class HybridSearch:
         ```
     """
 
-    def __init__(self, vector_search, bm25_search):
+    def __init__(self, vector_search: Any, bm25_search: Any) -> None:
         """
         Initialize HybridSearch with search dependencies.
 
@@ -282,7 +282,7 @@ class HybridSearch:
         )
 
         # STEP 6: SORT BY RRF SCORE AND APPLY LIMIT
-        merged_results.sort(key=lambda x: x.similarity_score, reverse=True)
+        merged_results.sort(key=lambda x: x.similarity_score or 0.0, reverse=True)
         final_results = merged_results[:limit]
 
         logger.info(
@@ -335,6 +335,8 @@ class HybridSearch:
         # STEP 1: PROCESS VECTOR RESULTS
         for rank, result in enumerate(vector_results, start=1):
             chunk_id = result.chunk_id
+            if chunk_id is None:
+                continue  # Skip results without chunk_id
             vector_rrf = 1.0 / (k + rank)
             combined_score = alpha * vector_rrf
 
