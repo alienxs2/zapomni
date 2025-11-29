@@ -114,7 +114,9 @@ class TestSchemaManagerIntegration:
 
         # Check that Memory and Chunk labels have indexes
         index_labels = [row[0] for row in indexes if len(row) > 0]
-        assert "Memory" in index_labels or "Chunk" in index_labels, "Expected Memory or Chunk indexes"
+        assert (
+            "Memory" in index_labels or "Chunk" in index_labels
+        ), "Expected Memory or Chunk indexes"
 
     def test_init_schema_idempotent_real_db(self, test_graph):
         """Test that calling init_schema multiple times is safe."""

@@ -543,9 +543,7 @@ class CrossEncoderReranker:
                 return list(normalized_arr.tolist())
             else:
                 # Handle list of scores
-                normalized_list: List[float] = [
-                    float(1 / (1 + np.exp(-s))) for s in raw_scores
-                ]
+                normalized_list: List[float] = [float(1 / (1 + np.exp(-s))) for s in raw_scores]
                 return normalized_list
 
         except Exception as e:

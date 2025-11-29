@@ -298,7 +298,9 @@ class BuildGraphTool:
 
         return text, options
 
-    async def _extract_entities(self, text: str, confidence_threshold: float) -> Tuple[List[Any], float]:
+    async def _extract_entities(
+        self, text: str, confidence_threshold: float
+    ) -> Tuple[List[Any], float]:
         """
         Extract entities from text using EntityExtractor.
 

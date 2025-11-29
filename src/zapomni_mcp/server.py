@@ -375,9 +375,7 @@ class MCPServer:
             for tool in self._tools.values():
 
                 @self._server.call_tool()  # type: ignore[misc]
-                async def handle_call_tool(
-                    name: str, arguments: dict[str, Any]
-                ) -> CallToolResult:
+                async def handle_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
                     """Handle tool call from MCP client."""
                     self._request_count += 1
 
@@ -387,7 +385,11 @@ class MCPServer:
                             return CallToolResult(
                                 content=cast(
                                     list[MCPContent],
-                                    [TextContent(type="text", text=f"Error: Unknown tool '{name}'")],
+                                    [
+                                        TextContent(
+                                            type="text", text=f"Error: Unknown tool '{name}'"
+                                        )
+                                    ],
                                 ),
                                 isError=True,
                             )
@@ -504,9 +506,7 @@ class MCPServer:
 
         # Register tools with MCP server (same as stdio mode)
         @self._server.call_tool()  # type: ignore[misc]
-        async def handle_call_tool(
-            name: str, arguments: dict[str, Any]
-        ) -> CallToolResult:
+        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             """Handle tool call from MCP client."""
             self._request_count += 1
 
