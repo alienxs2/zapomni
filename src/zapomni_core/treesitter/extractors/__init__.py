@@ -9,6 +9,7 @@ Classes:
     PythonExtractor: Specialized extractor for Python with full AST support.
     TypeScriptExtractor: Specialized extractor for TypeScript/JavaScript.
     GoExtractor: Specialized extractor for Go with full AST support.
+    RustExtractor: Specialized extractor for Rust with full AST support.
 
 Constants:
     FUNCTION_NODE_TYPES: Set of AST node types for function definitions.
@@ -23,6 +24,12 @@ Constants:
     GO_TYPE_TYPES: Go type definition node types.
     GO_STRUCT_TYPES: Go struct node types.
     GO_INTERFACE_TYPES: Go interface node types.
+    RUST_FUNCTION_TYPES: Rust function node types.
+    RUST_STRUCT_TYPES: Rust struct node types.
+    RUST_TRAIT_TYPES: Rust trait node types.
+    RUST_ENUM_TYPES: Rust enum node types.
+    RUST_MACRO_TYPES: Rust macro node types.
+    RUST_IMPL_TYPES: Rust impl block node types.
 
 Author: Goncharenko Anton aka alienxs2
 License: MIT
@@ -50,6 +57,15 @@ from .go import (
     GO_STRUCT_TYPES,
     GO_INTERFACE_TYPES,
 )
+from .rust import (
+    RustExtractor,
+    RUST_FUNCTION_TYPES,
+    RUST_STRUCT_TYPES,
+    RUST_TRAIT_TYPES,
+    RUST_ENUM_TYPES,
+    RUST_MACRO_TYPES,
+    RUST_IMPL_TYPES,
+)
 
 __all__ = [
     # Base class
@@ -62,6 +78,8 @@ __all__ = [
     "TypeScriptExtractor",
     # Go extractor
     "GoExtractor",
+    # Rust extractor
+    "RustExtractor",
     # Node type sets
     "FUNCTION_NODE_TYPES",
     "CLASS_NODE_TYPES",
@@ -78,4 +96,11 @@ __all__ = [
     "GO_TYPE_TYPES",
     "GO_STRUCT_TYPES",
     "GO_INTERFACE_TYPES",
+    # Rust constants
+    "RUST_FUNCTION_TYPES",
+    "RUST_STRUCT_TYPES",
+    "RUST_TRAIT_TYPES",
+    "RUST_ENUM_TYPES",
+    "RUST_MACRO_TYPES",
+    "RUST_IMPL_TYPES",
 ]
