@@ -53,12 +53,7 @@ jobs:
       - name: Test MCP server startup
         run: |
           # Create a temporary test to verify server can initialize
-          python -c "
-from zapomni_mcp.server import main
-import inspect
-print('MCP server main function found:', callable(main))
-print('Server module loaded successfully')
-          "
+          python -c "from zapomni_mcp.server import main; import inspect; print('MCP server main function found:', callable(main)); print('Server module loaded successfully')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
