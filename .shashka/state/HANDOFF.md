@@ -1,49 +1,53 @@
 # Session Handoff
 
-**Last Session**: #18 (2025-11-28)
-**Next Session**: #19
+**Last Session**: #19 (2025-11-29)
+**Next Session**: #20
 **Focus**: v0.6.0 - Code Intelligence (continue)
 
 ---
 
 ## For Next AI Agent / PM
 
-### v0.6.0 Progress: 1/3 Issues Done
+### v0.6.0 Progress: 2/3 Issues Done
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
 | #22 | GoExtractor | **COMPLETE** ✅ | 55 |
-| #23 | RustExtractor | **TODO** | - |
+| #23 | RustExtractor | **COMPLETE** ✅ | 55 |
 | #24 | CallGraphAnalyzer | **TODO** | - |
 
-**Total Tests**: 2307 unit + 10 integration = 2317+ passing
+**Total Tests**: 2362 unit + 10 integration = 2372+ passing
 
 ---
 
-## What Was Done in Session #18
+## What Was Done in Session #19
 
-**Issue #22 (GoExtractor) COMPLETE:**
+**Issue #23 (RustExtractor) COMPLETE:**
 
-1. Created `/home/dev/zapomni/src/zapomni_core/treesitter/extractors/go.py` (1093 lines):
-   - Full Go AST support
-   - Functions and methods with receiver types (pointer/value)
-   - Structs with fields and embedded types
-   - Interfaces with methods and embedded interfaces
-   - Go doc comments extraction (// style)
-   - Private detection (lowercase = unexported)
-   - Generics support (Go 1.18+ type parameters)
-   - Multiple and named return values
+1. Created `/home/dev/zapomni/src/zapomni_core/treesitter/extractors/rust.py` (1324 lines):
+   - Full Rust AST support
+   - Functions (fn) with parameters and return types
+   - impl blocks with method extraction
+   - self/&self/&mut self receiver detection
+   - Structs with field names and derive attributes
+   - Traits (as INTERFACE type) with method signatures
+   - Supertraits in bases list
+   - Enums with variant names and data variants
+   - Doc comments (/// style) extraction
+   - Visibility detection (pub, pub(crate), pub(super) vs private)
+   - Generics and lifetimes extraction
+   - Attributes (#[derive], #[cfg], etc.) as decorators
    - Auto-registration in LanguageParserRegistry
 
-2. Created `/home/dev/zapomni/tests/unit/treesitter/extractors/test_go.py` (1052 lines):
+2. Created `/home/dev/zapomni/tests/unit/treesitter/extractors/test_rust.py` (999 lines):
    - 55 comprehensive tests
    - All tests passing
 
 3. Updated config files:
-   - `src/zapomni_core/treesitter/config.py` - added "go" to LANGUAGES_WITH_EXTRACTORS
-   - `src/zapomni_core/treesitter/extractors/__init__.py` - added GoExtractor import
+   - `src/zapomni_core/treesitter/config.py` - added "rust" to LANGUAGES_WITH_EXTRACTORS
+   - `src/zapomni_core/treesitter/extractors/__init__.py` - added RustExtractor imports
 
-4. Commit: `9621168c feat(treesitter): Add GoExtractor with full Go AST support (Issue #22)`
+4. Commit: `5e15f26e feat(treesitter): Add RustExtractor with full Rust AST support (Issue #23)`
 
 ---
 
@@ -55,7 +59,7 @@ git pull origin main
 source .venv/bin/activate
 
 # Verify tests pass
-make test                              # 2307 unit tests
+make test                              # 2362 unit tests
 pytest tests/integration/ -v           # 10 integration tests
 
 # Check open issues for v0.6.0
@@ -70,14 +74,14 @@ make server                            # MCP server
 
 ## Next Issues to Work On
 
-### Issue #23: RustExtractor
+### Issue #24: CallGraphAnalyzer
 ```bash
-gh issue view 23
+gh issue view 24
 ```
-- Implement specialized Rust extractor
-- Functions (fn), impl blocks, traits, macros
-- Follow GoExtractor pattern
-- Target: 50+ tests
+- Track function calls across codebase
+- Build call graph relationships
+- Use extracted functions from PythonExtractor, TypeScriptExtractor, GoExtractor, RustExtractor
+- Detect caller/callee relationships
 
 ### Issue #24: CallGraphAnalyzer
 ```bash
