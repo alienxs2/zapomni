@@ -374,7 +374,7 @@ class MCPServer:
             # Register tools with MCP server
             for tool in self._tools.values():
 
-                @self._server.call_tool()  # type: ignore[misc]
+                @self._server.call_tool()  # type: ignore
                 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
                     """Handle tool call from MCP client."""
                     self._request_count += 1
@@ -420,7 +420,7 @@ class MCPServer:
                             isError=True,
                         )
 
-                @self._server.list_tools()  # type: ignore[misc, no-untyped-call]
+                @self._server.list_tools()  # type: ignore
                 async def handle_list_tools() -> list[Tool]:
                     """List all available tools."""
                     return [
@@ -505,7 +505,7 @@ class MCPServer:
         )
 
         # Register tools with MCP server (same as stdio mode)
-        @self._server.call_tool()  # type: ignore[misc]
+        @self._server.call_tool()  # type: ignore
         async def handle_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             """Handle tool call from MCP client."""
             self._request_count += 1
@@ -547,7 +547,7 @@ class MCPServer:
                     isError=True,
                 )
 
-        @self._server.list_tools()  # type: ignore[misc, no-untyped-call]
+        @self._server.list_tools()  # type: ignore
         async def handle_list_tools() -> list[Tool]:
             """List all available tools."""
             return [
