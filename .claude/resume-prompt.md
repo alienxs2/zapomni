@@ -1,7 +1,7 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-11-29 (Session #21)
-**Project Status**: v0.6.0 COMPLETE | CI/CD Fixed (Build SUCCESS)
+**Last Updated**: 2025-11-29 (Session #22)
+**Project Status**: v0.6.0 COMPLETE | CI/CD Fixed | mypy Improved
 **Version**: v0.6.0
 **Branch**: `main`
 
@@ -11,31 +11,28 @@
 
 ### Current State Summary
 
-**Session #21: CI/CD Fixes - Build & Package now works!**
+**Session #22: mypy Fixes + Integration Tests**
 
-Fixed 7 issues:
-1. build.yml YAML syntax error
-2. build.yml matrix reference
-3. Deprecated GitHub Actions (v3 -> v4/v5)
-4. tests.yml redis-tools
-5. 200+ flake8 errors
-6. black/isort formatting
-7. spaCy test fixture
+Fixed in parallel:
+1. **mypy errors**: 64 fixed (205 → 141)
+2. **Integration tests**: 115 pass (51 skipped for CI)
 
 **CI/CD Status:**
 | Workflow | Status |
 |----------|--------|
 | **Build & Package** | **SUCCESS** |
-| Lint & Code Quality | PARTIAL (mypy 205 errors) |
-| Tests | PARTIAL (integration infra) |
+| Lint & Code Quality | IMPROVED (mypy: 141 errors) |
+| Tests | **IMPROVED** (Integration tests work) |
 
 **Test Status:**
 - Unit Tests: **2436 passed**, 11 skipped
-- Integration Tests: **11 passed** (27 skip in CI)
+- Integration Tests: **115 passed** (51 skip in CI)
 - E2E Tests: 88 passed, 1 xfailed
 
 ### Previous Sessions:
 
+- **Session #22** - mypy + Integration tests
+- **Session #21** - CI/CD Fixes (Build SUCCESS)
 - **v0.6.0 COMPLETE** (Sessions #18-20)
   - GoExtractor (55 tests)
   - RustExtractor (55 tests)
@@ -45,16 +42,17 @@ Fixed 7 issues:
 
 ## NEXT STEPS (Choose One)
 
-### Option 1: Fix mypy errors
+### Option 1: Continue mypy fixes
 ```bash
-mypy src/                              # 205 errors
+mypy src/                              # 141 errors
 ```
+Remaining categories:
+- External library type stubs
+- Complex type inference in processors
+- Repository indexer Path/str mismatches
+- MCP server return types
 
-### Option 2: Fix integration tests
-- FalkorDB SHOW INDEXES issue
-- SSE tests need running server
-
-### Option 3: Start v0.7.0 - Search Excellence
+### Option 2: Start v0.7.0 - Search Excellence
 ```bash
 gh issue list --state open --label "v0.7.0"
 ```
@@ -101,7 +99,7 @@ gh run list --limit 5         # Check CI status
 │   ├── HANDOFF.md        # Session handoff (START HERE)
 │   └── SNAPSHOT.md       # Project snapshot
 ├── log/
-│   └── 2025-11-29-session-21.md  # Latest session log
+│   └── 2025-11-29-session-22.md  # Latest session log
 └── config.yaml           # Project config
 ```
 
@@ -123,6 +121,9 @@ gh run list --limit 5         # Check CI status
 make test                     # All unit tests (2436)
 make lint                     # Run linter
 make format                   # Format code
+
+# Type checking
+mypy src/                     # 141 errors remaining
 
 # Tree-sitter tests
 pytest tests/unit/treesitter/extractors/  # Extractor tests
@@ -159,7 +160,8 @@ src/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#21** | 2025-11-29 | CI/CD Fixes | **Build SUCCESS, 130+ files fixed** |
+| **#22** | 2025-11-29 | mypy + Integration | **64 mypy fixed, Integration working** |
+| #21 | 2025-11-29 | CI/CD Fixes | Build SUCCESS, 130+ files fixed |
 | #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer COMPLETE, v0.6.0 DONE! |
 | #19 | 2025-11-29 | Issue #23 | RustExtractor COMPLETE (55 tests) |
 | #18 | 2025-11-28 | Issue #22 | GoExtractor COMPLETE (55 tests) |
@@ -178,4 +180,4 @@ src/
 
 ---
 
-**Build works! Next: mypy fixes, integration tests, or v0.7.0 features.**
+**mypy improved! Integration tests working! Next: more type fixes or v0.7.0 features.**

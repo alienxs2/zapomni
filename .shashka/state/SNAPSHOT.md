@@ -2,15 +2,15 @@
 
 **Project**: Zapomni
 **Version**: v0.6.0
-**Status**: v0.6.0 COMPLETE | CI/CD Fixed
-**Last Updated**: 2025-11-29 (Session #21)
+**Status**: v0.6.0 COMPLETE | CI/CD Fixed | mypy Improved
+**Last Updated**: 2025-11-29 (Session #22)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
 | Unit Tests | 2436 passed, 11 skipped |
-| Integration Tests | 11 passed (27 skipped in CI) |
+| Integration Tests | 115 passed (51 skipped in CI) |
 | E2E Tests | 88 passed, 1 xfailed |
 | Tree-sitter | 41 languages, 449 tests |
 | PythonExtractor | 58 tests, full AST support |
@@ -28,42 +28,46 @@
 | Workflow | Status | Notes |
 |----------|--------|-------|
 | **Build & Package** | **SUCCESS** | Fixed in Session #21 |
-| Lint & Code Quality | PARTIAL | mypy has 205 type errors (pre-existing) |
+| Lint & Code Quality | IMPROVED | mypy: 205 → 141 errors |
 | Tests | PARTIAL | Integration tests need infrastructure |
 
-## Session #21 Summary - CI/CD Fixes
+## Session #22 Summary - Type Annotations & Integration Tests
 
-**CI/CD Workflow Fixes (7 commits):**
+**Two parallel improvements:**
 
-1. **build.yml Fixes:**
-   - Fixed YAML syntax error (multiline Python code)
-   - Fixed undefined `matrix.python-version` reference
-   - Added `LoggingService.configure_logging()` for server test
+### 1. mypy Type Errors (64 fixed)
 
-2. **Action Updates:**
-   - `actions/setup-python`: v4 -> v5
-   - `actions/upload-artifact`: v3 -> v4
-   - `actions/download-artifact`: v3 -> v4
-   - `codecov/codecov-action`: v3 -> v4
+| Category | Fixed |
+|----------|-------|
+| Exception `__init__` methods | 16 |
+| Generic type parameters | 6 |
+| External library type: ignore | 4 |
+| redis_cache client | 10+ |
+| Search module types | 5 |
+| Other modules | 20+ |
 
-3. **tests.yml Fix:**
-   - Added `apt-get install redis-tools` for service health checks
+**Key changes:**
+- Added `**kwargs: Any` and `-> None` to exception constructors
+- Added generic params to `asyncio.Task[Any]`, `Queue[...]`, `Coroutine[...]`
+- Added `type: ignore[import-untyped]` for psutil, networkx, radon, langchain
+- Created `_ensure_client()` helper in RedisClient
+- Fixed `Optional[List[str]]` for decorators field
 
-4. **Code Quality Fixes:**
-   - Fixed 200+ flake8 errors (E501, F401, F841, E712, E713, F541)
-   - Applied black formatting to all files
-   - Applied isort formatting to all files
-   - Fixed spaCy test fixture (skip if model not installed)
+### 2. Integration Tests Fixed
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| FalkorDB `SHOW INDEXES` | FalkorDB uses different syntax | `CALL db.indexes()` |
+| SSE session_manager None | create_sse_app didn't create SessionManager | Create and attach |
+| DNS rebinding blocking | TestClient uses "testserver" | Disable protection in tests |
+| Pydantic Chunk validation | Missing required fields | Use correct model fields |
+| datetime() function | FalkorDB doesn't support | Pass timestamp as parameter |
 
 **Commits:**
-- `ee1267ff` - fix(ci): Fix GitHub Actions workflow failures
-- `3406694b` - fix(ci): Fix YAML syntax error in build.yml
-- `2148573f` - fix(ci): Update deprecated GitHub Actions to latest versions
-- `2ab1fe6e` - fix(ci): Fix all flake8 errors and build test
-- `c7b95c5f` - fix(ci): Apply black formatting and fix spaCy test fixture
-- `e6938111` - fix(ci): Apply isort formatting
+- `190c85a9` - fix(integration): Fix FalkorDB compatibility and SSE tests
+- `f4b1ed95` - fix(types): Fix 64 mypy type annotation errors
 
-**Files Changed:** 130+ files
+**Files Changed:** 28 files
 
 ---
 
@@ -112,8 +116,8 @@ zapomni/
 
 ## Known Issues (for next session)
 
-1. **mypy** - 205 type annotation errors
-2. **Integration tests** - FalkorDB/SSE infrastructure issues in CI
+1. **mypy** - 141 type annotation errors remaining (mostly external libs)
+2. **Integration tests** - 51 skipped in CI (require infrastructure)
 
 ## Key Documents
 

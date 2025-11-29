@@ -19,7 +19,7 @@ language:
 
 # Session tracking
 session:
-  current: 21
+  current: 22
   last_date: "2025-11-29"
 
 # Bug tracking - ALL FIXED!

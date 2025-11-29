@@ -1,63 +1,49 @@
 # Session Handoff
 
-**Last Session**: #21 (2025-11-29)
-**Next Session**: #22
-**Focus**: Fix remaining CI/CD issues (mypy, integration tests) OR v0.7.0 features
+**Last Session**: #22 (2025-11-29)
+**Next Session**: #23
+**Focus**: Continue mypy fixes OR v0.7.0 features
 
 ---
 
 ## For Next AI Agent / PM
 
-### Session #21 Summary - CI/CD Fixes
+### Session #22 Summary - Type Annotations & Integration Tests
 
-**Build & Package workflow now works!**
+**Two parallel improvements completed:**
 
-Fixed issues:
-1. build.yml YAML syntax error
-2. build.yml undefined matrix reference
-3. Deprecated GitHub Actions (v3 -> v4/v5)
-4. tests.yml missing redis-tools
-5. 200+ flake8 errors
-6. black/isort formatting
-7. spaCy test fixture
+1. **mypy Type Errors**: 64 fixed (205 → 141)
+2. **Integration Tests**: All 115 pass (51 skipped for CI)
 
 ### Current CI/CD Status
 
 | Workflow | Status | Action Needed |
 |----------|--------|---------------|
 | **Build & Package** | **SUCCESS** | None |
-| Lint & Code Quality | PARTIAL | Fix 205 mypy errors |
-| Tests | PARTIAL | Fix integration test infrastructure |
+| Lint & Code Quality | IMPROVED | 141 mypy errors remain |
+| Tests | **IMPROVED** | Integration tests work locally |
 
 ---
 
-## What Was Done in Session #21
+## What Was Done in Session #22
 
-**7 commits to fix CI/CD:**
+**2 commits:**
 
-1. `ee1267ff` - Fix GitHub Actions workflow failures
-   - Fixed black formatting (49 files)
-   - Fixed build.yml matrix reference
-   - Added redis-tools installation
+1. `190c85a9` - fix(integration): Fix FalkorDB compatibility and SSE tests
+   - FalkorDB: `SHOW INDEXES` → `CALL db.indexes()`
+   - SSE: SessionManager creation in create_sse_app
+   - DNS rebinding protection disabled in tests
+   - Pydantic Chunk model fixes
+   - 7 files changed
 
-2. `3406694b` - Fix YAML syntax error in build.yml
-   - Multiline Python -> single line
+2. `f4b1ed95` - fix(types): Fix 64 mypy type annotation errors
+   - Exception `__init__` methods with `**kwargs: Any`
+   - Generic type parameters for asyncio types
+   - `type: ignore[import-untyped]` for external libs
+   - redis_cache `_ensure_client()` helper
+   - 21 files changed
 
-3. `2148573f` - Update deprecated GitHub Actions
-   - setup-python: v4 -> v5
-   - upload-artifact: v3 -> v4
-   - download-artifact: v3 -> v4
-   - codecov-action: v3 -> v4
-
-4. `2ab1fe6e` - Fix all flake8 errors and build test
-   - 200+ flake8 errors fixed
-   - Added LoggingService.configure_logging()
-
-5. `c7b95c5f` - Apply black formatting and fix spaCy test fixture
-
-6. `e6938111` - Apply isort formatting
-
-**Files Changed:** 130+ files
+**Files Changed:** 28 total
 
 ---
 
@@ -71,6 +57,9 @@ source .venv/bin/activate
 # Verify tests pass locally
 make test                              # 2436 unit tests
 
+# Check mypy status
+mypy src/                              # 141 errors
+
 # Check CI status
 gh run list --limit 5
 
@@ -83,22 +72,18 @@ make server                            # MCP server
 
 ## Next Steps (Choose One)
 
-### Option 1: Fix mypy errors (recommended)
+### Option 1: Continue mypy fixes
 ```bash
-mypy src/                              # Shows 205 errors
+mypy src/                              # Shows 141 errors
 ```
-Focus areas:
-- Missing type annotations
-- Incompatible types
-- Generic type parameters
+Remaining error categories:
+- External library type stubs (embedding_cache, html_processor)
+- Complex type inference in processors
+- Repository indexer Path/str mismatches
+- MCP server return type annotations
+- FalkorDB client generics
 
-### Option 2: Fix integration tests
-Issues:
-- FalkorDB `SHOW INDEXES` not supported
-- SSE tests need running server
-- Pydantic validation errors
-
-### Option 3: Start v0.7.0 - Search Excellence
+### Option 2: Start v0.7.0 - Search Excellence
 ```bash
 gh issue list --state open --label "v0.7.0"
 ```
@@ -120,11 +105,11 @@ zapomni/
 │   └── zapomni_db/
 ├── .github/workflows/            # CI/CD (Build works!)
 │   ├── build.yml                 # SUCCESS
-│   ├── lint.yml                  # Needs mypy fixes
+│   ├── lint.yml                  # mypy: 141 errors
 │   └── tests.yml                 # Needs infrastructure fixes
 └── tests/
     ├── unit/                     # 2436 tests
-    └── integration/              # 11 tests (27 skip in CI)
+    └── integration/              # 115 tests (51 skip in CI)
 ```
 
 ---
@@ -137,7 +122,7 @@ zapomni/
 │   ├── HANDOFF.md        # This file - session handoff
 │   └── SNAPSHOT.md       # Project snapshot
 ├── log/
-│   └── 2025-11-29-session-21.md  # Session #21 log
+│   └── 2025-11-29-session-22.md  # Session #22 log
 └── config.yaml           # Project config
 ```
 
@@ -171,7 +156,8 @@ zapomni/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#21** | 2025-11-29 | CI/CD Fixes | **Build SUCCESS, 130+ files fixed** |
+| **#22** | 2025-11-29 | mypy + Integration | **64 mypy fixed, Integration tests working** |
+| #21 | 2025-11-29 | CI/CD Fixes | Build SUCCESS, 130+ files fixed |
 | #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer COMPLETE (74 tests), v0.6.0 DONE! |
 | #19 | 2025-11-29 | Issue #23 | RustExtractor COMPLETE (55 tests) |
 | #18 | 2025-11-28 | Issue #22 | GoExtractor COMPLETE (55 tests) |
@@ -190,4 +176,4 @@ zapomni/
 
 ---
 
-**Build works! Choose your next focus: mypy fixes, integration tests, or v0.7.0 features.**
+**mypy improved (205 → 141)! Integration tests working! Choose: more type fixes or v0.7.0 features.**
