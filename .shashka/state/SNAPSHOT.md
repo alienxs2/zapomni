@@ -2,141 +2,80 @@
 
 **Project**: Zapomni
 **Version**: v0.6.0
-**Status**: v0.6.0 COMPLETE - All Code Intelligence features done (3/3)
-**Last Updated**: 2025-11-29 (Session #20)
+**Status**: v0.6.0 COMPLETE | CI/CD Fixed
+**Last Updated**: 2025-11-29 (Session #21)
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
 | Unit Tests | 2436 passed, 11 skipped |
-| Integration Tests | 11 passed |
+| Integration Tests | 11 passed (27 skipped in CI) |
 | E2E Tests | 88 passed, 1 xfailed |
 | Tree-sitter | 41 languages, 449 tests |
 | PythonExtractor | 58 tests, full AST support |
 | TypeScriptExtractor | 60 tests, full AST support |
 | GoExtractor | 55 tests, full AST support |
 | RustExtractor | 55 tests, full AST support |
-| **CallGraphAnalyzer** | **74 tests, full call tracking** ✅ NEW |
+| CallGraphAnalyzer | 74 tests, full call tracking |
 | Known Bugs | **0 remaining** |
 | Fixed Bugs | **7** (Issues #12-18) |
 | Open Issues | 8 (features only) |
 | Open PRs | 0 |
 
+## CI/CD Status
+
+| Workflow | Status | Notes |
+|----------|--------|-------|
+| **Build & Package** | **SUCCESS** | Fixed in Session #21 |
+| Lint & Code Quality | PARTIAL | mypy has 205 type errors (pre-existing) |
+| Tests | PARTIAL | Integration tests need infrastructure |
+
+## Session #21 Summary - CI/CD Fixes
+
+**CI/CD Workflow Fixes (7 commits):**
+
+1. **build.yml Fixes:**
+   - Fixed YAML syntax error (multiline Python code)
+   - Fixed undefined `matrix.python-version` reference
+   - Added `LoggingService.configure_logging()` for server test
+
+2. **Action Updates:**
+   - `actions/setup-python`: v4 -> v5
+   - `actions/upload-artifact`: v3 -> v4
+   - `actions/download-artifact`: v3 -> v4
+   - `codecov/codecov-action`: v3 -> v4
+
+3. **tests.yml Fix:**
+   - Added `apt-get install redis-tools` for service health checks
+
+4. **Code Quality Fixes:**
+   - Fixed 200+ flake8 errors (E501, F401, F841, E712, E713, F541)
+   - Applied black formatting to all files
+   - Applied isort formatting to all files
+   - Fixed spaCy test fixture (skip if model not installed)
+
+**Commits:**
+- `ee1267ff` - fix(ci): Fix GitHub Actions workflow failures
+- `3406694b` - fix(ci): Fix YAML syntax error in build.yml
+- `2148573f` - fix(ci): Update deprecated GitHub Actions to latest versions
+- `2ab1fe6e` - fix(ci): Fix all flake8 errors and build test
+- `c7b95c5f` - fix(ci): Apply black formatting and fix spaCy test fixture
+- `e6938111` - fix(ci): Apply isort formatting
+
+**Files Changed:** 130+ files
+
+---
+
 ## v0.6.0 Progress - Code Intelligence (COMPLETE)
 
 | Issue | Title | Status | Tests |
 |-------|-------|--------|-------|
-| #22 | GoExtractor | **COMPLETE** ✅ | 55 |
-| #23 | RustExtractor | **COMPLETE** ✅ | 55 |
-| #24 | CallGraphAnalyzer | **COMPLETE** ✅ | 74 |
-
-## Session #20 Summary
-
-**Issue #24 (CallGraphAnalyzer) COMPLETE:**
-- Full call graph analysis for Python, Go, Rust, TypeScript
-- CallGraphAnalyzer class (1233 lines) with language-specific call detection
-- Tracks function calls, method calls, constructor calls
-- Supports qualified names (module.function, obj.method)
-- 45 comprehensive analyzer tests
-- 29 MCP tools tests (get_callers, get_callees, get_call_graph)
-- Integration with FalkorDB for relationship storage
-- New MCP tools: get_callers, get_callees, get_call_graph
-
-**Commit:** `350a7157`
-**Files Changed:** 19 (+5050 lines)
-- `src/zapomni_core/treesitter/analyzers/call_graph.py` (1233 lines) - Core analyzer
-- `src/zapomni_mcp/tools/call_graph.py` - MCP tool implementations
-- `tests/unit/treesitter/analyzers/test_call_graph.py` (45 tests)
-- `tests/unit/mcp/tools/test_call_graph_tools.py` (29 tests)
-
-**v0.6.0 Milestone COMPLETE!**
+| #22 | GoExtractor | **COMPLETE** | 55 |
+| #23 | RustExtractor | **COMPLETE** | 55 |
+| #24 | CallGraphAnalyzer | **COMPLETE** | 74 |
 
 ---
-
-## Session #19 Summary
-
-**Issue #23 (RustExtractor) COMPLETE:**
-- Full Rust AST support implemented
-- Functions (fn) with parameters and return types
-- impl blocks with method extraction
-- self/&self/&mut self receiver detection
-- Structs with field names and derive attributes
-- Traits (as INTERFACE type) with method signatures
-- Supertraits in bases list
-- Enums with variant names and data variants
-- Doc comments (/// style) extraction
-- Visibility detection (pub, pub(crate), pub(super) vs private)
-- Generics and lifetimes extraction
-- Attributes (#[derive], #[cfg], etc.) as decorators
-- Auto-registration in LanguageParserRegistry
-- 55 comprehensive tests (target was 50+)
-
-**Commit:** `5e15f26e`
-**Files Changed:** 4 (+2350 lines)
-- `src/zapomni_core/treesitter/extractors/rust.py` (1324 lines)
-- `tests/unit/treesitter/extractors/test_rust.py` (999 lines)
-- `src/zapomni_core/treesitter/config.py` (updated)
-- `src/zapomni_core/treesitter/extractors/__init__.py` (updated)
-
----
-
-## Session #18 Summary
-
-**Issue #22 (GoExtractor) COMPLETE:**
-- Full Go AST support implemented
-- Functions and methods with receiver types (pointer/value)
-- Structs with fields and embedded types
-- Interfaces with methods and embedded interfaces
-- Go doc comments extraction (// style)
-- Private detection (lowercase = unexported)
-- Generics support (Go 1.18+ type parameters)
-- Multiple and named return values
-- Auto-registration in LanguageParserRegistry
-- 55 comprehensive tests (target was 50+)
-
-**Commit:** `9621168c`
-**Files Changed:** 4 (+2166 lines)
-- `src/zapomni_core/treesitter/extractors/go.py` (1093 lines)
-- `tests/unit/treesitter/extractors/test_go.py` (1052 lines)
-- `src/zapomni_core/treesitter/config.py` (updated)
-- `src/zapomni_core/treesitter/extractors/__init__.py` (updated)
-
----
-
-## Session #17 Summary
-
-**Issue #21 (Tree-sitter Integration) COMPLETE:**
-- Integrated PythonExtractor and TypeScriptExtractor into index_codebase MCP tool
-- Modified `_parse_file_ast()` to use `LanguageParserRegistry`
-- Python files now use PythonExtractor (docstrings, decorators, type hints)
-- TypeScript/JS files now use TypeScriptExtractor (JSDoc, interfaces, enums)
-- Other languages fall back to GenericExtractor
-- 10 new integration tests
-- v0.5.0 milestone COMPLETE!
-
-**Commits:**
-- `8798590c` - feat(treesitter): Integrate language-specific extractors
-- `bd68a56d` - docs: Prepare project for AI agent handoff
-
----
-
-## Session #16 Summary
-
-**Issue #20 (TypeScriptExtractor) COMPLETE:**
-- Full TypeScript/JavaScript AST support implemented
-- JSDoc comments: @param, @returns, @throws extraction
-- Decorators: Angular, NestJS, custom decorators
-- Type annotations: generics, union, intersection types
-- Interfaces and type aliases extraction
-- Enums: regular and const enums with members
-- Access modifiers: public/private/protected detection
-- Async functions and generators
-- Arrow functions with name resolution
-- Getters/setters detection
-- 60 comprehensive tests (target was 40+)
-
-**Files Changed:** 4 (+2100 lines)
 
 ## Architecture Overview
 
@@ -144,20 +83,18 @@
 zapomni/
 ├── src/
 │   ├── zapomni_core/       # Core memory processing
-│   │   ├── embeddings/     # Ollama embeddings + cache ✅
-│   │   ├── treesitter/     # AST parsing (41 languages) ✅
-│   │   │   └── extractors/
-│   │   │       ├── generic.py     # Universal fallback
-│   │   │       ├── python.py      # Python-specific ✅
-│   │   │       ├── typescript.py  # TypeScript/JS ✅
-│   │   │       ├── go.py          # Go-specific ✅
-│   │   │       └── rust.py        # Rust-specific ✅
-│   │   │   └── analyzers/
-│   │   │       └── call_graph.py  # CallGraphAnalyzer ✅ NEW
-│   │   └── memory_processor.py ✅
-│   ├── zapomni_mcp/        # MCP server (17 tools) ✅
+│   │   ├── embeddings/     # Ollama embeddings + cache
+│   │   ├── treesitter/     # AST parsing (41 languages)
+│   │   │   ├── extractors/ # Language-specific extractors
+│   │   │   └── analyzers/  # Code analysis (call graph)
+│   │   └── memory_processor.py
+│   ├── zapomni_mcp/        # MCP server (17 tools)
 │   ├── zapomni_db/         # FalkorDB + Redis clients
 │   └── zapomni_cli/        # CLI tools + Git hooks
+├── .github/workflows/      # CI/CD (Fixed!)
+│   ├── build.yml           # Build & Package
+│   ├── lint.yml            # Lint & Code Quality
+│   └── tests.yml           # Tests
 └── tests/                  # 2436+ unit tests
 ```
 
@@ -166,18 +103,17 @@ zapomni/
 | Milestone | Focus | Status |
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
-| v0.5.0 | Solid Foundation | **COMPLETE** (3/3 done) |
-| v0.6.0 | Code Intelligence | **COMPLETE** (3/3 done) |
+| v0.5.0 | Solid Foundation | **COMPLETE** |
+| v0.6.0 | Code Intelligence | **COMPLETE** |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
 | v0.9.0 | Scale & Performance | Planned |
 | v1.0.0 | Production Ready | Target |
 
-## Next Steps
+## Known Issues (for next session)
 
-v0.6.0 COMPLETE! Next milestone: v0.7.0 - Search Excellence
-
-Run `gh issue list --state open` to see available issues for v0.7.0.
+1. **mypy** - 205 type annotation errors
+2. **Integration tests** - FalkorDB/SSE infrastructure issues in CI
 
 ## Key Documents
 

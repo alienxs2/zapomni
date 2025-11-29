@@ -1,80 +1,63 @@
 # Session Handoff
 
-**Last Session**: #20 (2025-11-29)
-**Next Session**: #21
-**Focus**: v0.7.0 - Search Excellence
+**Last Session**: #21 (2025-11-29)
+**Next Session**: #22
+**Focus**: Fix remaining CI/CD issues (mypy, integration tests) OR v0.7.0 features
 
 ---
 
 ## For Next AI Agent / PM
 
-### v0.6.0 Progress: 3/3 Issues Done (COMPLETE!)
+### Session #21 Summary - CI/CD Fixes
 
-| Issue | Title | Status | Tests |
-|-------|-------|--------|-------|
-| #22 | GoExtractor | **COMPLETE** ✅ | 55 |
-| #23 | RustExtractor | **COMPLETE** ✅ | 55 |
-| #24 | CallGraphAnalyzer | **COMPLETE** ✅ | 74 |
+**Build & Package workflow now works!**
 
-**Total Tests**: 2436 unit + 11 integration = 2447+ passing
+Fixed issues:
+1. build.yml YAML syntax error
+2. build.yml undefined matrix reference
+3. Deprecated GitHub Actions (v3 -> v4/v5)
+4. tests.yml missing redis-tools
+5. 200+ flake8 errors
+6. black/isort formatting
+7. spaCy test fixture
 
----
+### Current CI/CD Status
 
-## What Was Done in Session #20
-
-**Issue #24 (CallGraphAnalyzer) COMPLETE:**
-
-1. Created `/home/dev/zapomni/src/zapomni_core/treesitter/analyzers/call_graph.py` (1233 lines):
-   - Full call graph analysis for Python, Go, Rust, TypeScript
-   - Tracks function calls, method calls, constructor calls
-   - Supports qualified names (module.function, obj.method)
-   - Language-specific call detection patterns
-   - Integration with FalkorDB for relationship storage
-
-2. Created `/home/dev/zapomni/src/zapomni_mcp/tools/call_graph.py`:
-   - New MCP tools: get_callers, get_callees, get_call_graph
-   - Query call relationships from knowledge graph
-
-3. Created `/home/dev/zapomni/tests/unit/treesitter/analyzers/test_call_graph.py`:
-   - 45 comprehensive analyzer tests
-
-4. Created `/home/dev/zapomni/tests/unit/mcp/tools/test_call_graph_tools.py`:
-   - 29 MCP tool tests
-
-5. Commit: `350a7157 feat(treesitter): Add CallGraphAnalyzer with full call tracking (Issue #24)`
-
-**v0.6.0 Milestone COMPLETE!**
+| Workflow | Status | Action Needed |
+|----------|--------|---------------|
+| **Build & Package** | **SUCCESS** | None |
+| Lint & Code Quality | PARTIAL | Fix 205 mypy errors |
+| Tests | PARTIAL | Fix integration test infrastructure |
 
 ---
 
-## What Was Done in Session #19
+## What Was Done in Session #21
 
-**Issue #23 (RustExtractor) COMPLETE:**
+**7 commits to fix CI/CD:**
 
-1. Created `/home/dev/zapomni/src/zapomni_core/treesitter/extractors/rust.py` (1324 lines):
-   - Full Rust AST support
-   - Functions (fn) with parameters and return types
-   - impl blocks with method extraction
-   - self/&self/&mut self receiver detection
-   - Structs with field names and derive attributes
-   - Traits (as INTERFACE type) with method signatures
-   - Supertraits in bases list
-   - Enums with variant names and data variants
-   - Doc comments (/// style) extraction
-   - Visibility detection (pub, pub(crate), pub(super) vs private)
-   - Generics and lifetimes extraction
-   - Attributes (#[derive], #[cfg], etc.) as decorators
-   - Auto-registration in LanguageParserRegistry
+1. `ee1267ff` - Fix GitHub Actions workflow failures
+   - Fixed black formatting (49 files)
+   - Fixed build.yml matrix reference
+   - Added redis-tools installation
 
-2. Created `/home/dev/zapomni/tests/unit/treesitter/extractors/test_rust.py` (999 lines):
-   - 55 comprehensive tests
-   - All tests passing
+2. `3406694b` - Fix YAML syntax error in build.yml
+   - Multiline Python -> single line
 
-3. Updated config files:
-   - `src/zapomni_core/treesitter/config.py` - added "rust" to LANGUAGES_WITH_EXTRACTORS
-   - `src/zapomni_core/treesitter/extractors/__init__.py` - added RustExtractor imports
+3. `2148573f` - Update deprecated GitHub Actions
+   - setup-python: v4 -> v5
+   - upload-artifact: v3 -> v4
+   - download-artifact: v3 -> v4
+   - codecov-action: v3 -> v4
 
-4. Commit: `5e15f26e feat(treesitter): Add RustExtractor with full Rust AST support (Issue #23)`
+4. `2ab1fe6e` - Fix all flake8 errors and build test
+   - 200+ flake8 errors fixed
+   - Added LoggingService.configure_logging()
+
+5. `c7b95c5f` - Apply black formatting and fix spaCy test fixture
+
+6. `e6938111` - Apply isort formatting
+
+**Files Changed:** 130+ files
 
 ---
 
@@ -85,12 +68,11 @@ cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
 
-# Verify tests pass
-make test                              # 2362 unit tests
-pytest tests/integration/ -v           # 10 integration tests
+# Verify tests pass locally
+make test                              # 2436 unit tests
 
-# Check open issues for v0.6.0
-gh issue list --state open
+# Check CI status
+gh run list --limit 5
 
 # Start services
 make docker-up                         # FalkorDB + Redis
@@ -99,18 +81,27 @@ make server                            # MCP server
 
 ---
 
-## Next Issues to Work On (v0.7.0 - Search Excellence)
+## Next Steps (Choose One)
 
-### Check available issues:
+### Option 1: Fix mypy errors (recommended)
+```bash
+mypy src/                              # Shows 205 errors
+```
+Focus areas:
+- Missing type annotations
+- Incompatible types
+- Generic type parameters
+
+### Option 2: Fix integration tests
+Issues:
+- FalkorDB `SHOW INDEXES` not supported
+- SSE tests need running server
+- Pydantic validation errors
+
+### Option 3: Start v0.7.0 - Search Excellence
 ```bash
 gh issue list --state open --label "v0.7.0"
 ```
-
-v0.7.0 focuses on improving search capabilities:
-- Enhanced semantic search
-- Better code search with AST awareness
-- Search result ranking improvements
-- Query optimization
 
 ---
 
@@ -121,22 +112,19 @@ zapomni/
 ├── src/
 │   ├── zapomni_core/
 │   │   ├── treesitter/           # Tree-sitter module (41 languages)
-│   │   │   ├── extractors/       # Language extractors
-│   │   │   │   ├── base.py       # BaseCodeExtractor ABC
-│   │   │   │   ├── generic.py    # GenericExtractor (165+ langs)
-│   │   │   │   ├── python.py     # PythonExtractor (58 tests)
-│   │   │   │   ├── typescript.py # TypeScriptExtractor (60 tests)
-│   │   │   │   └── go.py         # GoExtractor (55 tests) ✅ NEW
-│   │   │   └── parser/
-│   │   │       └── registry.py   # LanguageParserRegistry (singleton)
+│   │   │   ├── extractors/       # Language extractors (Python, TS, Go, Rust)
+│   │   │   └── analyzers/        # Call graph analyzer
 │   │   └── memory_processor.py
 │   ├── zapomni_mcp/
-│   │   └── tools/
-│   │       └── index_codebase.py # MCP tool (uses extractors)
+│   │   └── tools/                # 17 MCP tools
 │   └── zapomni_db/
+├── .github/workflows/            # CI/CD (Build works!)
+│   ├── build.yml                 # SUCCESS
+│   ├── lint.yml                  # Needs mypy fixes
+│   └── tests.yml                 # Needs infrastructure fixes
 └── tests/
-    ├── unit/                      # 2436 tests
-    └── integration/               # 11 tests
+    ├── unit/                     # 2436 tests
+    └── integration/              # 11 tests (27 skip in CI)
 ```
 
 ---
@@ -149,7 +137,7 @@ zapomni/
 │   ├── HANDOFF.md        # This file - session handoff
 │   └── SNAPSHOT.md       # Project snapshot
 ├── log/
-│   └── 2025-11-28-session-18.md  # Session #18 log
+│   └── 2025-11-29-session-21.md  # Session #21 log
 └── config.yaml           # Project config
 ```
 
@@ -171,7 +159,7 @@ zapomni/
 |-----------|-------|--------|
 | Bug Fixing | 7 bugs | **COMPLETE** |
 | v0.5.0 | Solid Foundation | **COMPLETE** |
-| v0.6.0 | Code Intelligence | **COMPLETE** (3/3) |
+| v0.6.0 | Code Intelligence | **COMPLETE** |
 | v0.7.0 | Search Excellence | Planned |
 | v0.8.0 | Knowledge Graph 2.0 | Planned |
 | v0.9.0 | Scale & Performance | Planned |
@@ -183,7 +171,8 @@ zapomni/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#20** | 2025-11-29 | Issue #24 | **CallGraphAnalyzer COMPLETE (74 tests), v0.6.0 DONE!** |
+| **#21** | 2025-11-29 | CI/CD Fixes | **Build SUCCESS, 130+ files fixed** |
+| #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer COMPLETE (74 tests), v0.6.0 DONE! |
 | #19 | 2025-11-29 | Issue #23 | RustExtractor COMPLETE (55 tests) |
 | #18 | 2025-11-28 | Issue #22 | GoExtractor COMPLETE (55 tests) |
 | #17 | 2025-11-28 | Issue #21 | Tree-sitter Integration COMPLETE, v0.5.0 DONE! |
@@ -201,4 +190,4 @@ zapomni/
 
 ---
 
-**v0.6.0 Complete! Good luck with v0.7.0 - Search Excellence!**
+**Build works! Choose your next focus: mypy fixes, integration tests, or v0.7.0 features.**
