@@ -5,7 +5,7 @@ project:
   name: "zapomni"
   description: "Local-first MCP memory server for AI agents with 41-language AST support"
   type: "mcp-server"
-  version: "v0.6.0"
+  version: "v0.7.0"
   repository: "https://github.com/alienxs2/zapomni"
   stack:
     languages: ["Python 3.11+"]
