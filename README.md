@@ -10,7 +10,7 @@ Zapomni is a local-first MCP (Model Context Protocol) memory server that provide
 
 - **Local-first architecture** - all data and processing stays on your machine
 - **Unified database** - FalkorDB combines vector embeddings and knowledge graph in a single system
-- **Hybrid search** - vector similarity, BM25 keyword search, and graph traversal
+- **Hybrid search** - vector similarity, BM25 keyword search, graph traversal, and configurable fusion strategies (RRF, RSF, DBSF)
 - **Knowledge graph** - automatic entity extraction and relationship mapping
 - **Code intelligence** - AST-based code analysis and indexing (41+ languages, Python & TypeScript extractors with full AST support)
 - **Git Hooks integration** - automatic re-indexing on code changes
@@ -220,7 +220,7 @@ Zapomni consists of 4 layers:
 │         zapomni_core (Business Logic)               │
 │  • MemoryProcessor: Orchestrates operations         │
 │  • Processors: Text, PDF, DOCX, HTML, Code          │
-│  • Search: Vector, BM25, Hybrid, Graph traversal    │
+│  • Search: Vector, BM25, Hybrid (RRF/RSF/DBSF)      │
 │  • Extractors: Entity & relationship extraction     │
 │  • Code: AST analysis, call graphs, indexing        │
 └──────────────────┬──────────────────────────────────┘
@@ -266,11 +266,55 @@ After installation, every git commit/merge/checkout automatically updates the kn
 
 For more details, see the [CLI Guide](docs/CLI.md).
 
+## Search
+
+### Hybrid Search
+
+Combines BM25 keyword search with vector similarity search using configurable fusion strategies:
+
+- **RRF (Reciprocal Rank Fusion)** - Default, robust rank-based fusion (k=60)
+- **RSF (Relative Score Fusion)** - Min-max normalized score fusion
+- **DBSF (Distribution-Based Score Fusion)** - 3-sigma normalized fusion
+
+```python
+from zapomni_core.search import HybridSearch
+
+hybrid = HybridSearch(
+    vector_search=vector_search,
+    bm25_search=bm25_search,
+    fusion_method="rrf",  # or "rsf", "dbsf"
+    fusion_k=60
+)
+
+results = await hybrid.search("query", alpha=0.5)
+```
+
+Features:
+- **Parallel execution** - BM25 and vector searches run concurrently via `asyncio.gather()`
+- **Configurable alpha** - Balance between vector (alpha=1.0) and BM25 (alpha=0.0) results
+
+### Evaluation Metrics
+
+Built-in search quality metrics for evaluating retrieval performance:
+
+- **Recall@K** - Fraction of relevant documents retrieved in top K
+- **Precision@K** - Fraction of top K results that are relevant
+- **MRR (Mean Reciprocal Rank)** - Average of reciprocal ranks of first relevant result
+- **NDCG@K (Normalized Discounted Cumulative Gain)** - Graded relevance metric
+
+```python
+from zapomni_core.search.evaluation import SearchMetrics
+
+metrics = SearchMetrics()
+results = metrics.evaluate(retrieved_docs, relevant_docs, k=10)
+# Returns: {"recall@10": 0.8, "precision@10": 0.6, "mrr": 0.75, "ndcg@10": 0.82}
+```
+
 ## Development
 
 ### Running Tests
 
-The project includes **2252+ tests** (unit + E2E + integration) with high coverage (74-89% depending on module).
+The project includes **2640+ tests** (unit + E2E + integration) with high coverage (74-89% depending on module).
 
 ```bash
 # Run all tests
@@ -311,7 +355,7 @@ For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOP
 
 ## Project Status
 
-**Current Version**: v0.5.0-alpha
+**Current Version**: v0.7.0
 
 **What's Working**:
 - Core memory operations (add, search, statistics)
@@ -320,10 +364,20 @@ For detailed development setup and guidelines, see [DEVELOPMENT.md](docs/DEVELOP
 - Git hooks integration
 - All 17 MCP tools available
 - Tree-sitter AST parsing (41 languages, 279 tests)
-- Language-specific extractors: Python (58 tests), TypeScript/JS (60 tests)
-- Comprehensive test suite (2252+ tests)
+- Language-specific extractors: Python (58 tests), TypeScript/JS (60 tests), Go, Rust
+- Hybrid search with RRF/RSF/DBSF fusion strategies
+- Search quality evaluation metrics (MRR, NDCG@K, Recall@K)
+- Comprehensive test suite (2640+ tests)
 
-**Recent Fixes (v0.5.0-alpha)**:
+**Recent Updates (v0.7.0)**:
+- Hybrid search with RRF, RSF, DBSF fusion algorithms (Issue #26)
+- Enhanced BM25 search with bm25s library and CodeTokenizer (Issue #25)
+- Search quality evaluation metrics (MRR, NDCG@K, Recall@K, Precision@K)
+- Parallel search execution with asyncio.gather()
+- Go and Rust language extractors (Issues #22, #23)
+- Call graph analyzer for code dependencies (Issue #24)
+
+**Previous Fixes (v0.5.0-alpha)**:
 - Workspace isolation (Issue #12)
 - Performance 7-45x improvement (Issue #13)
 - Code indexing with Tree-sitter (Issues #14, #15)
