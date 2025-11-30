@@ -1,8 +1,8 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-11-30 (Session #24)
-**Project Status**: v0.7.0 IN PROGRESS | Issue #25 COMPLETE | mypy 100% CLEAN
-**Version**: v0.7.0-dev
+**Last Updated**: 2025-11-30 (Session #25)
+**Project Status**: v0.7.0 COMPLETE | Issue #26 COMPLETE | mypy 100% CLEAN
+**Version**: v0.7.0
 **Branch**: `main`
 
 ---
@@ -11,24 +11,26 @@
 
 ### Current State Summary
 
-**Session #24: BM25 Search Enhanced!**
+**Session #25: Hybrid Search with RRF Fusion!**
 
 Major achievement:
-- **Issue #25 BM25 Search**: COMPLETE
-- Replaced `rank-bm25` with `bm25s` (100-500x faster)
-- Added `CodeTokenizer` for code-aware tokenization
-- **65 new tests**, all passing
-- **2501 total unit tests** passing
+- **Issue #26 Hybrid Search with RRF Fusion**: COMPLETE
+- Added `fusion/` module (RRF, RSF, DBSF algorithms)
+- Added `evaluation/` module (MRR, NDCG@K, Recall@K)
+- True parallel execution with `asyncio.gather()`
+- **139 new tests**, all passing
+- **2640 total unit tests** passing
+- **v0.7.0 Search Excellence: COMPLETE**
 
 **CI/CD Status:**
 | Workflow | Status |
 |----------|--------|
 | **Build & Package** | **SUCCESS** |
 | **Lint & Code Quality** | **SUCCESS** (mypy: 0 errors!) |
-| Tests | **SUCCESS** (2501 passed) |
+| Tests | **SUCCESS** (2640 passed) |
 
 **Test Status:**
-- Unit Tests: **2501 passed**, 11 skipped
+- Unit Tests: **2640 passed**, 11 skipped
 - Integration Tests: **115 passed** (51 skip in CI)
 - E2E Tests: 88 passed, 1 xfailed
 
@@ -36,21 +38,20 @@ Major achievement:
 
 ## NEXT STEPS
 
-### Priority 1: Issue #26 - Hybrid Search with RRF
+### Priority 1: v0.8.0 - Knowledge Graph 2.0
+
+#### Issue #27 - Bi-temporal model
 
 ```bash
-gh issue view 26
+gh issue view 27
 ```
 
-Based on research from Session #24:
-1. **True parallel execution** with `asyncio.gather()`
-2. **Fusion method options**: RRF, RSF, DBSF
-3. **Configurable RRF k parameter** (default: 60)
-4. **DBSF implementation** (3-sigma normalization)
-5. **Evaluation metrics**: MRR, NDCG@K, Recall@K
+Key areas:
+1. **Valid time vs transaction time**
+2. **Historical queries**
+3. **Time-travel debugging**
 
 ### Other milestones
-- v0.8.0: #27 Bi-temporal model
 - v0.9.0: #28 Support 100k+ files
 - v1.0.0: #29 Web UI, #30 Documentation
 
@@ -61,10 +62,16 @@ Based on research from Session #24:
 ```
 src/zapomni_core/search/
 ├── bm25_search.py        # Enhanced with bm25s (Session #24)
-├── bm25_tokenizer.py     # NEW: CodeTokenizer (Session #24)
+├── bm25_tokenizer.py     # CodeTokenizer (Session #24)
 ├── vector_search.py      # Vector search
-├── hybrid_search.py      # Needs Issue #26
-└── reranker.py           # Cross-encoder
+├── hybrid_search.py      # Parallel + fusion (Session #25)
+├── reranker.py           # Cross-encoder
+├── fusion/               # NEW: Fusion algorithms (Session #25)
+│   ├── rrf.py            # Reciprocal Rank Fusion
+│   ├── rsf.py            # Relative Score Fusion
+│   └── dbsf.py           # Distribution-Based Score Fusion
+└── evaluation/           # NEW: Metrics (Session #25)
+    └── metrics.py        # MRR, NDCG@K, Recall@K
 ```
 
 ### How to Start
@@ -73,7 +80,7 @@ src/zapomni_core/search/
 cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
-make test                     # Should see 2501 passed
+make test                     # Should see 2640 passed
 mypy src/                     # Should see 0 errors!
 gh run list --limit 5         # Check CI status
 ```
@@ -90,7 +97,7 @@ gh run list --limit 5         # Check CI status
 │   ├── HANDOFF.md        # Session handoff (START HERE)
 │   └── SNAPSHOT.md       # Project snapshot
 ├── log/
-│   └── 2025-11-30-session-24.md  # Latest session log
+│   └── 2025-11-30-session-25.md  # Latest session log
 └── config.yaml           # Project config
 ```
 
@@ -109,13 +116,13 @@ gh run list --limit 5         # Check CI status
 
 ```bash
 # Development
-make test                     # All unit tests (2501)
+make test                     # All unit tests (2640)
 make lint                     # Run linter
 make format                   # Format code
 mypy src/                     # Type checking (0 errors!)
 
 # Search tests
-pytest tests/unit/search/     # BM25 search tests (65)
+pytest tests/unit/search/     # Search tests (204)
 
 # Services
 make docker-up                # Start FalkorDB + Redis
@@ -123,7 +130,7 @@ make server                   # Start MCP server
 
 # GitHub
 gh run list --limit 5         # Check CI status
-gh issue list --state open    # All open issues (6)
+gh issue list --state open    # All open issues (5)
 ```
 
 ---
@@ -133,11 +140,13 @@ gh issue list --state open    # All open issues (6)
 ```
 src/
 ├── zapomni_core/
-│   ├── search/             # Search module (v0.7.0 focus)
+│   ├── search/             # Search module (v0.7.0 COMPLETE)
 │   │   ├── bm25_search.py      # Enhanced with bm25s
 │   │   ├── bm25_tokenizer.py   # CodeTokenizer
 │   │   ├── vector_search.py    # Vector search
-│   │   └── hybrid_search.py    # Issue #26
+│   │   ├── hybrid_search.py    # Parallel + fusion
+│   │   ├── fusion/             # RRF, RSF, DBSF
+│   │   └── evaluation/         # MRR, NDCG, Recall
 │   ├── treesitter/         # Tree-sitter module
 │   │   ├── extractors/     # Language extractors
 │   │   └── analyzers/      # Code analysis
@@ -154,8 +163,9 @@ src/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#24** | 2025-11-30 | Issue #25 BM25 | **bm25s + CodeTokenizer, 65 tests** |
-| #23 | 2025-11-29 | mypy cleanup | 141→0 errors, 9 issues closed |
+| **#25** | 2025-11-30 | Issue #26 Hybrid | **RRF/RSF/DBSF fusion, 139 tests** |
+| #24 | 2025-11-30 | Issue #25 BM25 | bm25s + CodeTokenizer, 65 tests |
+| #23 | 2025-11-29 | mypy cleanup | 141->0 errors, 9 issues closed |
 | #22 | 2025-11-29 | mypy + Integration | 64 mypy fixed |
 | #21 | 2025-11-29 | CI/CD Fixes | Build SUCCESS |
 | #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer (74 tests) |
@@ -172,4 +182,4 @@ src/
 
 ---
 
-**Issue #25 complete! Next: Issue #26 Hybrid Search with RRF fusion.**
+**v0.7.0 Search Excellence COMPLETE! Next: v0.8.0 Knowledge Graph 2.0 (Issue #27).**

@@ -19,7 +19,7 @@ language:
 
 # Session tracking
 session:
-  current: 24
+  current: 25
   last_date: "2025-11-30"
 
 # Bug tracking - ALL FIXED!
@@ -30,12 +30,12 @@ bugs:
 
 # Milestones
 milestones:
-  current: "v0.7.0 - Search Excellence (IN PROGRESS)"
+  current: "v0.7.0 - Search Excellence (COMPLETE)"
   next: "v0.8.0 - Knowledge Graph 2.0"
 
 # v0.7.0 Progress
 v070_progress:
   completed:
     - "#25 BM25 Search - bm25s + CodeTokenizer + persistence (65 tests)"
-  todo:
-    - "#26 Hybrid Search with RRF fusion"
+    - "#26 Hybrid Search with RRF fusion - fusion/, evaluation/, 139 tests"
+  todo: []

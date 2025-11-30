@@ -8,6 +8,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+#### Hybrid Search with RRF Fusion (Issue #26) - 2025-11-30
+
+**Issue:** [#26](https://github.com/alienxs2/zapomni/issues/26)
+
+Implemented advanced hybrid search capabilities with multiple fusion algorithms and comprehensive evaluation metrics for search quality assessment.
+
+**New Features:**
+
+1. **Fusion Module** (`src/zapomni_core/search/fusion/`)
+   - `FusionStrategy` protocol for pluggable fusion algorithms
+   - `RRFusion` - Reciprocal Rank Fusion with configurable k parameter (default: 60)
+   - `RSFusion` - Relative Score Fusion with min-max normalization
+   - `DBSFusion` - Distribution-Based Score Fusion using 3-sigma rule
+
+2. **Evaluation Metrics** (`src/zapomni_core/search/evaluation/`)
+   - `recall_at_k` - Recall@K metric
+   - `precision_at_k` - Precision@K metric
+   - `mrr` - Mean Reciprocal Rank
+   - `ndcg_at_k` - Normalized Discounted Cumulative Gain
+   - `average_precision` - For MAP calculation
+   - `evaluate_search` - Aggregate function for all metrics
+
+3. **HybridSearch Enhancements**
+   - True parallel execution with `asyncio.gather()` and `asyncio.to_thread()`
+   - Pluggable fusion methods: rrf, rsf, dbsf
+   - Configurable RRF k parameter
+   - Graceful degradation when one search fails
+
+**Files Added:**
+- `src/zapomni_core/search/fusion/__init__.py` - Fusion module exports
+- `src/zapomni_core/search/fusion/base.py` - FusionStrategy protocol
+- `src/zapomni_core/search/fusion/rrf.py` - Reciprocal Rank Fusion
+- `src/zapomni_core/search/fusion/rsf.py` - Relative Score Fusion
+- `src/zapomni_core/search/fusion/dbsf.py` - Distribution-Based Score Fusion
+- `src/zapomni_core/search/evaluation/__init__.py` - Evaluation module exports
+- `src/zapomni_core/search/evaluation/metrics.py` - All evaluation metrics
+- `tests/unit/search/fusion/test_rrf.py` - RRF tests
+- `tests/unit/search/fusion/test_rsf.py` - RSF tests
+- `tests/unit/search/fusion/test_dbsf.py` - DBSF tests
+- `tests/unit/search/evaluation/test_metrics.py` - Evaluation metrics tests
+
+**Files Modified:**
+- `src/zapomni_core/search/hybrid.py` - Added parallel execution and pluggable fusion
+
+**Test Results:**
+- **65 tests** for fusion algorithms (RRF, RSF, DBSF)
+- **64 tests** for evaluation metrics
+- **10 new tests** for HybridSearch fusion methods
+- **Total: ~139 new tests**
+
+**Closes:** [#26](https://github.com/alienxs2/zapomni/issues/26)
+
+---
+
 #### Tree-sitter Integration into index_codebase (Issue #21)
 
 **Issue:** [#21](https://github.com/alienxs2/zapomni/issues/21)

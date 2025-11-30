@@ -1,22 +1,23 @@
 # Session Handoff
 
-**Last Session**: #24 (2025-11-30)
-**Next Session**: #25
-**Focus**: v0.7.0 - Search Excellence (Issue #26 Hybrid Search)
+**Last Session**: #25 (2025-11-30)
+**Next Session**: #26
+**Focus**: v0.8.0 - Knowledge Graph 2.0 (Issue #27 Bi-temporal model)
 
 ---
 
 ## For Next AI Agent / PM
 
-### Session #24 Summary - BM25 Search Enhanced!
+### Session #25 Summary - Hybrid Search with RRF Fusion!
 
 **Major achievement:**
-- Issue #25 BM25 Search: **COMPLETE**
-- Replaced `rank-bm25` with `bm25s` (100-500x faster)
-- Added `CodeTokenizer` for code-aware tokenization
-- Added persistence (save/load with memory mapping)
-- **65 new tests**, all passing
-- **2501 total unit tests** passing
+- Issue #26 Hybrid Search with RRF Fusion: **COMPLETE**
+- Added **fusion/** module with RRF, RSF, DBSF algorithms
+- Added **evaluation/** module with MRR, NDCG@K, Recall@K metrics
+- True parallel execution with `asyncio.gather()`
+- **139 new tests**, all passing
+- **2640 total unit tests** passing
+- **v0.7.0 Search Excellence: COMPLETE**
 
 ### Current CI/CD Status
 
@@ -24,32 +25,38 @@
 |----------|--------|---------------|
 | **Build & Package** | **SUCCESS** | None |
 | **Lint & Code Quality** | **SUCCESS** | mypy: 0 errors! |
-| **Tests** | **SUCCESS** | 2501 passed |
+| **Tests** | **SUCCESS** | 2640 passed |
 
 ---
 
-## What Was Done in Session #24
+## What Was Done in Session #25
 
 **1 major feature implemented:**
 
-### Issue #25: BM25 Search Index
+### Issue #26: Hybrid Search with RRF Fusion
 
-**Files Created:**
-- `src/zapomni_core/search/bm25_tokenizer.py` - CodeTokenizer class
-- `tests/unit/search/__init__.py` - Test package
-- `tests/unit/search/test_bm25_search.py` - 65 tests
+**Files Created (fusion/ module):**
+- `src/zapomni_core/search/fusion/__init__.py` - Package exports
+- `src/zapomni_core/search/fusion/base.py` - Base fusion class
+- `src/zapomni_core/search/fusion/rrf.py` - RRF implementation
+- `src/zapomni_core/search/fusion/rsf.py` - Relative Score Fusion
+- `src/zapomni_core/search/fusion/dbsf.py` - Distribution-Based Score Fusion
+
+**Files Created (evaluation/ module):**
+- `src/zapomni_core/search/evaluation/__init__.py` - Package exports
+- `src/zapomni_core/search/evaluation/metrics.py` - MRR, NDCG@K, Recall@K
 
 **Files Modified:**
-- `src/zapomni_core/search/bm25_search.py` - Enhanced with bm25s
-- `src/zapomni_core/search/__init__.py` - Export CodeTokenizer
-- `pyproject.toml` - bm25s[full]>=0.2.0 dependency
+- `src/zapomni_core/search/hybrid_search.py` - Parallel execution + fusion options
+- `src/zapomni_core/search/__init__.py` - Export fusion classes
+- `tests/unit/search/` - 139 new tests
 
 **New Features:**
-1. **bm25s library** - 100-500x faster than rank-bm25
-2. **CodeTokenizer** - Splits camelCase/snake_case/acronyms
-3. **Persistence** - save_index() / load_index() with mmap
-4. **BM25 variants** - lucene, robertson, bm25+, bm25l, atire
-5. **Backward compatible** - All 29 original tests pass
+1. **RRF (Reciprocal Rank Fusion)** - Configurable k parameter (default: 60)
+2. **RSF (Relative Score Fusion)** - Score-based fusion
+3. **DBSF (Distribution-Based Score Fusion)** - 3-sigma normalization
+4. **Parallel execution** - asyncio.gather() for true parallelism
+5. **Evaluation metrics** - MRR, NDCG@K, Recall@K for search quality
 
 ---
 
@@ -61,7 +68,7 @@ git pull origin main
 source .venv/bin/activate
 
 # Verify everything is clean
-make test                              # 2501 unit tests
+make test                              # 2640 unit tests
 mypy src/                              # 0 errors!
 
 # Check CI status
@@ -74,39 +81,22 @@ make server                            # MCP server
 
 ---
 
-## Next Steps - Issue #26: Hybrid Search with RRF
+## Next Steps - v0.8.0: Knowledge Graph 2.0
 
-### What to Implement
+### Issue #27: Bi-temporal model
 
-Based on research conducted in Session #24:
-
-1. **True parallel execution** with `asyncio.gather()`
-2. **Fusion method options**: RRF, RSF, DBSF
-3. **Configurable RRF k parameter** (default: 60)
-4. **DBSF implementation** (3-sigma normalization)
-5. **Evaluation metrics**: MRR, NDCG@K, Recall@K
-
-### Key Files to Modify
-
-```
-src/zapomni_core/search/
-├── hybrid_search.py      # Add parallel execution + fusion options
-├── fusion/               # NEW: Fusion algorithms
-│   ├── __init__.py
-│   ├── rrf.py           # RRF implementation
-│   ├── rsf.py           # Relative Score Fusion
-│   └── dbsf.py          # Distribution-Based Score Fusion
-└── evaluation/           # NEW: Metrics
-    └── metrics.py       # MRR, NDCG, Recall@K
+```bash
+gh issue view 27
 ```
 
-### RRF Formula Reference
+Key areas:
+- Valid time vs transaction time
+- Historical queries
+- Time-travel debugging
 
-```python
-RRF_score(d) = Σ (weight_i / (k + rank_i(d)))
-# k=60 is robust default
-# alpha parameter balances vector vs BM25
-```
+### Other milestones
+- v0.9.0: #28 Support 100k+ files
+- v1.0.0: #29 Web UI, #30 Documentation
 
 ---
 
@@ -121,17 +111,23 @@ zapomni/
 │   │   │   └── analyzers/        # Call graph analyzer
 │   │   ├── search/               # Search modules
 │   │   │   ├── bm25_search.py    # Enhanced with bm25s
-│   │   │   ├── bm25_tokenizer.py # NEW: CodeTokenizer
+│   │   │   ├── bm25_tokenizer.py # CodeTokenizer
 │   │   │   ├── vector_search.py  # Vector search
-│   │   │   └── hybrid_search.py  # Hybrid (needs #26)
+│   │   │   ├── hybrid_search.py  # Parallel + fusion (Issue #26)
+│   │   │   ├── fusion/           # NEW: Fusion algorithms
+│   │   │   │   ├── rrf.py        # Reciprocal Rank Fusion
+│   │   │   │   ├── rsf.py        # Relative Score Fusion
+│   │   │   │   └── dbsf.py       # Distribution-Based Score Fusion
+│   │   │   └── evaluation/       # NEW: Metrics
+│   │   │       └── metrics.py    # MRR, NDCG@K, Recall@K
 │   │   └── memory_processor.py
 │   ├── zapomni_mcp/
 │   │   └── tools/                # 17 MCP tools
 │   └── zapomni_db/
 ├── .github/workflows/            # CI/CD (All green!)
 └── tests/
-    ├── unit/                     # 2501 tests
-    │   └── search/               # NEW: Search tests
+    ├── unit/                     # 2640 tests
+    │   └── search/               # Search tests (204 total)
     └── integration/              # 115 tests
 ```
 
@@ -145,7 +141,7 @@ zapomni/
 │   ├── HANDOFF.md        # This file - session handoff
 │   └── SNAPSHOT.md       # Project snapshot
 ├── log/
-│   └── 2025-11-30-session-24.md  # Session #24 log
+│   └── 2025-11-30-session-25.md  # Session #25 log
 └── config.yaml           # Project config
 ```
 
@@ -168,8 +164,8 @@ zapomni/
 | Bug Fixing | 8 bugs | **COMPLETE** |
 | v0.5.0 | Solid Foundation | **COMPLETE** |
 | v0.6.0 | Code Intelligence | **COMPLETE** |
-| v0.7.0 | Search Excellence | **IN PROGRESS** (Issue #25 done) |
-| v0.8.0 | Knowledge Graph 2.0 | Planned |
+| v0.7.0 | Search Excellence | **COMPLETE** |
+| v0.8.0 | Knowledge Graph 2.0 | **NEXT** |
 | v0.9.0 | Scale & Performance | Planned |
 | v1.0.0 | Production Ready | Target |
 
@@ -179,8 +175,9 @@ zapomni/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#24** | 2025-11-30 | Issue #25 BM25 | **bm25s + CodeTokenizer, 65 tests** |
-| #23 | 2025-11-29 | mypy cleanup | 141→0 errors, 9 issues closed |
+| **#25** | 2025-11-30 | Issue #26 Hybrid | **RRF/RSF/DBSF fusion, 139 tests** |
+| #24 | 2025-11-30 | Issue #25 BM25 | bm25s + CodeTokenizer, 65 tests |
+| #23 | 2025-11-29 | mypy cleanup | 141->0 errors, 9 issues closed |
 | #22 | 2025-11-29 | mypy + Integration | 64 mypy fixed |
 | #21 | 2025-11-29 | CI/CD Fixes | Build SUCCESS |
 | #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer (74 tests) |
@@ -197,4 +194,4 @@ zapomni/
 
 ---
 
-**Issue #25 complete! Next: Issue #26 Hybrid Search with RRF fusion.**
+**v0.7.0 Search Excellence COMPLETE! Next: v0.8.0 Knowledge Graph 2.0 (Issue #27).**

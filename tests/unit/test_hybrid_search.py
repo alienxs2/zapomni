@@ -32,9 +32,14 @@ def mock_vector_search():
 
 @pytest.fixture
 def mock_bm25_search():
-    """Mock BM25Search instance."""
+    """Mock BM25Search instance.
+
+    Note: BM25Search.search is synchronous and is wrapped in asyncio.to_thread
+    by HybridSearch, so we use a regular Mock (not AsyncMock).
+    """
     mock = Mock()
-    mock.search = AsyncMock()
+    # BM25Search.search is synchronous - NOT an AsyncMock
+    mock.search = Mock()
     return mock
 
 
@@ -224,7 +229,8 @@ class TestReciprocalRankFusion:
         hybrid_search.vector_search.search.assert_called_once_with(
             query="Python", limit=10, filters=None
         )
-        hybrid_search.bm25_search.search.assert_called_once_with(query="Python", limit=10)
+        # BM25Search.search is called without keyword arguments (via asyncio.to_thread)
+        hybrid_search.bm25_search.search.assert_called_once_with("Python", 10)
 
         # Should deduplicate mem1 and mem2 (appear in both)
         # BM25 result "Python best practices" doesn't match any vector result,
@@ -357,24 +363,50 @@ class TestDeduplication:
 
 
 class TestErrorHandling:
-    """Test error handling and propagation."""
+    """Test error handling and propagation.
+
+    Note: HybridSearch now uses graceful degradation - if one search fails,
+    the other results are still returned. Only if BOTH fail does it raise.
+    """
 
     @pytest.mark.asyncio
-    async def test_vector_search_error_propagation(self, hybrid_search):
-        """Should propagate SearchError from vector search."""
+    async def test_vector_search_error_graceful_degradation(
+        self, hybrid_search, sample_bm25_results
+    ):
+        """Should return BM25 results when vector search fails (graceful degradation)."""
         hybrid_search.vector_search.search.side_effect = SearchError(
             message="Vector search failed", error_code="SEARCH_001"
         )
+        hybrid_search.bm25_search.search.return_value = sample_bm25_results
 
-        with pytest.raises(SearchError) as exc_info:
-            await hybrid_search.search(query="test", limit=10, alpha=0.5)
+        # Should NOT raise - graceful degradation returns BM25 results
+        results = await hybrid_search.search(query="test", limit=10, alpha=0.5)
 
-        assert "Vector search failed" in str(exc_info.value)
+        # Should have BM25 results only
+        assert len(results) == 3
 
     @pytest.mark.asyncio
-    async def test_bm25_search_error_propagation(self, hybrid_search):
-        """Should propagate SearchError from BM25 search."""
-        hybrid_search.vector_search.search.return_value = []
+    async def test_bm25_search_error_graceful_degradation(
+        self, hybrid_search, sample_vector_results
+    ):
+        """Should return vector results when BM25 search fails (graceful degradation)."""
+        hybrid_search.vector_search.search.return_value = sample_vector_results
+        hybrid_search.bm25_search.search.side_effect = SearchError(
+            message="BM25 search failed", error_code="SEARCH_001"
+        )
+
+        # Should NOT raise - graceful degradation returns vector results
+        results = await hybrid_search.search(query="test", limit=10, alpha=0.5)
+
+        # Should have vector results only
+        assert len(results) == 3
+
+    @pytest.mark.asyncio
+    async def test_both_searches_fail_raises_error(self, hybrid_search):
+        """Should raise SearchError when both searches fail."""
+        hybrid_search.vector_search.search.side_effect = SearchError(
+            message="Vector search failed", error_code="SEARCH_001"
+        )
         hybrid_search.bm25_search.search.side_effect = SearchError(
             message="BM25 search failed", error_code="SEARCH_001"
         )
@@ -382,17 +414,7 @@ class TestErrorHandling:
         with pytest.raises(SearchError) as exc_info:
             await hybrid_search.search(query="test", limit=10, alpha=0.5)
 
-        assert "BM25 search failed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_unexpected_error_wrapping(self, hybrid_search):
-        """Should wrap unexpected errors in SearchError."""
-        hybrid_search.vector_search.search.side_effect = RuntimeError("Unexpected error")
-
-        with pytest.raises(SearchError) as exc_info:
-            await hybrid_search.search(query="test", limit=10, alpha=0.5)
-
-        assert "Unexpected error during hybrid search" in str(exc_info.value)
+        assert "Both vector and BM25 searches failed" in str(exc_info.value)
         assert exc_info.value.error_code == "SEARCH_001"
 
 
@@ -496,5 +518,149 @@ class TestFiltersParameter:
         filters = {"tags": ["python"], "source": "docs"}
         await hybrid_search.search(query="test", limit=10, filters=filters)
 
-        # BM25 search should not receive filters
-        hybrid_search.bm25_search.search.assert_called_once_with(query="test", limit=10)
+        # BM25 search should not receive filters (called via asyncio.to_thread)
+        hybrid_search.bm25_search.search.assert_called_once_with("test", 10)
+
+
+class TestFusionMethods:
+    """Test different fusion strategies (RRF, RSF, DBSF)."""
+
+    def test_init_with_fusion_method_rrf(self, mock_vector_search, mock_bm25_search):
+        """Should initialize with RRF fusion method."""
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="rrf",
+        )
+        assert search._fusion_method == "rrf"
+
+    def test_init_with_fusion_method_rsf(self, mock_vector_search, mock_bm25_search):
+        """Should initialize with RSF fusion method."""
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="rsf",
+        )
+        assert search._fusion_method == "rsf"
+
+    def test_init_with_fusion_method_dbsf(self, mock_vector_search, mock_bm25_search):
+        """Should initialize with DBSF fusion method."""
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="dbsf",
+        )
+        assert search._fusion_method == "dbsf"
+
+    def test_init_with_custom_fusion_k(self, mock_vector_search, mock_bm25_search):
+        """Should initialize with custom fusion_k parameter."""
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_k=20,
+        )
+        assert search._fusion_k == 20
+
+    def test_init_with_invalid_fusion_k(self, mock_vector_search, mock_bm25_search):
+        """Should raise ValidationError for invalid fusion_k."""
+        with pytest.raises(ValidationError) as exc_info:
+            HybridSearch(
+                vector_search=mock_vector_search,
+                bm25_search=mock_bm25_search,
+                fusion_k=0,
+            )
+        assert "fusion_k must be a positive integer" in str(exc_info.value)
+
+    def test_init_with_negative_fusion_k(self, mock_vector_search, mock_bm25_search):
+        """Should raise ValidationError for negative fusion_k."""
+        with pytest.raises(ValidationError) as exc_info:
+            HybridSearch(
+                vector_search=mock_vector_search,
+                bm25_search=mock_bm25_search,
+                fusion_k=-10,
+            )
+        assert "fusion_k must be a positive integer" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_search_with_rsf_fusion(
+        self, mock_vector_search, mock_bm25_search, sample_vector_results, sample_bm25_results
+    ):
+        """Should use RSF fusion method when specified."""
+        mock_vector_search.search.return_value = sample_vector_results
+        mock_bm25_search.search.return_value = sample_bm25_results
+
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="rsf",
+        )
+
+        results = await search.search(query="test", limit=10, alpha=0.5)
+
+        # RSF should produce results with scores in [0, 1] range
+        assert len(results) > 0
+        for result in results:
+            assert 0.0 <= result.similarity_score <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_search_with_dbsf_fusion(
+        self, mock_vector_search, mock_bm25_search, sample_vector_results, sample_bm25_results
+    ):
+        """Should use DBSF fusion method when specified."""
+        mock_vector_search.search.return_value = sample_vector_results
+        mock_bm25_search.search.return_value = sample_bm25_results
+
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="dbsf",
+        )
+
+        results = await search.search(query="test", limit=10, alpha=0.5)
+
+        # DBSF should produce results with scores in [0, 1] range
+        assert len(results) > 0
+        for result in results:
+            assert 0.0 <= result.similarity_score <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_search_fusion_method_override(
+        self, mock_vector_search, mock_bm25_search, sample_vector_results, sample_bm25_results
+    ):
+        """Should override instance fusion method with search parameter."""
+        mock_vector_search.search.return_value = sample_vector_results
+        mock_bm25_search.search.return_value = sample_bm25_results
+
+        # Initialize with RRF
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="rrf",
+        )
+
+        # Override with RSF for this search
+        results = await search.search(query="test", limit=10, alpha=0.5, fusion_method="rsf")
+
+        # Should return results (RSF was used)
+        assert len(results) > 0
+
+    @pytest.mark.asyncio
+    async def test_search_uses_default_fusion_method(
+        self, mock_vector_search, mock_bm25_search, sample_vector_results, sample_bm25_results
+    ):
+        """Should use default fusion method when not specified in search."""
+        mock_vector_search.search.return_value = sample_vector_results
+        mock_bm25_search.search.return_value = sample_bm25_results
+
+        # Initialize with DBSF as default
+        search = HybridSearch(
+            vector_search=mock_vector_search,
+            bm25_search=mock_bm25_search,
+            fusion_method="dbsf",
+        )
+
+        # Don't specify fusion_method in search
+        results = await search.search(query="test", limit=10, alpha=0.5)
+
+        # Should return results using DBSF
+        assert len(results) > 0
