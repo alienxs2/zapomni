@@ -46,7 +46,7 @@ dependencies = [
     "tiktoken>=0.5.0",
     "sentence-transformers>=2.2.0",
     "spacy>=3.7.0",
-    "rank-bm25>=0.2.2",
+    "bm25s[full]>=0.2.0",
 
     # Document Processing
     "pymupdf>=1.23.0",
@@ -152,7 +152,7 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "falkordb.*",
-    "rank_bm25.*",
+    "bm25s.*",
     "trafilatura.*",
     "pymupdf.*",
 ]

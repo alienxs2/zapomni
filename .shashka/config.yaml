@@ -19,8 +19,8 @@ language:
 
 # Session tracking
 session:
-  current: 23
-  last_date: "2025-11-29"
+  current: 24
+  last_date: "2025-11-30"
 
 # Bug tracking - ALL FIXED!
 bugs:
@@ -30,13 +30,12 @@ bugs:
 
 # Milestones
 milestones:
-  current: "v0.6.0 - Code Intelligence (COMPLETE)"
-  next: "v0.7.0 - Search Excellence"
+  current: "v0.7.0 - Search Excellence (IN PROGRESS)"
+  next: "v0.8.0 - Knowledge Graph 2.0"
 
-# v0.6.0 Progress
-v060_progress:
+# v0.7.0 Progress
+v070_progress:
   completed:
-    - "#22 GoExtractor (55 tests)"
-    - "#23 RustExtractor (55 tests)"
-    - "#24 CallGraphAnalyzer (74 tests)"
-  todo: []
+    - "#25 BM25 Search - bm25s + CodeTokenizer + persistence (65 tests)"
+  todo:
+    - "#26 Hybrid Search with RRF fusion"
