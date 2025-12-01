@@ -44,7 +44,7 @@ class TestSchemaManagerInit:
         manager = SchemaManager(graph=mock_graph)
 
         assert manager.graph is mock_graph
-        assert manager.schema_version == "1.0.0"
+        assert manager.schema_version == "2.0.0"  # Updated for bi-temporal (v0.8.0)
         assert manager.initialized is False
         assert manager.logger is not None
 
@@ -72,7 +72,7 @@ class TestSchemaManagerInit:
         mock_graph = MagicMock(spec=Graph)
         manager = SchemaManager(graph=mock_graph)
 
-        assert manager.SCHEMA_VERSION == "1.0.0"
+        assert manager.SCHEMA_VERSION == "2.0.0"  # Updated for bi-temporal (v0.8.0)
         assert manager.VECTOR_DIMENSION == 768
         assert manager.SIMILARITY_FUNCTION == "cosine"
         assert manager.NODE_MEMORY == "Memory"
@@ -374,9 +374,9 @@ class TestSchemaManagerCreatePropertyIndexes:
 
         mock_manager.create_property_indexes()
 
-        # Should execute CREATE INDEX for 6 missing indexes (not for memory_id_idx)
-        # Total indexes: 7 (original 4 + 2 GC indexes + 1 call graph index), minus 1 existing = 6
-        assert mock_manager._execute_cypher.call_count == 6
+        # Should execute CREATE INDEX for 10 missing indexes (not for memory_id_idx)
+        # Total indexes: 11 (original 7 + 4 bi-temporal indexes), minus 1 existing = 10
+        assert mock_manager._execute_cypher.call_count == 10
 
     def test_create_property_indexes_correct_cypher(self, mock_manager):
         """Test property indexes created with correct Cypher syntax."""
@@ -385,8 +385,8 @@ class TestSchemaManagerCreatePropertyIndexes:
         # Check that Cypher queries contain expected patterns
         cypher_calls = [call[0][0] for call in mock_manager._execute_cypher.call_args_list]
 
-        # Should have 7 CREATE INDEX queries (including 2 GC indexes + 1 call graph index)
-        assert len(cypher_calls) == 7
+        # Should have 11 CREATE INDEX queries (including bi-temporal indexes)
+        assert len(cypher_calls) == 11
 
         # All should be CREATE INDEX
         for query in cypher_calls:
@@ -431,7 +431,7 @@ class TestSchemaManagerVerifySchema:
         status = mock_manager.verify_schema()
 
         assert isinstance(status, dict)
-        assert status["version"] == "1.0.0"
+        assert status["version"] == "2.0.0"  # Updated for bi-temporal (v0.8.0)
         assert status["initialized"] is True
         assert "indexes" in status
         assert "node_labels" in status

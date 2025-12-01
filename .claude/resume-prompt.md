@@ -1,8 +1,8 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-11-30 (Session #25)
-**Project Status**: v0.7.0 COMPLETE | Issue #26 COMPLETE | mypy 100% CLEAN
-**Version**: v0.7.0
+**Last Updated**: 2025-12-01 (Session #26)
+**Project Status**: Issue #27 Phase 1 COMPLETE | v0.8.0 IN PROGRESS | mypy 100% CLEAN
+**Version**: v0.7.0 (v0.8.0 in progress)
 **Branch**: `main`
 
 ---
@@ -11,26 +11,25 @@
 
 ### Current State Summary
 
-**Session #25: Hybrid Search with RRF Fusion!**
+**Session #26: Bi-temporal Model Phase 1 Complete!**
 
 Major achievement:
-- **Issue #26 Hybrid Search with RRF Fusion**: COMPLETE
-- Added `fusion/` module (RRF, RSF, DBSF algorithms)
-- Added `evaluation/` module (MRR, NDCG@K, Recall@K)
-- True parallel execution with `asyncio.gather()`
-- **139 new tests**, all passing
-- **2640 total unit tests** passing
-- **v0.7.0 Search Excellence: COMPLETE**
+- **Issue #27 Phase 1 (Schema & Models)**: COMPLETE
+- Added **bi-temporal models** (MemoryVersion, TemporalQuery)
+- Created **migration system** (migration_001_bitemporal.py)
+- Schema version **2.0.0** with 4 new temporal indexes
+- **48 new tests**, all passing
+- **2688 total unit tests** passing
 
 **CI/CD Status:**
 | Workflow | Status |
 |----------|--------|
 | **Build & Package** | **SUCCESS** |
 | **Lint & Code Quality** | **SUCCESS** (mypy: 0 errors!) |
-| Tests | **SUCCESS** (2640 passed) |
+| Tests | **SUCCESS** (2688 passed) |
 
 **Test Status:**
-- Unit Tests: **2640 passed**, 11 skipped
+- Unit Tests: **2688 passed**, 11 skipped
 - Integration Tests: **115 passed** (51 skip in CI)
 - E2E Tests: 88 passed, 1 xfailed
 
@@ -38,40 +37,48 @@ Major achievement:
 
 ## NEXT STEPS
 
-### Priority 1: v0.8.0 - Knowledge Graph 2.0
-
-#### Issue #27 - Bi-temporal model
+### Priority 1: Issue #38 - Phase 2: Database Layer
 
 ```bash
-gh issue view 27
+gh issue view 38
 ```
 
-Key areas:
-1. **Valid time vs transaction time**
-2. **Historical queries**
-3. **Time-travel debugging**
+Key tasks:
+1. Add temporal query methods to FalkorDBClient
+2. Update CypherQueryBuilder with temporal patterns
+3. Update existing methods for backwards compatibility
+4. 50+ new unit tests
 
-### Other milestones
-- v0.9.0: #28 Support 100k+ files
-- v1.0.0: #29 Web UI, #30 Documentation
+**Full specification**: `.shashka/specs/issue-27-bitemporal/`
+
+### Implementation Progress (Issue #27)
+
+| Phase | Issue | Description | Status |
+|-------|-------|-------------|--------|
+| 1 | #37 | Schema & Models | **COMPLETE** |
+| 2 | #38 | Database Layer | **NEXT** |
+| 3 | #39 | Git Integration | Pending |
+| 4 | #40 | MCP Tools | Pending |
+| 5 | #41 | Documentation | Pending |
 
 ---
 
 ## Reference Files
 
 ```
-src/zapomni_core/search/
-├── bm25_search.py        # Enhanced with bm25s (Session #24)
-├── bm25_tokenizer.py     # CodeTokenizer (Session #24)
-├── vector_search.py      # Vector search
-├── hybrid_search.py      # Parallel + fusion (Session #25)
-├── reranker.py           # Cross-encoder
-├── fusion/               # NEW: Fusion algorithms (Session #25)
-│   ├── rrf.py            # Reciprocal Rank Fusion
-│   ├── rsf.py            # Relative Score Fusion
-│   └── dbsf.py           # Distribution-Based Score Fusion
-└── evaluation/           # NEW: Metrics (Session #25)
-    └── metrics.py        # MRR, NDCG@K, Recall@K
+src/zapomni_db/
+├── models.py              # Bi-temporal models (Session #26)
+├── schema_manager.py      # Schema v2.0.0 (Session #26)
+├── falkordb_client.py     # <-- ADD TEMPORAL METHODS (Phase 2)
+├── cypher_query_builder.py # <-- ADD TEMPORAL QUERIES (Phase 2)
+└── migrations/            # NEW: Migration scripts (Session #26)
+    └── migration_001_bitemporal.py
+
+.shashka/specs/issue-27-bitemporal/
+├── README.md              # Spec overview
+├── requirements.md        # Requirements
+├── design.md              # Technical design (READ THIS!)
+└── tasks.md               # Task breakdown
 ```
 
 ### How to Start
@@ -80,9 +87,12 @@ src/zapomni_core/search/
 cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
-make test                     # Should see 2640 passed
+make test                     # Should see 2688 passed
 mypy src/                     # Should see 0 errors!
 gh run list --limit 5         # Check CI status
+
+# Read bi-temporal spec
+cat .shashka/specs/issue-27-bitemporal/design.md
 ```
 
 ---
@@ -93,12 +103,14 @@ gh run list --limit 5         # Check CI status
 
 ```
 .shashka/
+├── specs/
+│   └── issue-27-bitemporal/  # FULL SPECIFICATION
 ├── state/
-│   ├── HANDOFF.md        # Session handoff (START HERE)
-│   └── SNAPSHOT.md       # Project snapshot
+│   ├── HANDOFF.md            # Session handoff (START HERE)
+│   └── SNAPSHOT.md           # Project snapshot
 ├── log/
-│   └── 2025-11-30-session-25.md  # Latest session log
-└── config.yaml           # Project config
+│   └── 2025-12-01-session-26.md  # Latest session log
+└── config.yaml               # Project config
 ```
 
 ### Claude Slash Commands
@@ -116,13 +128,13 @@ gh run list --limit 5         # Check CI status
 
 ```bash
 # Development
-make test                     # All unit tests (2640)
+make test                     # All unit tests (2688)
 make lint                     # Run linter
 make format                   # Format code
 mypy src/                     # Type checking (0 errors!)
 
 # Search tests
-pytest tests/unit/search/     # Search tests (204)
+pytest tests/unit/db/         # DB tests (48 temporal)
 
 # Services
 make docker-up                # Start FalkorDB + Redis
@@ -130,7 +142,7 @@ make server                   # Start MCP server
 
 # GitHub
 gh run list --limit 5         # Check CI status
-gh issue list --state open    # All open issues (5)
+gh issue list --state open    # All open issues
 ```
 
 ---
@@ -142,11 +154,8 @@ src/
 ├── zapomni_core/
 │   ├── search/             # Search module (v0.7.0 COMPLETE)
 │   │   ├── bm25_search.py      # Enhanced with bm25s
-│   │   ├── bm25_tokenizer.py   # CodeTokenizer
-│   │   ├── vector_search.py    # Vector search
 │   │   ├── hybrid_search.py    # Parallel + fusion
-│   │   ├── fusion/             # RRF, RSF, DBSF
-│   │   └── evaluation/         # MRR, NDCG, Recall
+│   │   └── fusion/             # RRF, RSF, DBSF
 │   ├── treesitter/         # Tree-sitter module
 │   │   ├── extractors/     # Language extractors
 │   │   └── analyzers/      # Code analysis
@@ -154,7 +163,11 @@ src/
 ├── zapomni_mcp/
 │   └── tools/
 │       └── index_codebase.py  # INTEGRATION POINT
-└── zapomni_db/
+└── zapomni_db/             # <-- FOCUS FOR PHASE 2
+    ├── models.py           # Bi-temporal models
+    ├── schema_manager.py   # Schema v2.0.0
+    ├── falkordb_client.py  # Add temporal methods
+    └── migrations/         # Migration scripts
 ```
 
 ---
@@ -163,14 +176,13 @@ src/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#25** | 2025-11-30 | Issue #26 Hybrid | **RRF/RSF/DBSF fusion, 139 tests** |
+| **#26** | 2025-12-01 | Issue #27 Phase 1 | **Schema & Models, 48 tests** |
+| #25 | 2025-11-30 | Issue #26 Hybrid | RRF/RSF/DBSF fusion, 139 tests |
 | #24 | 2025-11-30 | Issue #25 BM25 | bm25s + CodeTokenizer, 65 tests |
 | #23 | 2025-11-29 | mypy cleanup | 141->0 errors, 9 issues closed |
 | #22 | 2025-11-29 | mypy + Integration | 64 mypy fixed |
 | #21 | 2025-11-29 | CI/CD Fixes | Build SUCCESS |
 | #20 | 2025-11-29 | Issue #24 | CallGraphAnalyzer (74 tests) |
-| #19 | 2025-11-29 | Issue #23 | RustExtractor (55 tests) |
-| #18 | 2025-11-28 | Issue #22 | GoExtractor (55 tests) |
 
 ---
 
@@ -182,4 +194,4 @@ src/
 
 ---
 
-**v0.7.0 Search Excellence COMPLETE! Next: v0.8.0 Knowledge Graph 2.0 (Issue #27).**
+**Issue #27 Phase 1 COMPLETE! Next: Phase 2 - Database Layer (Issue #38).**

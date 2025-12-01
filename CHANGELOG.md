@@ -8,6 +8,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+#### Bi-temporal Model Foundation (Issue #27 Phase 1) - 2025-12-01
+
+**Issue:** [#27](https://github.com/alienxs2/zapomni/issues/27) (Phase 1 of 5)
+
+Started implementation of bi-temporal model for time-travel queries and version history tracking.
+
+**New Features:**
+
+1. **Bi-temporal Models** (`src/zapomni_db/models.py`)
+   - `MemoryVersion` - Memory node with full bi-temporal support
+   - `TemporalQuery` - Parameters for point-in-time and history queries
+   - `VersionInfo`, `ChangeRecord`, `TimelineEntry` - Supporting dataclasses
+   - `Entity` updated with `valid_from`, `valid_to`, `is_current` fields
+
+2. **Schema Updates** (`src/zapomni_db/schema_manager.py`)
+   - Schema version bumped to 2.0.0
+   - 4 new indexes for temporal queries:
+     - `memory_current_idx` - Fast current state queries
+     - `memory_valid_from_idx` - Valid time range queries
+     - `memory_version_idx` - Version chain traversal
+     - `entity_current_idx` - Entity current state
+
+3. **Migration System** (`src/zapomni_db/migrations/`)
+   - `migration_001_bitemporal.py` - Idempotent migration script
+   - `get_migration_status()` - Check migration progress
+   - `migrate_to_bitemporal()` - Add temporal fields to existing data
+
+**Files Added:**
+- `src/zapomni_db/migrations/__init__.py` - Migration module exports
+- `src/zapomni_db/migrations/migration_001_bitemporal.py` - Bi-temporal migration
+- `tests/unit/db/test_models_temporal.py` - 26 tests for temporal models
+- `tests/unit/db/test_migration_bitemporal.py` - 22 tests for migration
+- `.shashka/specs/issue-27-bitemporal/` - Full specification
+
+**Files Modified:**
+- `src/zapomni_db/models.py` - Added bi-temporal models
+- `src/zapomni_db/schema_manager.py` - Version 2.0.0, new indexes
+
+**Test Results:**
+- **48 new tests** (26 models + 22 migration)
+- **2688 total unit tests** passing
+- **mypy: 0 errors**
+
+**Remaining Phases:**
+- Phase 2: Database Layer (#38)
+- Phase 3: Git Integration (#39)
+- Phase 4: MCP Tools (#40)
+- Phase 5: Documentation & Release (#41)
+
+---
+
 #### Hybrid Search with RRF Fusion (Issue #26) - 2025-11-30
 
 **Issue:** [#26](https://github.com/alienxs2/zapomni/issues/26)

@@ -49,7 +49,7 @@ class SchemaManager:
     """
 
     # Class constants
-    SCHEMA_VERSION: str = "1.0.0"
+    SCHEMA_VERSION: str = "2.0.0"  # Updated for bi-temporal model (Issue #27)
     VECTOR_DIMENSION: int = 768  # nomic-embed-text dimension
     SIMILARITY_FUNCTION: str = "cosine"
 
@@ -73,6 +73,13 @@ class SchemaManager:
     INDEX_MEMORY_STALE: str = "memory_stale_idx"
     INDEX_MEMORY_FILE_PATH: str = "memory_file_path_idx"
     INDEX_MEMORY_QUALIFIED_NAME: str = "memory_qualified_name_idx"
+
+    # Bi-temporal index names (v0.8.0 - Issue #27)
+    INDEX_MEMORY_CURRENT: str = "memory_current_idx"
+    INDEX_MEMORY_VALID_FROM: str = "memory_valid_from_idx"
+    INDEX_MEMORY_FILE_HISTORY: str = "memory_file_history_idx"
+    INDEX_MEMORY_VERSION: str = "memory_version_idx"
+    INDEX_ENTITY_CURRENT: str = "entity_current_idx"
 
     def __init__(self, graph: Graph, logger: Optional[BoundLogger] = None) -> None:
         """
@@ -259,6 +266,11 @@ class SchemaManager:
             (self.INDEX_MEMORY_FILE_PATH, self.NODE_MEMORY, "file_path"),
             # Index for call graph queries
             (self.INDEX_MEMORY_QUALIFIED_NAME, self.NODE_MEMORY, "qualified_name"),
+            # Bi-temporal indexes (v0.8.0 - Issue #27)
+            (self.INDEX_MEMORY_CURRENT, self.NODE_MEMORY, "is_current"),
+            (self.INDEX_MEMORY_VALID_FROM, self.NODE_MEMORY, "valid_from"),
+            (self.INDEX_MEMORY_VERSION, self.NODE_MEMORY, "previous_version_id"),
+            (self.INDEX_ENTITY_CURRENT, self.NODE_ENTITY, "is_current"),
         ]
 
         created_count = 0
