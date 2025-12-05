@@ -17,7 +17,7 @@ import re
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import redis
 import structlog
@@ -36,6 +36,7 @@ from zapomni_db.models import (
     DEFAULT_WORKSPACE_ID,
     Entity,
     Memory,
+    MemoryVersion,
     QueryResult,
     SearchResult,
     Workspace,
@@ -2639,3 +2640,709 @@ class FalkorDBClient:
                 qualified_name=qualified_name,
             )
             raise DatabaseError(f"Failed to get callees: {e}")
+
+    # ========================================
+    # BI-TEMPORAL QUERIES (Issue #27)
+    # ========================================
+
+    async def get_memory_at_time(
+        self,
+        workspace_id: str,
+        file_path: str,
+        as_of: datetime,
+        time_type: Literal["valid", "transaction", "both"] = "valid",
+    ) -> Optional[MemoryVersion]:
+        """
+        Get memory state at a specific point in time.
+
+        This method performs a point-in-time query using bi-temporal semantics
+        to retrieve the memory version that was valid at the specified time.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            file_path: File path to query
+            as_of: Point in time (datetime)
+            time_type: Which temporal dimension to query
+                - "valid": When the fact was true in reality (default)
+                - "transaction": What we knew at that time in the database
+                - "both": Full bi-temporal query (both dimensions)
+
+        Returns:
+            MemoryVersion if found at that time, None otherwise
+
+        Raises:
+            ValidationError: If workspace_id or file_path is empty
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            # What was the state of main.py on November 15th?
+            memory = await client.get_memory_at_time(
+                workspace_id="default",
+                file_path="/project/src/main.py",
+                as_of=datetime(2025, 11, 15, tzinfo=timezone.utc),
+                time_type="valid"
+            )
+            if memory:
+                print(f"Version {memory.version}: {memory.text[:100]}")
+            ```
+        """
+        # Validate inputs
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if not file_path or not file_path.strip():
+            raise ValidationError("file_path cannot be empty")
+
+        # Convert datetime to ISO 8601 string
+        as_of_str = as_of.isoformat() if as_of else datetime.now(timezone.utc).isoformat()
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_point_in_time_query(
+            workspace_id=workspace_id,
+            file_path=file_path,
+            as_of=as_of_str,
+            time_type=time_type,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            if result.row_count > 0:
+                row = result.rows[0]
+                memory = self._row_to_memory_version(row)
+
+                self._logger.debug(
+                    "memory_at_time_retrieved",
+                    workspace_id=workspace_id,
+                    file_path=file_path,
+                    as_of=as_of_str,
+                    time_type=time_type,
+                    version=memory.version,
+                )
+                return memory
+
+            self._logger.debug(
+                "memory_at_time_not_found",
+                workspace_id=workspace_id,
+                file_path=file_path,
+                as_of=as_of_str,
+                time_type=time_type,
+            )
+            return None
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._logger.error(
+                "get_memory_at_time_error",
+                error=str(e),
+                workspace_id=workspace_id,
+                file_path=file_path,
+            )
+            raise DatabaseError(f"Failed to get memory at time: {e}")
+
+    async def get_memory_history(
+        self,
+        workspace_id: str,
+        file_path: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[MemoryVersion]:
+        """
+        Get version history of a memory.
+
+        Returns all versions of a memory ordered by valid_from DESC.
+        At least one of file_path or entity_id must be provided.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            file_path: File path to get history for (optional if entity_id provided)
+            entity_id: Memory ID to get history for (optional if file_path provided)
+            limit: Maximum number of versions to return (1-1000, default 50)
+
+        Returns:
+            List of MemoryVersion objects ordered by valid_from DESC
+
+        Raises:
+            ValidationError: If workspace_id is empty
+            ValidationError: If both file_path and entity_id are None
+            ValidationError: If entity_id is not a valid UUID
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            # Get history by file path
+            history = await client.get_memory_history(
+                workspace_id="default",
+                file_path="/project/src/main.py",
+                limit=100
+            )
+            for version in history:
+                print(f"v{version.version}: {version.valid_from} - {version.valid_to or 'current'}")
+            ```
+        """
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_history_query(
+            workspace_id=workspace_id,
+            file_path=file_path,
+            entity_id=entity_id,
+            limit=limit,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            memories = []
+            for row in result.rows:
+                memory = self._row_to_memory_version(row)
+                memories.append(memory)
+
+            self._logger.debug(
+                "memory_history_retrieved",
+                workspace_id=workspace_id,
+                file_path=file_path,
+                entity_id=entity_id,
+                count=len(memories),
+            )
+
+            return memories
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._logger.error(
+                "get_memory_history_error",
+                error=str(e),
+                workspace_id=workspace_id,
+                file_path=file_path,
+                entity_id=entity_id,
+            )
+            raise DatabaseError(f"Failed to get memory history: {e}")
+
+    async def get_changes(
+        self,
+        workspace_id: str,
+        since: datetime,
+        until: Optional[datetime] = None,
+        change_type: Optional[str] = None,
+        path_pattern: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get changes in time range.
+
+        Retrieves memories created/modified within the specified time range,
+        with optional filtering by change type and path pattern.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            since: Start of time range (inclusive)
+            until: End of time range (inclusive, optional - defaults to now)
+            change_type: Filter by change type (optional)
+                - "created": Only version=1 records (new files)
+                - "modified": Only version>1 records (updates)
+                - "deleted": Only records where transaction_to is set
+            path_pattern: Path prefix filter using STARTS WITH (optional)
+            limit: Maximum number of results (1-1000, default 100)
+
+        Returns:
+            List of dicts containing:
+                - memory_id: str
+                - file_path: str
+                - change_type: str ("created", "modified", "deleted")
+                - timestamp: str (created_at)
+                - version: int
+                - qualified_name: Optional[str]
+
+        Raises:
+            ValidationError: If workspace_id is empty
+            ValidationError: If change_type is invalid
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            # Get all changes in the last day
+            changes = await client.get_changes(
+                workspace_id="default",
+                since=datetime.now(timezone.utc) - timedelta(days=1),
+                limit=50
+            )
+            for change in changes:
+                print(f"{change['change_type']}: {change['file_path']} v{change['version']}")
+            ```
+        """
+        # Convert datetime to ISO 8601 strings
+        since_str = since.isoformat()
+        until_str = until.isoformat() if until else None
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_changes_query(
+            workspace_id=workspace_id,
+            since=since_str,
+            until=until_str,
+            change_type=change_type,
+            path_pattern=path_pattern,
+            limit=limit,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            changes = []
+            for row in result.rows:
+                changes.append({
+                    "memory_id": row.get("memory_id"),
+                    "file_path": row.get("file_path"),
+                    "change_type": row.get("change_type"),
+                    "timestamp": row.get("created_at"),
+                    "version": row.get("version"),
+                    "qualified_name": row.get("qualified_name"),
+                    "valid_from": row.get("valid_from"),
+                    "valid_to": row.get("valid_to"),
+                    "transaction_to": row.get("transaction_to"),
+                })
+
+            self._logger.debug(
+                "changes_retrieved",
+                workspace_id=workspace_id,
+                since=since_str,
+                until=until_str,
+                change_type=change_type,
+                count=len(changes),
+            )
+
+            return changes
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._logger.error(
+                "get_changes_error",
+                error=str(e),
+                workspace_id=workspace_id,
+                since=since_str,
+            )
+            raise DatabaseError(f"Failed to get changes: {e}")
+
+    async def close_version(
+        self,
+        memory_id: str,
+        valid_to: Optional[datetime] = None,
+        transaction_to: Optional[datetime] = None,
+    ) -> bool:
+        """
+        Close a memory version (mark as superseded).
+
+        Updates a memory version to mark it as no longer current. This method
+        sets valid_to, transaction_to, and is_current = false.
+
+        Args:
+            memory_id: UUID of the memory version to close
+            valid_to: When content ceased to be valid (defaults to now)
+            transaction_to: When version was superseded in DB (defaults to now)
+
+        Returns:
+            True if version was closed, False if memory not found
+
+        Raises:
+            ValidationError: If memory_id is not a valid UUID
+            DatabaseError: If query fails
+
+        Example:
+            ```python
+            # Close previous version when creating new one
+            success = await client.close_version(
+                memory_id="550e8400-e29b-41d4-a716-446655440000",
+                valid_to=datetime.now(timezone.utc),
+                transaction_to=datetime.now(timezone.utc)
+            )
+            if success:
+                print("Version closed successfully")
+            ```
+        """
+        # Validate UUID
+        try:
+            uuid.UUID(memory_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid memory UUID: {e}")
+
+        # Set default timestamps
+        now = datetime.now(timezone.utc)
+        valid_to_str = (valid_to or now).isoformat()
+        transaction_to_str = (transaction_to or now).isoformat()
+
+        # Build query using CypherQueryBuilder
+        query_builder = CypherQueryBuilder()
+        cypher, params = query_builder.build_close_version_query(
+            memory_id=memory_id,
+            valid_to=valid_to_str,
+            transaction_to=transaction_to_str,
+        )
+
+        try:
+            result = await self._execute_cypher(cypher, params)
+
+            if result.row_count > 0:
+                self._logger.info(
+                    "version_closed",
+                    memory_id=memory_id,
+                    valid_to=valid_to_str,
+                    transaction_to=transaction_to_str,
+                )
+                return True
+
+            self._logger.warning(
+                "version_not_found_for_close",
+                memory_id=memory_id,
+            )
+            return False
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._logger.error(
+                "close_version_error",
+                error=str(e),
+                memory_id=memory_id,
+            )
+            raise DatabaseError(f"Failed to close version: {e}")
+
+    async def create_new_version(
+        self,
+        previous_memory_id: str,
+        new_text: str,
+        valid_from: Optional[datetime] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[MemoryVersion]:
+        """
+        Create a new version of a memory.
+
+        Creates a new version by:
+        1. Getting the previous memory
+        2. Closing the previous version
+        3. Creating new memory with incremented version number
+
+        Args:
+            previous_memory_id: UUID of the memory to create new version from
+            new_text: New text content for the memory
+            valid_from: When new content became valid (defaults to now)
+            metadata: Optional additional metadata for new version
+
+        Returns:
+            New MemoryVersion if created, None if previous memory not found
+
+        Raises:
+            ValidationError: If previous_memory_id is invalid UUID
+            ValidationError: If new_text is empty
+            DatabaseError: If database operation fails
+
+        Example:
+            ```python
+            # Create new version with updated content
+            new_memory = await client.create_new_version(
+                previous_memory_id="550e8400-e29b-41d4-a716-446655440000",
+                new_text="def updated_function(): pass",
+                valid_from=datetime.now(timezone.utc)
+            )
+            if new_memory:
+                print(f"Created version {new_memory.version}")
+            ```
+        """
+        # Validate inputs
+        try:
+            uuid.UUID(previous_memory_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid previous_memory_id UUID: {e}")
+
+        if not new_text or not new_text.strip():
+            raise ValidationError("new_text cannot be empty")
+
+        # Set timestamps
+        now = datetime.now(timezone.utc)
+        valid_from_dt = valid_from or now
+        valid_from_str = valid_from_dt.isoformat()
+        transaction_now_str = now.isoformat()
+
+        try:
+            # STEP 1: Get previous memory to extract its properties
+            get_cypher = """
+            MATCH (m:Memory {id: $memory_id})
+            RETURN m.id AS id,
+                   m.file_path AS file_path,
+                   m.qualified_name AS qualified_name,
+                   m.workspace_id AS workspace_id,
+                   m.version AS version,
+                   m.source AS source,
+                   m.tags AS tags,
+                   m.metadata AS metadata
+            """
+            get_params = {"memory_id": previous_memory_id}
+
+            result = await self._execute_cypher(get_cypher, get_params)
+
+            if result.row_count == 0:
+                self._logger.warning(
+                    "previous_memory_not_found",
+                    previous_memory_id=previous_memory_id,
+                )
+                return None
+
+            prev_row = result.rows[0]
+            prev_version = prev_row.get("version", 1) or 1
+            workspace_id = prev_row.get("workspace_id", DEFAULT_WORKSPACE_ID)
+            file_path = prev_row.get("file_path")
+            qualified_name = prev_row.get("qualified_name")
+            source = prev_row.get("source", "code_indexer")
+            tags = prev_row.get("tags", [])
+
+            # Parse previous metadata
+            prev_metadata = prev_row.get("metadata", "{}")
+            if isinstance(prev_metadata, str):
+                prev_metadata = json.loads(prev_metadata)
+            if metadata:
+                prev_metadata.update(metadata)
+
+            # STEP 2: Close previous version
+            closed = await self.close_version(
+                memory_id=previous_memory_id,
+                valid_to=valid_from_dt,
+                transaction_to=now,
+            )
+
+            if not closed:
+                self._logger.error(
+                    "failed_to_close_previous_version",
+                    previous_memory_id=previous_memory_id,
+                )
+                raise DatabaseError("Failed to close previous version")
+
+            # STEP 3: Create new version
+            new_memory_id = str(uuid.uuid4())
+            new_version = prev_version + 1
+
+            create_cypher = """
+            CREATE (m:Memory {
+                id: $memory_id,
+                text: $text,
+                file_path: $file_path,
+                qualified_name: $qualified_name,
+                workspace_id: $workspace_id,
+                version: $version,
+                previous_version_id: $previous_version_id,
+                source: $source,
+                tags: $tags,
+                metadata: $metadata,
+                created_at: $created_at,
+                transaction_to: null,
+                valid_from: $valid_from,
+                valid_to: null,
+                is_current: true,
+                stale: false,
+                last_seen_at: $created_at
+            })
+            RETURN m.id AS id,
+                   m.text AS text,
+                   m.file_path AS file_path,
+                   m.qualified_name AS qualified_name,
+                   m.workspace_id AS workspace_id,
+                   m.version AS version,
+                   m.previous_version_id AS previous_version_id,
+                   m.source AS source,
+                   m.tags AS tags,
+                   m.metadata AS metadata,
+                   m.created_at AS created_at,
+                   m.transaction_to AS transaction_to,
+                   m.valid_from AS valid_from,
+                   m.valid_to AS valid_to,
+                   m.is_current AS is_current
+            """
+
+            create_params = {
+                "memory_id": new_memory_id,
+                "text": new_text,
+                "file_path": file_path,
+                "qualified_name": qualified_name,
+                "workspace_id": workspace_id,
+                "version": new_version,
+                "previous_version_id": previous_memory_id,
+                "source": source,
+                "tags": tags,
+                "metadata": json.dumps(prev_metadata),
+                "created_at": transaction_now_str,
+                "valid_from": valid_from_str,
+            }
+
+            create_result = await self._execute_cypher(create_cypher, create_params)
+
+            if create_result.row_count > 0:
+                new_row = create_result.rows[0]
+                new_memory = self._row_to_memory_version(new_row)
+
+                self._logger.info(
+                    "new_version_created",
+                    memory_id=new_memory_id,
+                    version=new_version,
+                    previous_memory_id=previous_memory_id,
+                    file_path=file_path,
+                )
+
+                return new_memory
+
+            raise DatabaseError("Failed to create new version: no record returned")
+
+        except ValidationError:
+            raise
+        except DatabaseError:
+            raise
+        except Exception as e:
+            self._logger.error(
+                "create_new_version_error",
+                error=str(e),
+                previous_memory_id=previous_memory_id,
+            )
+            raise DatabaseError(f"Failed to create new version: {e}")
+
+    async def soft_delete_memory(
+        self,
+        memory_id: str,
+        workspace_id: Optional[str] = None,
+    ) -> bool:
+        """
+        Soft delete a memory (mark as deleted but preserve history).
+
+        Unlike hard delete, this method preserves the memory and its chunks
+        for historical queries by setting transaction_to and is_current = false.
+
+        Args:
+            memory_id: Memory UUID to soft delete
+            workspace_id: Workspace ID for validation. If provided, memory must
+                          belong to this workspace.
+
+        Returns:
+            True if soft deleted, False if memory not found
+
+        Raises:
+            ValidationError: If memory_id is invalid UUID
+            ValidationError: If memory exists but in different workspace
+            DatabaseError: If soft delete operation fails
+
+        Example:
+            ```python
+            # Soft delete preserves history
+            deleted = await client.soft_delete_memory(
+                memory_id="550e8400-e29b-41d4-a716-446655440000",
+                workspace_id="default"
+            )
+            if deleted:
+                print("Memory soft deleted - history preserved")
+            ```
+        """
+        # Validate UUID
+        try:
+            uuid.UUID(memory_id)
+        except ValueError as e:
+            raise ValidationError(f"Invalid memory UUID: {e}")
+
+        # If workspace_id provided, validate memory belongs to it
+        if workspace_id:
+            check_cypher = """
+            MATCH (m:Memory {id: $memory_id})
+            RETURN m.workspace_id AS workspace_id
+            """
+            check_params = {"memory_id": memory_id}
+
+            try:
+                check_result = await self._execute_cypher(check_cypher, check_params)
+                if check_result.row_count > 0:
+                    actual_workspace = check_result.rows[0].get("workspace_id")
+                    if actual_workspace and actual_workspace != workspace_id:
+                        raise ValidationError(
+                            f"Memory belongs to workspace '{actual_workspace}', "
+                            f"not '{workspace_id}'"
+                        )
+            except ValidationError:
+                raise
+            except Exception:
+                pass  # Memory might not exist, soft delete will return False
+
+        # Soft delete: mark as not current, set transaction_to
+        now_str = datetime.now(timezone.utc).isoformat()
+
+        soft_delete_cypher = """
+        MATCH (m:Memory {id: $memory_id})
+        SET m.transaction_to = $transaction_to,
+            m.is_current = false
+        RETURN count(m) AS deleted_count
+        """
+
+        parameters = {
+            "memory_id": memory_id,
+            "transaction_to": now_str,
+        }
+
+        try:
+            result = await self._execute_cypher(soft_delete_cypher, parameters)
+
+            if result.row_count > 0 and result.rows[0].get("deleted_count", 0) > 0:
+                self._logger.info(
+                    "memory_soft_deleted",
+                    memory_id=memory_id,
+                    workspace_id=workspace_id,
+                    transaction_to=now_str,
+                )
+                return True
+
+            self._logger.warning("memory_not_found_for_soft_delete", memory_id=memory_id)
+            return False
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            self._logger.error("soft_delete_memory_error", error=str(e))
+            raise DatabaseError(f"Failed to soft delete memory: {e}")
+
+    def _row_to_memory_version(self, row: Dict[str, Any]) -> MemoryVersion:
+        """
+        Convert database row to MemoryVersion object.
+
+        Helper method to parse query results into MemoryVersion objects.
+
+        Args:
+            row: Dictionary from query result
+
+        Returns:
+            MemoryVersion object populated from row data
+        """
+        # Handle tags - may be string or list
+        tags = row.get("tags", [])
+        if isinstance(tags, str):
+            tags = json.loads(tags) if tags else []
+
+        # Handle metadata - may be string
+        metadata = row.get("metadata")
+        if metadata and isinstance(metadata, dict):
+            metadata = json.dumps(metadata)
+
+        return MemoryVersion(
+            id=row.get("memory_id") or row.get("id", ""),
+            text=row.get("text", ""),
+            tags=tags,
+            source=row.get("source", ""),
+            metadata=metadata,
+            workspace_id=row.get("workspace_id", DEFAULT_WORKSPACE_ID),
+            file_path=row.get("file_path"),
+            qualified_name=row.get("qualified_name"),
+            created_at=row.get("created_at", datetime.now(timezone.utc).isoformat()),
+            transaction_to=row.get("transaction_to"),
+            valid_from=row.get("valid_from", datetime.now(timezone.utc).isoformat()),
+            valid_to=row.get("valid_to"),
+            version=row.get("version", 1) or 1,
+            previous_version_id=row.get("previous_version_id"),
+            is_current=row.get("is_current", True) if row.get("is_current") is not None else True,
+            stale=row.get("stale", False) or False,
+            last_seen_at=row.get("last_seen_at"),
+        )

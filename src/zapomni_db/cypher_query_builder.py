@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 from zapomni_db.exceptions import ValidationError
 from zapomni_db.models import DEFAULT_WORKSPACE_ID
@@ -239,6 +239,7 @@ class CypherQueryBuilder:
         # Note: FalkorDB returns cosine DISTANCE (0=identical, 2=opposite)
         # Convert min_similarity to max_distance: max_distance = 1 - min_similarity
         # IMPORTANT: workspace_id filter must come AFTER YIELD clause (in-filtering pattern)
+        # Bi-temporal: Only return current versions (is_current = true)
         cypher = f"""
         CALL db.idx.vector.queryNodes(
             'Chunk',
@@ -250,6 +251,7 @@ class CypherQueryBuilder:
         MATCH (m:Memory)-[:HAS_CHUNK]->(c)
         WHERE score <= (1.0 - $min_similarity)
         AND m.workspace_id = $workspace_id
+        AND m.is_current = true
         {filter_clause}
         RETURN m.id AS memory_id,
                c.id AS chunk_id,
@@ -937,6 +939,545 @@ class CypherQueryBuilder:
                count(r) AS call_count
         ORDER BY call_count DESC
         LIMIT $limit
+        """
+
+        return (cypher, parameters)
+
+    # ========================================
+    # BI-TEMPORAL QUERIES (Issue #27)
+    # ========================================
+
+    def _build_temporal_filter_clause(
+        self,
+        time_type: str = "current",
+        as_of_valid: Optional[str] = None,
+        as_of_transaction: Optional[str] = None,
+        node_alias: str = "m",
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build temporal WHERE clause for bi-temporal queries.
+
+        Generates parameterized temporal filter conditions based on the requested
+        time type. Supports current state, valid time, transaction time, or both.
+
+        Args:
+            time_type: Type of temporal query
+                - "current": Filter by is_current = true (default)
+                - "valid": Filter by valid time dimension
+                - "transaction": Filter by transaction time dimension
+                - "both": Filter by both valid and transaction time
+            as_of_valid: Point in valid time (ISO 8601 timestamp)
+                Required when time_type is "valid" or "both"
+            as_of_transaction: Point in transaction time (ISO 8601 timestamp)
+                Required when time_type is "transaction" or "both"
+            node_alias: Cypher node alias (default "m" for Memory)
+
+        Returns:
+            Tuple of (clause_string, parameters_dict)
+            - clause_string: WHERE clause fragment starting with "AND"
+            - parameters_dict: Parameters for the clause
+
+        Example:
+            ```python
+            # Current state filter
+            clause, params = builder._build_temporal_filter_clause(
+                time_type="current"
+            )
+            # Returns: ("AND m.is_current = true", {})
+
+            # Valid time filter
+            clause, params = builder._build_temporal_filter_clause(
+                time_type="valid",
+                as_of_valid="2025-11-15T00:00:00Z"
+            )
+            # Returns: (
+            #     "AND m.valid_from <= $as_of_valid AND (m.valid_to IS NULL OR m.valid_to > $as_of_valid)",
+            #     {"as_of_valid": "2025-11-15T00:00:00Z"}
+            # )
+            ```
+
+        Notes:
+            - NULL handling: valid_to/transaction_to NULL means "still valid/current"
+            - Time comparisons use <= for start and > for end (half-open interval)
+            - For "both", valid and transaction filters are combined with AND
+        """
+        params: Dict[str, Any] = {}
+        alias = node_alias
+
+        if time_type == "current":
+            # Optimized current state query using indexed is_current field
+            return (f"AND {alias}.is_current = true", params)
+
+        if time_type == "valid":
+            if not as_of_valid:
+                raise ValidationError("as_of_valid is required for time_type='valid'")
+            params["as_of_valid"] = as_of_valid
+            clause = (
+                f"AND {alias}.valid_from <= $as_of_valid "
+                f"AND ({alias}.valid_to IS NULL OR {alias}.valid_to > $as_of_valid)"
+            )
+            return (clause, params)
+
+        if time_type == "transaction":
+            if not as_of_transaction:
+                raise ValidationError("as_of_transaction is required for time_type='transaction'")
+            params["as_of_transaction"] = as_of_transaction
+            clause = (
+                f"AND {alias}.created_at <= $as_of_transaction "
+                f"AND ({alias}.transaction_to IS NULL OR {alias}.transaction_to > $as_of_transaction)"
+            )
+            return (clause, params)
+
+        if time_type == "both":
+            if not as_of_valid:
+                raise ValidationError("as_of_valid is required for time_type='both'")
+            if not as_of_transaction:
+                raise ValidationError("as_of_transaction is required for time_type='both'")
+            params["as_of_valid"] = as_of_valid
+            params["as_of_transaction"] = as_of_transaction
+            clause = (
+                f"AND {alias}.valid_from <= $as_of_valid "
+                f"AND ({alias}.valid_to IS NULL OR {alias}.valid_to > $as_of_valid) "
+                f"AND {alias}.created_at <= $as_of_transaction "
+                f"AND ({alias}.transaction_to IS NULL OR {alias}.transaction_to > $as_of_transaction)"
+            )
+            return (clause, params)
+
+        raise ValidationError(
+            f"Invalid time_type: '{time_type}'. "
+            "Must be one of: 'current', 'valid', 'transaction', 'both'"
+        )
+
+    def build_point_in_time_query(
+        self,
+        workspace_id: str,
+        file_path: str,
+        as_of: str,
+        time_type: Literal["valid", "transaction", "both"] = "valid",
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build Cypher query for point-in-time lookup.
+
+        Retrieves the memory version that was valid/known at the specified
+        point in time. Returns the single most recent version matching
+        the temporal criteria.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            file_path: File path to query
+            as_of: ISO 8601 timestamp for the point in time
+            time_type: Which time dimension to query
+                - "valid": What was true in reality at as_of
+                - "transaction": What we knew in the database at as_of
+                - "both": Bi-temporal query (requires as_of for both dimensions)
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If workspace_id is empty
+            ValidationError: If file_path is empty
+            ValidationError: If as_of is empty
+            ValidationError: If time_type is invalid
+
+        Example:
+            ```python
+            # What was the state of main.py on November 15th?
+            cypher, params = builder.build_point_in_time_query(
+                workspace_id="default",
+                file_path="/project/src/main.py",
+                as_of="2025-11-15T00:00:00Z",
+                time_type="valid"
+            )
+            ```
+
+        Query Pattern:
+            ```cypher
+            MATCH (m:Memory)
+            WHERE m.workspace_id = $workspace_id
+              AND m.file_path = $file_path
+              AND m.valid_from <= $as_of_valid
+              AND (m.valid_to IS NULL OR m.valid_to > $as_of_valid)
+            ORDER BY m.valid_from DESC
+            LIMIT 1
+            ```
+        """
+        # STEP 1: Validate inputs
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if not file_path or not file_path.strip():
+            raise ValidationError("file_path cannot be empty")
+
+        if not as_of or not as_of.strip():
+            raise ValidationError("as_of cannot be empty")
+
+        if time_type not in ("valid", "transaction", "both"):
+            raise ValidationError(
+                f"Invalid time_type: '{time_type}'. "
+                "Must be one of: 'valid', 'transaction', 'both'"
+            )
+
+        # STEP 2: Build parameters
+        parameters: Dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "file_path": file_path,
+        }
+
+        # STEP 3: Build temporal filter
+        if time_type == "both":
+            temporal_clause, temporal_params = self._build_temporal_filter_clause(
+                time_type="both",
+                as_of_valid=as_of,
+                as_of_transaction=as_of,
+            )
+        elif time_type == "valid":
+            temporal_clause, temporal_params = self._build_temporal_filter_clause(
+                time_type="valid",
+                as_of_valid=as_of,
+            )
+        else:  # transaction
+            temporal_clause, temporal_params = self._build_temporal_filter_clause(
+                time_type="transaction",
+                as_of_transaction=as_of,
+            )
+        parameters.update(temporal_params)
+
+        # STEP 4: Determine ORDER BY field based on time_type
+        order_field = "m.valid_from" if time_type in ("valid", "both") else "m.created_at"
+
+        # STEP 5: Build Cypher query
+        cypher = f"""
+        MATCH (m:Memory)
+        WHERE m.workspace_id = $workspace_id
+        AND m.file_path = $file_path
+        {temporal_clause}
+        RETURN m.id AS memory_id,
+               m.text AS text,
+               m.file_path AS file_path,
+               m.qualified_name AS qualified_name,
+               m.version AS version,
+               m.valid_from AS valid_from,
+               m.valid_to AS valid_to,
+               m.created_at AS created_at,
+               m.transaction_to AS transaction_to,
+               m.is_current AS is_current,
+               m.source AS source,
+               m.tags AS tags,
+               m.workspace_id AS workspace_id
+        ORDER BY {order_field} DESC
+        LIMIT 1
+        """
+
+        return (cypher, parameters)
+
+    def build_history_query(
+        self,
+        workspace_id: str,
+        file_path: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build Cypher query for version history.
+
+        Retrieves all versions of a memory, ordered by valid_from descending.
+        At least one of file_path or entity_id must be provided.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            file_path: File path to get history for (optional if entity_id provided)
+            entity_id: Memory ID to get history for (optional if file_path provided)
+            limit: Maximum number of versions to return (1-1000, default 50)
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If workspace_id is empty
+            ValidationError: If both file_path and entity_id are None
+            ValidationError: If limit is out of range
+            ValidationError: If entity_id is not a valid UUID
+
+        Example:
+            ```python
+            # Get history by file path
+            cypher, params = builder.build_history_query(
+                workspace_id="default",
+                file_path="/project/src/main.py",
+                limit=100
+            )
+
+            # Get history by entity ID
+            cypher, params = builder.build_history_query(
+                workspace_id="default",
+                entity_id="550e8400-e29b-41d4-a716-446655440000"
+            )
+            ```
+
+        Query Returns:
+            - memory_id: UUID of the version
+            - version: Version number (1, 2, 3...)
+            - valid_from: When version became valid
+            - valid_to: When version was superseded (NULL if current)
+            - created_at: When recorded in database
+            - transaction_to: When superseded in database (NULL if current)
+            - is_current: Boolean flag for current version
+        """
+        # STEP 1: Validate inputs
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if file_path is None and entity_id is None:
+            raise ValidationError("Either file_path or entity_id must be provided")
+
+        if not isinstance(limit, int) or limit < 1 or limit > 1000:
+            raise ValidationError(f"limit must be int in range [1, 1000], got {limit}")
+
+        if entity_id is not None:
+            self._validate_uuid(entity_id)
+
+        # STEP 2: Build parameters
+        parameters: Dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "limit": limit,
+        }
+
+        # STEP 3: Build filter condition
+        if file_path is not None:
+            parameters["file_path"] = file_path
+            filter_condition = "AND m.file_path = $file_path"
+        else:
+            parameters["entity_id"] = entity_id
+            filter_condition = "AND m.id = $entity_id"
+
+        # STEP 4: Build Cypher query
+        cypher = f"""
+        MATCH (m:Memory)
+        WHERE m.workspace_id = $workspace_id
+        {filter_condition}
+        RETURN m.id AS memory_id,
+               m.version AS version,
+               m.valid_from AS valid_from,
+               m.valid_to AS valid_to,
+               m.created_at AS created_at,
+               m.transaction_to AS transaction_to,
+               m.is_current AS is_current,
+               m.file_path AS file_path,
+               m.qualified_name AS qualified_name,
+               m.text AS text,
+               m.source AS source
+        ORDER BY m.valid_from DESC
+        LIMIT $limit
+        """
+
+        return (cypher, parameters)
+
+    def build_changes_query(
+        self,
+        workspace_id: str,
+        since: str,
+        until: Optional[str] = None,
+        change_type: Optional[str] = None,
+        path_pattern: Optional[str] = None,
+        limit: int = 100,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build Cypher query for changes in a time range.
+
+        Retrieves memories created/modified within the specified time range,
+        with optional filtering by change type and path pattern.
+
+        Args:
+            workspace_id: Workspace ID for data isolation
+            since: ISO 8601 timestamp for range start (inclusive)
+            until: ISO 8601 timestamp for range end (inclusive, optional)
+            change_type: Filter by change type (optional)
+                - "created": Only version=1 records (new files)
+                - "modified": Only version>1 records (updates)
+                - "deleted": Only records where transaction_to is set
+            path_pattern: Cypher STARTS WITH pattern for file_path (optional)
+            limit: Maximum number of results (1-1000, default 100)
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If workspace_id is empty
+            ValidationError: If since is empty
+            ValidationError: If change_type is invalid
+            ValidationError: If limit is out of range
+
+        Example:
+            ```python
+            # Get all changes in the last day
+            cypher, params = builder.build_changes_query(
+                workspace_id="default",
+                since="2025-12-04T00:00:00Z",
+                until="2025-12-05T00:00:00Z",
+                limit=50
+            )
+
+            # Get only new files in src/
+            cypher, params = builder.build_changes_query(
+                workspace_id="default",
+                since="2025-12-01T00:00:00Z",
+                change_type="created",
+                path_pattern="/project/src/"
+            )
+            ```
+
+        Query Returns:
+            - memory_id: UUID of the memory
+            - file_path: File path
+            - version: Version number
+            - created_at: When recorded in database
+            - change_type: "created", "modified", or "deleted"
+            - qualified_name: Fully qualified name (if available)
+        """
+        # STEP 1: Validate inputs
+        if not workspace_id or not workspace_id.strip():
+            raise ValidationError("workspace_id cannot be empty")
+
+        if not since or not since.strip():
+            raise ValidationError("since cannot be empty")
+
+        if change_type is not None and change_type not in ("created", "modified", "deleted"):
+            raise ValidationError(
+                f"Invalid change_type: '{change_type}'. "
+                "Must be one of: 'created', 'modified', 'deleted'"
+            )
+
+        if not isinstance(limit, int) or limit < 1 or limit > 1000:
+            raise ValidationError(f"limit must be int in range [1, 1000], got {limit}")
+
+        # STEP 2: Build parameters
+        parameters: Dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "since": since,
+            "limit": limit,
+        }
+
+        # STEP 3: Build optional filters
+        optional_filters = []
+
+        if until is not None:
+            parameters["until"] = until
+            optional_filters.append("AND m.created_at <= $until")
+
+        if path_pattern is not None:
+            parameters["path_pattern"] = path_pattern
+            optional_filters.append("AND m.file_path STARTS WITH $path_pattern")
+
+        # STEP 4: Build change_type filter
+        change_type_filter = ""
+        if change_type == "created":
+            change_type_filter = "AND m.version = 1"
+        elif change_type == "modified":
+            change_type_filter = "AND m.version > 1"
+        elif change_type == "deleted":
+            change_type_filter = "AND m.transaction_to IS NOT NULL"
+
+        optional_clause = " ".join(optional_filters)
+
+        # STEP 5: Build Cypher query
+        cypher = f"""
+        MATCH (m:Memory)
+        WHERE m.workspace_id = $workspace_id
+        AND m.created_at >= $since
+        {optional_clause}
+        {change_type_filter}
+        RETURN m.id AS memory_id,
+               m.file_path AS file_path,
+               m.version AS version,
+               m.created_at AS created_at,
+               m.qualified_name AS qualified_name,
+               m.valid_from AS valid_from,
+               m.valid_to AS valid_to,
+               m.transaction_to AS transaction_to,
+               CASE
+                 WHEN m.version = 1 THEN 'created'
+                 WHEN m.transaction_to IS NOT NULL THEN 'deleted'
+                 ELSE 'modified'
+               END AS change_type
+        ORDER BY m.created_at DESC
+        LIMIT $limit
+        """
+
+        return (cypher, parameters)
+
+    def build_close_version_query(
+        self,
+        memory_id: str,
+        valid_to: str,
+        transaction_to: str,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build Cypher query to close a version (mark as superseded).
+
+        Updates a memory version to mark it as no longer current. This is
+        called when creating a new version of the same entity.
+
+        Args:
+            memory_id: UUID of the memory version to close
+            valid_to: ISO 8601 timestamp when version ceased to be valid
+            transaction_to: ISO 8601 timestamp when version was superseded
+
+        Returns:
+            Tuple of (cypher_string, parameters_dict)
+
+        Raises:
+            ValidationError: If memory_id is not valid UUID
+            ValidationError: If valid_to is empty
+            ValidationError: If transaction_to is empty
+
+        Example:
+            ```python
+            # Close previous version when creating new one
+            cypher, params = builder.build_close_version_query(
+                memory_id="550e8400-e29b-41d4-a716-446655440000",
+                valid_to="2025-12-05T10:30:00Z",
+                transaction_to="2025-12-05T10:30:00Z"
+            )
+            ```
+
+        Query Effects:
+            - Sets valid_to to mark when content became invalid
+            - Sets transaction_to to mark when superseded in database
+            - Sets is_current = false for optimized queries
+
+        Notes:
+            - This should be called in the same transaction as creating
+              the new version to maintain consistency
+            - The valid_to/transaction_to timestamps should typically
+              match the valid_from/created_at of the new version
+        """
+        # STEP 1: Validate inputs
+        self._validate_uuid(memory_id)
+
+        if not valid_to or not valid_to.strip():
+            raise ValidationError("valid_to cannot be empty")
+
+        if not transaction_to or not transaction_to.strip():
+            raise ValidationError("transaction_to cannot be empty")
+
+        # STEP 2: Build parameters
+        parameters: Dict[str, Any] = {
+            "memory_id": memory_id,
+            "valid_to": valid_to,
+            "transaction_to": transaction_to,
+        }
+
+        # STEP 3: Build Cypher query
+        cypher = """
+        MATCH (m:Memory {id: $memory_id})
+        SET m.valid_to = $valid_to,
+            m.transaction_to = $transaction_to,
+            m.is_current = false
+        RETURN m.id AS memory_id,
+               m.is_current AS is_current,
+               m.valid_to AS valid_to,
+               m.transaction_to AS transaction_to
         """
 
         return (cypher, parameters)
