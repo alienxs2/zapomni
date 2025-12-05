@@ -52,10 +52,57 @@ Started implementation of bi-temporal model for time-travel queries and version 
 - **mypy: 0 errors**
 
 **Remaining Phases:**
-- Phase 2: Database Layer (#38)
+- Phase 2: Database Layer (#38) ✅ COMPLETE
 - Phase 3: Git Integration (#39)
 - Phase 4: MCP Tools (#40)
 - Phase 5: Documentation & Release (#41)
+
+---
+
+#### Bi-temporal Database Layer (Issue #38 Phase 2) - 2025-12-05
+
+**Issue:** [#38](https://github.com/alienxs2/zapomni/issues/38) (Phase 2 of 5)
+
+Implemented temporal query methods and version management for bi-temporal database operations.
+
+**New Features:**
+
+1. **CypherQueryBuilder Temporal Methods** (`src/zapomni_db/cypher_query_builder.py`)
+   - `_build_temporal_filter_clause()` - Base temporal WHERE clause builder
+   - `build_point_in_time_query()` - Point-in-time queries (valid/transaction/both)
+   - `build_history_query()` - Version history queries
+   - `build_changes_query()` - Changes in time range queries
+   - `build_close_version_query()` - Close version (mark superseded)
+   - Updated `build_vector_search_query()` with `is_current = true` filter
+
+2. **FalkorDBClient Temporal Methods** (`src/zapomni_db/falkordb_client.py`)
+   - `get_memory_at_time()` - Get memory state at specific point in time
+   - `get_memory_history()` - Get all versions of a memory
+   - `get_changes()` - Get changes in time range with filtering
+   - `close_version()` - Close a memory version
+   - `create_new_version()` - Create new version with chain linking
+   - `soft_delete_memory()` - Soft delete preserving history
+   - `_row_to_memory_version()` - Helper for result parsing
+
+**Files Added:**
+- `tests/unit/db/test_cypher_temporal.py` - 51 tests for CypherQueryBuilder temporal methods
+- `tests/unit/db/test_falkordb_temporal.py` - 46 tests for FalkorDBClient temporal methods
+
+**Files Modified:**
+- `src/zapomni_db/cypher_query_builder.py` - +540 lines (6 temporal methods)
+- `src/zapomni_db/falkordb_client.py` - +706 lines (7 temporal methods)
+
+**Test Results:**
+- **97 new tests** (51 CypherQueryBuilder + 46 FalkorDBClient)
+- **2785 total unit tests** passing
+- **mypy: 0 errors**
+
+**Capabilities Added:**
+- Point-in-time queries ("What was the code at time X?")
+- Version history tracking ("Show all versions of file Y")
+- Change tracking ("What changed between dates A and B?")
+- Soft delete (preserves history instead of hard delete)
+- Version chain management (close old, create new with linking)
 
 ---
 

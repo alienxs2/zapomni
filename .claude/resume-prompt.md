@@ -1,7 +1,7 @@
 # Zapomni Project - AI Agent Handoff
 
-**Last Updated**: 2025-12-01 (Session #26)
-**Project Status**: Issue #27 Phase 1 COMPLETE | v0.8.0 IN PROGRESS | mypy 100% CLEAN
+**Last Updated**: 2025-12-05 (Session #27)
+**Project Status**: Issue #38 Phase 2 COMPLETE | v0.8.0 IN PROGRESS | mypy 100% CLEAN
 **Version**: v0.7.0 (v0.8.0 in progress)
 **Branch**: `main`
 
@@ -11,25 +11,25 @@
 
 ### Current State Summary
 
-**Session #26: Bi-temporal Model Phase 1 Complete!**
+**Session #27: Database Layer Phase 2 Complete!**
 
 Major achievement:
-- **Issue #27 Phase 1 (Schema & Models)**: COMPLETE
-- Added **bi-temporal models** (MemoryVersion, TemporalQuery)
-- Created **migration system** (migration_001_bitemporal.py)
-- Schema version **2.0.0** with 4 new temporal indexes
-- **48 new tests**, all passing
-- **2688 total unit tests** passing
+- **Issue #38 Phase 2 (Database Layer)**: COMPLETE
+- Added **6 temporal methods** to CypherQueryBuilder (+540 lines)
+- Added **7 temporal methods** to FalkorDBClient (+706 lines)
+- Updated `build_vector_search_query()` with `is_current = true` filter
+- **97 new tests**, all passing
+- **2785 total unit tests** passing
 
 **CI/CD Status:**
 | Workflow | Status |
 |----------|--------|
 | **Build & Package** | **SUCCESS** |
 | **Lint & Code Quality** | **SUCCESS** (mypy: 0 errors!) |
-| Tests | **SUCCESS** (2688 passed) |
+| Tests | **SUCCESS** (2785 passed) |
 
 **Test Status:**
-- Unit Tests: **2688 passed**, 11 skipped
+- Unit Tests: **2785 passed**, 11 skipped
 - Integration Tests: **115 passed** (51 skip in CI)
 - E2E Tests: 88 passed, 1 xfailed
 
@@ -37,29 +37,30 @@ Major achievement:
 
 ## NEXT STEPS
 
-### Priority 1: Issue #38 - Phase 2: Database Layer
+### Priority 1: Issue #39 - Phase 3: Git Integration
 
 ```bash
-gh issue view 38
+gh issue view 39
 ```
 
 Key tasks:
-1. Add temporal query methods to FalkorDBClient
-2. Update CypherQueryBuilder with temporal patterns
-3. Update existing methods for backwards compatibility
-4. 50+ new unit tests
+1. Detect git commits in indexed repositories
+2. Extract commit hash, author, timestamp, message
+3. Use git commit timestamp as valid_from
+4. Link memory versions to git commits
+5. 30+ new unit tests
 
 **Full specification**: `.shashka/specs/issue-27-bitemporal/`
 
 ### Implementation Progress (Issue #27)
 
-| Phase | Issue | Description | Status |
-|-------|-------|-------------|--------|
-| 1 | #37 | Schema & Models | **COMPLETE** |
-| 2 | #38 | Database Layer | **NEXT** |
-| 3 | #39 | Git Integration | Pending |
-| 4 | #40 | MCP Tools | Pending |
-| 5 | #41 | Documentation | Pending |
+| Phase | Issue | Description | Status | Tests |
+|-------|-------|-------------|--------|-------|
+| 1 | #37 | Schema & Models | **COMPLETE** | 48 |
+| 2 | #38 | Database Layer | **COMPLETE** | 97 |
+| 3 | #39 | Git Integration | **NEXT** | - |
+| 4 | #40 | MCP Tools | Pending | - |
+| 5 | #41 | Documentation | Pending | - |
 
 ---
 
@@ -69,9 +70,9 @@ Key tasks:
 src/zapomni_db/
 ├── models.py              # Bi-temporal models (Session #26)
 ├── schema_manager.py      # Schema v2.0.0 (Session #26)
-├── falkordb_client.py     # <-- ADD TEMPORAL METHODS (Phase 2)
-├── cypher_query_builder.py # <-- ADD TEMPORAL QUERIES (Phase 2)
-└── migrations/            # NEW: Migration scripts (Session #26)
+├── falkordb_client.py     # +7 temporal methods (Session #27)
+├── cypher_query_builder.py # +6 temporal methods (Session #27)
+└── migrations/            # Migration scripts (Session #26)
     └── migration_001_bitemporal.py
 
 .shashka/specs/issue-27-bitemporal/
@@ -87,7 +88,7 @@ src/zapomni_db/
 cd /home/dev/zapomni
 git pull origin main
 source .venv/bin/activate
-make test                     # Should see 2688 passed
+make test                     # Should see 2785 passed
 mypy src/                     # Should see 0 errors!
 gh run list --limit 5         # Check CI status
 
@@ -109,7 +110,7 @@ cat .shashka/specs/issue-27-bitemporal/design.md
 │   ├── HANDOFF.md            # Session handoff (START HERE)
 │   └── SNAPSHOT.md           # Project snapshot
 ├── log/
-│   └── 2025-12-01-session-26.md  # Latest session log
+│   └── 2025-12-05-session-27.md  # Latest session log
 └── config.yaml               # Project config
 ```
 
@@ -128,13 +129,13 @@ cat .shashka/specs/issue-27-bitemporal/design.md
 
 ```bash
 # Development
-make test                     # All unit tests (2688)
+make test                     # All unit tests (2785)
 make lint                     # Run linter
 make format                   # Format code
 mypy src/                     # Type checking (0 errors!)
 
 # Search tests
-pytest tests/unit/db/         # DB tests (48 temporal)
+pytest tests/unit/db/         # DB tests (145 temporal)
 
 # Services
 make docker-up                # Start FalkorDB + Redis
@@ -163,10 +164,11 @@ src/
 ├── zapomni_mcp/
 │   └── tools/
 │       └── index_codebase.py  # INTEGRATION POINT
-└── zapomni_db/             # <-- FOCUS FOR PHASE 2
+└── zapomni_db/             # BI-TEMPORAL COMPLETE!
     ├── models.py           # Bi-temporal models
     ├── schema_manager.py   # Schema v2.0.0
-    ├── falkordb_client.py  # Add temporal methods
+    ├── cypher_query_builder.py # +6 temporal methods
+    ├── falkordb_client.py  # +7 temporal methods
     └── migrations/         # Migration scripts
 ```
 
@@ -176,7 +178,8 @@ src/
 
 | Session | Date | Focus | Result |
 |---------|------|-------|--------|
-| **#26** | 2025-12-01 | Issue #27 Phase 1 | **Schema & Models, 48 tests** |
+| **#27** | 2025-12-05 | Issue #38 Phase 2 | **Database Layer, 97 tests** |
+| #26 | 2025-12-01 | Issue #27 Phase 1 | Schema & Models, 48 tests |
 | #25 | 2025-11-30 | Issue #26 Hybrid | RRF/RSF/DBSF fusion, 139 tests |
 | #24 | 2025-11-30 | Issue #25 BM25 | bm25s + CodeTokenizer, 65 tests |
 | #23 | 2025-11-29 | mypy cleanup | 141->0 errors, 9 issues closed |
@@ -194,4 +197,4 @@ src/
 
 ---
 
-**Issue #27 Phase 1 COMPLETE! Next: Phase 2 - Database Layer (Issue #38).**
+**Issue #38 Phase 2 COMPLETE! Next: Phase 3 - Git Integration (Issue #39).**
